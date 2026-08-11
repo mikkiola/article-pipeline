@@ -32,3 +32,6 @@ secrets.json
 .vscode/
 .idea/
 .DS_Store
+
+# Local machine-specific config (per-checkout paths, not portable)
+local_paths.json
