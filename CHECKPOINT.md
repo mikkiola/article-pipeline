@@ -6,12 +6,12 @@ combined = goal×50% + constraint×30% + scope×20%. Обновлять `status`
 `drift` по ходу реализации, не только в конце.
 
 ## M1: Установить linkup-sdk и настроить чтение LINKUP_API_KEY
-- [ ] `pip install linkup-sdk`
-- [ ] Подтвердить запись `linkup-api-key-article-pipeline` в Bitwarden
-- [ ] Проверить чтение ключа: `bw get password linkup-api-key-article-pipeline --session $BW_SESSION`
+- [x] `pip install linkup-sdk`
+- [x] Подтвердить запись `linkup-api-key-article-pipeline` в Bitwarden
+- [x] Проверить чтение ключа: `bw get password linkup-api-key-article-pipeline --session $BW_SESSION`
 - verify: `pip show linkup-sdk && bw get password linkup-api-key-article-pipeline --session $BW_SESSION | wc -c`
 - done-when: `linkup-sdk` установлен; команда `bw get password` возвращает непустой вывод (сам ключ в лог/вывод команды verify не печатать)
-- status: not-started
+- status: done
 - drift:
   - goal: 0.0
   - constraint: 0.0
