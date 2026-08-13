@@ -29,10 +29,22 @@ combined = goal×50% + constraint×30% + scope×20%. Обновлять `status`
     GitHub-репозиторий. `py_compile`: PASS. `gitleaks`: 0 находок.
 - status: done
 - drift:
-  - goal: 0.0
-  - constraint: 0.0
-  - scope: 0.0
-  - combined: 0.0
+  - goal: 0.2 — goal drift caused by approved architecture change
+    (D-024 pending formal write-up): `_get_api_key()` теперь читает
+    только `LINKUP_API_KEY` из окружения, без обращения к `bw` изнутри
+    файла. Written SPEC.md (строки 65-68, 204, 242-243) всё ещё
+    специфицирует `bw get password ... --session $BW_SESSION` как
+    механизм внутри скрипта — это честное расстояние от текущего
+    письменного SPEC, не ошибка и не незапланированный дрейф.
+    Остальная часть цели M2 (форма интерфейса `search()`,
+    инкапсуляция специфики Linkup) — без отклонений. После формального
+    внесения D-024 в SPEC.md (в конце сессии) эта же реализация
+    оценивается как 0.0 против новой базовой линии.
+  - constraint: 0.0 — ключ по-прежнему нигде не логируется/не
+    печатается/не хардкодится; NFR#4 соблюдён.
+  - scope: 0.0 — изменён только уже запланированный файл
+    `search_backend.py`.
+  - combined: 0.10 (0.2×0.5 + 0.0×0.3 + 0.0×0.2)
 
 ## M3: Driver-скрипт (Claims → запросы → бюджет → лог)
 - [ ] Читает Claims со `status: "claim"` из самого свежего `claim_extraction/output/pilot_run_*.json`

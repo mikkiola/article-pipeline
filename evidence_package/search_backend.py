@@ -9,12 +9,9 @@ future vendor.
 from __future__ import annotations
 
 import os
-import subprocess
 from dataclasses import dataclass
 
 from linkup import LinkupClient
-
-BW_ITEM_NAME = "linkup-api-key-article-pipeline"
 
 
 class SearchBackendError(RuntimeError):
@@ -29,23 +26,12 @@ class SearchResult:
 
 
 def _get_api_key() -> str:
-    session = os.environ.get("BW_SESSION")
-    if not session:
+    key = os.environ.get("LINKUP_API_KEY")
+    if not key:
         raise SearchBackendError(
-            "BW_SESSION is not set. Open a Bitwarden session "
-            "(bw login / bw unlock) and export BW_SESSION before running."
-        )
-    result = subprocess.run(
-        ["bw", "get", "password", BW_ITEM_NAME, "--session", session],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    key = result.stdout.strip()
-    if result.returncode != 0 or not key:
-        raise SearchBackendError(
-            f"Failed to read '{BW_ITEM_NAME}' from Bitwarden (bw CLI exit "
-            f"code {result.returncode})."
+            "LINKUP_API_KEY not set in environment. Export it before "
+            "running (e.g. via Bitwarden locally, or a CI secret "
+            "variable in production)."
         )
     return key
 
