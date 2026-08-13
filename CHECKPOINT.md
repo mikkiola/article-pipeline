@@ -19,11 +19,15 @@ combined = goal×50% + constraint×30% + scope×20%. Обновлять `status`
   - combined: 0.0
 
 ## M2: search_backend.py (swappable interface, реализация на Linkup)
-- [ ] `evidence_package/search_backend.py` экспортирует `search(query: str) -> list[SearchResult]`
-- [ ] Вся специфика Linkup инкапсулирована внутри файла (замена вендора = переписать только его)
+- [x] `evidence_package/search_backend.py` экспортирует `search(query: str) -> list[SearchResult]`
+- [x] Вся специфика Linkup инкапсулирована внутри файла (замена вендора = переписать только его)
 - verify: `python3 -m py_compile evidence_package/search_backend.py && gitleaks detect --source evidence_package --no-git -v`
 - done-when: файл компилируется; ручной вызов `search()` на тестовом запросе возвращает результат; `gitleaks` не находит ключа в коде
-- status: not-started
+  - Подтверждено Ольгой вручную (BW_SESSION недоступна инструменту Claude Code):
+    `search("test query linkup api smoke test")` → 20 результатов от живого
+    Linkup API (не заглушка); первый результат — релевантный реальный
+    GitHub-репозиторий. `py_compile`: PASS. `gitleaks`: 0 находок.
+- status: done
 - drift:
   - goal: 0.0
   - constraint: 0.0
