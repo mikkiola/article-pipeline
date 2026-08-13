@@ -35,3 +35,7 @@ secrets.json
 
 # Local machine-specific config (per-checkout paths, not portable)
 local_paths.json
+
+# Evidence Package: raw staging artifact from the M4 search phase (not
+# part of SPEC.md's canonical evidence_run/evidence_log output schema)
+evidence_package/output/_m4_staging_*.json

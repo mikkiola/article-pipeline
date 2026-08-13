@@ -34,6 +34,10 @@ from search_backend import search as linkup_search
 MAX_REQUESTS_PER_CLAIM = 2  # SPEC.md: "до 2 раз на Claim"
 MAX_REQUESTS_PER_RUN = 20  # SPEC.md: "жёсткий лимит на весь прогон — 20 запросов"
 
+
+class SearchBudgetError(RuntimeError):
+    """Raised when a retry would exceed the per-Claim or run-wide budget."""
+
 _THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 CLAIM_EXTRACTION_OUTPUT_DIR = os.path.join(_THIS_DIR, "..", "claim_extraction", "output")
 
@@ -145,6 +149,43 @@ def run_searches(
         "events": events,
     }
     return records, log_summary
+
+
+def retry_search(
+    record: dict,
+    requests_used_total: int,
+    search_fn=linkup_search,
+    max_requests_per_claim: int = MAX_REQUESTS_PER_CLAIM,
+    max_requests_per_run: int = MAX_REQUESTS_PER_RUN,
+) -> dict:
+    """Make a second search attempt for one Claim (interactive M4 call only).
+
+    Enforces both budgets as hard checks, not just the declared
+    constants: raises SearchBudgetError instead of silently exceeding
+    either cap. Mutates and returns `record` — appends the new results,
+    bumps `requests_used`, updates `searched_at`. Does not touch
+    run-wide bookkeeping beyond validating against the caller-supplied
+    `requests_used_total`; the caller (M4 session) is responsible for
+    tracking that total across all Claims in the run.
+    """
+    if record["requests_used"] >= max_requests_per_claim:
+        raise SearchBudgetError(
+            f"{record['claim_id']}: per-Claim budget exhausted "
+            f"({record['requests_used']}/{max_requests_per_claim})"
+        )
+    if requests_used_total >= max_requests_per_run:
+        raise SearchBudgetError(
+            f"{record['claim_id']}: run-wide budget exhausted "
+            f"({requests_used_total}/{max_requests_per_run})"
+        )
+
+    results = search_fn(record["search_query"])
+    record["requests_used"] += 1
+    record["search_results"] = (record["search_results"] or []) + [
+        {"title": r.title, "url": r.url, "snippet": r.snippet} for r in results
+    ]
+    record["searched_at"] = datetime.now(timezone.utc).astimezone().isoformat()
+    return record
 
 
 def main() -> None:

@@ -79,11 +79,33 @@ combined = goal×50% + constraint×30% + scope×20%. Обновлять `status`
   - combined: 0.0
 
 ## M4: Интерактивная оценка Claude Code (status/source_url/license/note)
-- [ ] Для каждого Claim с результатами поиска — Claude Code в текущей сессии читает сниппеты/URL и присваивает `status`/`source_url`/`license`/`note`
-- [ ] Без отдельного LLM-вызова поверх результатов (D-015)
+- [x] Для каждого Claim с результатами поиска — Claude Code в текущей сессии читает сниппеты/URL и присваивает `status`/`source_url`/`license`/`note`
+- [x] Без отдельного LLM-вызова поверх результатов (D-015)
 - verify: ручная проверка Ольгой на выборке записей — этот шаг интерактивный, скриптового verify для самой оценки нет
 - done-when: каждый обработанный Claim получил `status` из `{verified, disputed, unverifiable, pending}` с полями по схеме `SPEC.md` (`source_url`/`license` присутствуют всегда, даже `null`)
-- status: not-started
+  - Все 5 Claims оценены. Первый проход: 3× unverifiable, 2× verified
+    (claim_03 — Habr, claim_04 — vc.ru). Retry не использовался ни для
+    одного Claim: `retry_search()` переиспользует тот же
+    `search_query` (SPEC не допускает менять формулу запроса между
+    попытками), а низкая релевантность у claim_01/02/05 — структурная
+    (диффузный запрос), не случайный сбой, который повтор мог бы
+    исправить.
+  - Построчная проверка Ольгой (сверка полных текстов атомов и полных
+    страниц источников — не только сниппетов) понизила обе `verified`-
+    записи до `unverifiable`: claim_03 — источник иллюстрирует тот же
+    абстрактный паттерн на другом материале (LLM-документация), не
+    подтверждает тезис в домене атома (граф доверия/ОДС); claim_04 —
+    источник оказался статьёй AI-персоны (Digital Author Persona), не
+    верифицируемым человеческим экспертом, что не даёт независимого
+    эпистемического подтверждения даже при совпадении домена. Итог:
+    **5 из 5 → unverifiable**, `source_url`/`license` — `null` явно у
+    всех пяти.
+  - `retry_search()` добавлена в `driver.py`: enforcement per-Claim
+    (`MAX_REQUESTS_PER_CLAIM=2`) и run-wide (`MAX_REQUESTS_PER_RUN=20`)
+    бюджетов через `raise SearchBudgetError`, не молчаливое
+    превышение. Проверено на стабах: успешный retry, превышение
+    per-Claim кэпа, превышение run-wide кэпа — все 3 сценария PASS.
+- status: done
 - drift:
   - goal: 0.0
   - constraint: 0.0
@@ -91,12 +113,30 @@ combined = goal×50% + constraint×30% + scope×20%. Обновлять `status`
   - combined: 0.0
 
 ## M5: Запись evidence_run/evidence_log (Immutable Lineage)
-- [ ] `evidence_package/output/evidence_run_<timestamp>.json`
-- [ ] `evidence_package/output/evidence_log_<timestamp>.json`
-- [ ] Коллизия `run_id` (совпадение timestamp) — `raise error`, не перезапись
+- [x] `evidence_package/output/evidence_run_<timestamp>.json`
+- [x] `evidence_package/output/evidence_log_<timestamp>.json`
+- [x] Коллизия `run_id` (совпадение timestamp) — `raise error`, не перезапись
 - verify: `python3 -c "import json,glob; [json.load(open(f)) for f in glob.glob('evidence_package/output/evidence_*.json')]"`
 - done-when: оба файла валидный JSON и записаны; повторный запуск с тем же `run_id` падает с ошибкой, а не перезаписывает
-- status: not-started
+  - `evidence_package/write_evidence.py` создан (`build_evidence_run()`,
+    `build_evidence_log()`, `write_outputs()`), тот же паттерн, что
+    `build_pilot_output.py` в Claim Extraction. `run_id=20260813T114717`
+    (тот же run_id, что у поисковой фазы M3/M4 — единый логический
+    прогон).
+  - Прогон 1 (первая запись): SUCCESS —
+    `evidence_run_20260813T114717.json` (5 записей, все `unverifiable`),
+    `evidence_log_20260813T114717.json` (`status_counts.unverifiable=5`,
+    `requests_used_total=5`, `search_budget_exhausted=false`).
+  - Прогон 2 (тот же `run_id` намеренно повторно): `FileExistsError` —
+    "evidence_run_20260813T114717.json уже существует — Immutable
+    Lineage запрещает перезапись прежнего прогона." Файлы прогона 1 не
+    тронуты (mtime не изменился после попытки коллизии).
+  - `python3 -c "import json,glob; ..."`: PASS (оба файла валидный
+    JSON). `gitleaks`: 0 находок.
+  - Staging-файл `_m4_staging_20260813T114717.json` (сырые результаты
+    поиска M4) не коммитится — добавлен в `.gitignore`, не часть
+    канонической схемы вывода SPEC.md.
+- status: done
 - drift:
   - goal: 0.0
   - constraint: 0.0
