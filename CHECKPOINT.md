@@ -47,13 +47,31 @@ combined = goal×50% + constraint×30% + scope×20%. Обновлять `status`
   - combined: 0.10 (0.2×0.5 + 0.0×0.3 + 0.0×0.2)
 
 ## M3: Driver-скрипт (Claims → запросы → бюджет → лог)
-- [ ] Читает Claims со `status: "claim"` из самого свежего `claim_extraction/output/pilot_run_*.json`
-- [ ] Формирует `search_query = novelty.value + basis.value`
-- [ ] Вызывает `search_backend.search()` с бюджетом 2 запроса/Claim, 20/прогон
-- [ ] Логирует сетевые ошибки и исчерпание бюджета, не прерывая прогон
+- [x] Читает Claims со `status: "claim"` из самого свежего `claim_extraction/output/pilot_run_*.json`
+- [x] Формирует `search_query = novelty.value + basis.value`
+- [x] Вызывает `search_backend.search()` с бюджетом 2 запроса/Claim, 20/прогон
+- [x] Логирует сетевые ошибки и исчерпание бюджета, не прерывая прогон
 - verify: `python3 -m py_compile evidence_package/*.py`
 - done-when: сухой прогон на тестовых Claims не падает ни на сетевой ошибке, ни на исчерпании бюджета (оставшиеся Claims получают `pending`)
-- status: not-started
+  - `evidence_package/driver.py` создан: `find_latest_pilot_run()`,
+    `load_claims()`, `build_search_query()`, `run_searches()`.
+    `MAX_REQUESTS_PER_CLAIM=2`, `MAX_REQUESTS_PER_RUN=20` — жёсткие
+    константы в коде. Реальный запрос к Linkup в M3 не использовался —
+    dry-run на 3 тестовых Claims со стаб-функцией `search_fn`
+    (LINKUP_API_KEY не потребовался, бюджет не потрачен):
+    1) успешный путь — 3/3 records, `status=None` (ждёт M4);
+    2) сетевая ошибка (`RuntimeError` от стаба на всех 3) — прогон не
+       упал, все 3 → `status="unverifiable"`, `requests_used=1`, event
+       `search_error` в логе;
+    3) исчерпание бюджета (`max_requests_per_run=1`, 3 Claims) — 1-й
+       обработан, 2 оставшихся → `status="pending"`,
+       `requests_used=0`, `search_budget_exhausted=True`.
+    Все 3 сценария: PASS. Также проверена реальная загрузка (без
+    вызова поиска): `find_latest_pilot_run()` находит
+    `pilot_run_20260811T165911.json`, `load_claims()` — 5 Claims.
+    `python3 -m py_compile evidence_package/*.py`: PASS. `gitleaks`:
+    0 находок.
+- status: done
 - drift:
   - goal: 0.0
   - constraint: 0.0
