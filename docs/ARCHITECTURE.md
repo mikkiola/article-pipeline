@@ -1,26 +1,25 @@
 # Article Pipeline — Architecture
 
-State as of 2026-08-14. One table, no prose. Rationale for any
-decision: `docs/adr/`. Plan: `ROADMAP.md`. Tasks: `BACKLOG.md`.
+State as of 2026-08-14. Every fact is a table cell — no prose
+sections. Rationale for any decision: `docs/adr/`. Plan:
+`docs/ROADMAP.md`. Tasks: `docs/BACKLOG.md`. This document does not
+duplicate what those three own — it states current state and
+dependencies only.
 
-Project: publishes articles to Habr and LinkedIn, built from atoms in
-an Obsidian knowledge graph (Brain). Separate from System Drift
-(Telegram, Collision Engine) — different project, split 2026-07-30.
-
-| Component | Status | Commit | Notes |
-|---|---|---|---|
-| Atom Selector | Implemented | `bd7b784`, bugfix `97b87f7` | Vendored copy in this repo, not migrated to single source |
-| `graph_reader.py` | Implemented | `e7fbc45` | Vendored copy in this repo, not migrated to single source |
-| Claim Extraction | Implemented | `46d1a41` | 4 immutable pilot runs; output loses context needed downstream, unresolved |
-| Evidence Package | Implemented | `2fe0aac..29f716f` | Validated on 5 live Claims, 5/5 unverifiable — root cause traced to Claim Extraction, not this component |
-| ToolTempest lock+sync (manual) | Implemented | `3d4ad09` | Manual only — no CLI adapter, no auto-discovery |
-| ToolTempest CLI adapter + discovery | Not started | — | Architectural contract fixed, nothing built |
-| Context/causal-structure layer | Not started | — | Fixes Claim Extraction's context loss; see BACKLOG.md P0 |
-| Strategy Layer | Spec only | — | Blocked until context layer exists |
-| Author | Spec only | — | Blocked until context layer exists |
-| Quality Gate | Spec only | — | Blocked until context layer exists |
-| Platform Adapter | Spec only | — | Blocked until context layer exists |
-| Experiment Log | Spec only | — | Blocked until context layer exists |
+| Component | Status | Depends on | Validation | Commit |
+|---|---|---|---|---|
+| Atom Selector | Implemented | Brain (`02_Cards/`) | Tested on real data | `bd7b784`, bugfix `97b87f7` |
+| `graph_reader.py` | Implemented | Atom Selector | Tested on real data | `e7fbc45` |
+| Claim Extraction | Implemented | Atom Selector, `graph_reader.py` | 4 immutable pilot runs, manually verified | `46d1a41` |
+| Context/causal-structure layer | Not started | Claim Extraction | — | — |
+| Evidence Package | Implemented | Claim Extraction output | 5 live Claims tested, 5/5 unverifiable | `2fe0aac..29f716f` |
+| Strategy Layer | Spec only | Context/causal-structure layer | — | — |
+| Author | Spec only | Strategy Layer | — | — |
+| Quality Gate | Spec only | Author | — | — |
+| Platform Adapter | Spec only | Quality Gate | — | — |
+| Experiment Log | Spec only | Platform Adapter | — | — |
+| ToolTempest lock+sync (manual) | Implemented | `mikkiola/tooltempest` | End-to-end tested, byte-for-byte diff verified | `3d4ad09` |
+| ToolTempest CLI adapter + discovery | Not started | ToolTempest lock+sync | — | — |
 
 ## Repositories
 
@@ -30,11 +29,9 @@ an Obsidian knowledge graph (Brain). Separate from System Drift
 | `mikkiola/article-pipeline` | This project's code + `docs/adr/` |
 | `mikkiola/tooltempest` | Shared tooling (`/spec`, `/verify`, `drift-control.md`) |
 
-## Models
+## Models used by this project
 
-| Use | Model |
+| Component | Model or service |
 |---|---|
-| Drift primary | `claude-sonnet-5` |
-| Drift fallback | `claude-sonnet-4-6` |
 | Claim Extraction | Interactive, Claude Code |
-| Evidence Package | Linkup API |
+| Evidence Package | Linkup API (search/retrieval, not a language model) |
