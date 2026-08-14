@@ -1,28 +1,47 @@
 # 0014 — New repository: mikkiola/article-pipeline
 
 ## Status
-Accepted. Partially implemented — see inconsistency noted below.
-
-## Context
-
-Article Pipeline is not architecturally required to live inside
-`brain.git` (follows from 0001). A full code migration in a single
-session was judged excessive.
+ACTIVE, partially implemented — known inconsistency, see Consequences.
 
 ## Decision
-
 Compromise: create an empty scaffold repository now; defer full code
 migration to a separate future task. Does not exactly match any single
 one of the originally proposed options.
 
-## Consequences
+## Options
+A — full immediate migration of all code from brain.git. B — leave
+everything in brain.git indefinitely. C — scaffold now, migrate code
+later as a separate task (chosen, as a compromise not identical to any
+single proposed option).
 
-Implemented: repository created 2026-08-10. **Partially inconsistent
-with its own stated plan**: Claim Extraction and Evidence Package were
-written directly in the new repository (not staged through `brain.git`
-first), while Atom Selector and `graph_reader.py` remain vendored copies
-rather than migrated originals — the "scaffold now, code later" pattern
-was not applied uniformly.
+## Chosen
+C.
+
+## Why
+Article Pipeline is not architecturally required to live inside
+`brain.git` (follows from 0001), but a full code migration in the same
+session as everything else being decided was judged an excessive load —
+splitting scaffold creation from code migration let the repository exist
+immediately without forcing a rushed migration.
+
+## Constraints
+New Article Pipeline code should be written directly into the new
+repository going forward, not staged through brain.git first — though
+this constraint was not applied uniformly in practice (see
+Consequences).
+
+## Rejected
+A — too much for a single session. B — leaves Article Pipeline
+permanently coupled to brain.git, which 0001 already ruled out as the
+long-term goal.
+
+## Consequences
+Implemented: repository created 2026-08-10. Partially inconsistent with
+its own stated plan — Claim Extraction and Evidence Package were written
+directly in the new repository (not staged through brain.git first),
+while Atom Selector and `graph_reader.py` remain vendored copies rather
+than migrated originals. The "scaffold now, code later" pattern was not
+applied uniformly.
 
 ## Validation
 Unverified — migration of Atom Selector/`graph_reader.py` to a single

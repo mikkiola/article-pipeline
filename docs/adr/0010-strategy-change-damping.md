@@ -1,30 +1,36 @@
 # 0010 — Damped strategy switching (MAX_STRATEGY_CHANGES_PER_N_POSTS)
 
 ## Status
-Accepted. Not implemented — Strategy Layer does not exist yet, so this
-rule cannot be technically exercised.
-
-## Context
-
-Switching strategy after a single bad result risks chaotic, reactive
-behavior. A full Viable System Model (five-level Beer governance) was
-judged excessive for a solo-developer scale.
+ACTIVE, deferred implementation.
 
 ## Decision
-
 A simple config rule: don't change strategy more than once per N
 publications, with an explicit exception for an unambiguous catastrophic
 failure.
 
-## Options considered
+## Options
+A — full Viable System Model (5-level Beer governance). B — simple
+damping rule with a catastrophe exception (chosen).
 
-**A — Full VSM (5-level Beer model).** Rejected — excessive complexity
-for the current scale; same effect achievable with one config line.
+## Chosen
+B.
 
-**B — Simple damping rule with catastrophe exception (chosen).**
+## Why
+Switching strategy after a single bad result risks chaotic, reactive
+behavior that never lets any one strategy run long enough to be judged
+fairly. A full VSM governance model would give the same practical
+protection at solo-developer scale, but at a cost of complexity far
+beyond what one config line achieves.
+
+## Constraints
+Damping threshold (`N`) lives in config, not hardcoded. The catastrophe
+exception must be unambiguous — not a judgment call made mid-incident.
+
+## Rejected
+A — excessive complexity for the current scale; same effect achievable
+with one config line.
 
 ## Consequences
-
 Specified in the pipeline's functional requirements. Cannot be tested
 until Strategy Layer exists.
 

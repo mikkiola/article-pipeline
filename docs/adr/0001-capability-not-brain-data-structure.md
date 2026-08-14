@@ -1,44 +1,43 @@
 # 0001 — Capability is Article Pipeline logic, not a Brain data structure
 
 ## Status
-Accepted. Implementation: architectural intent, not technically enforced
-as an invariant (no test verifies Article Pipeline never writes to
-Brain).
-
-## Context
-
-Brain (the Obsidian knowledge graph) is the owner's personal knowledge
-base. Article Pipeline needs to read from it. The question is whether
-Article Pipeline's selection/capability logic should live inside Brain's
-own structure (as a MOC cluster or a tag on atoms) or entirely outside
-it.
+ACTIVE.
 
 ## Decision
-
 Capability lives inside Article Pipeline as code, not inside Brain as a
 MOC cluster or atom tags.
 
-## Options considered
+## Options
+A — MOC cluster inside Brain. B — Tag on atoms. C — Logic inside Article
+Pipeline (chosen).
 
-**A — MOC cluster inside Brain.** Rejected: makes Brain's structure
-depend on Article Pipeline's needs, coupling the personal knowledge base
-to a downstream consumer.
+## Chosen
+C.
 
-**B — Tag on atoms.** Rejected: same coupling problem — Brain's atoms
-would carry Article-Pipeline-specific metadata.
+## Why
+Brain is the owner's personal knowledge base and must not be shaped
+around a downstream consumer's needs. Keeping Capability inside Article
+Pipeline keeps Brain a passive, unmodified source, and lets it be read
+through a single narrow, auditable channel (see 0022) instead of
+scattering Article-Pipeline-specific structure through the owner's
+personal graph.
 
-**C — Logic inside Article Pipeline (chosen).** Brain stays a passive
-source; Article Pipeline reads through a narrow, auditable channel (see
-0022).
+## Constraints
+Brain remains read-only from Article Pipeline's perspective. Reading
+happens only through the channel defined in 0022, not ad hoc filesystem
+access.
+
+## Rejected
+A (MOC cluster) — couples Brain's structure to Article Pipeline.
+B (tag on atoms) — same coupling problem, different mechanism.
 
 ## Consequences
-
-Brain remains unmodified by Article Pipeline. Reading happens through a
-single defined channel rather than ad hoc filesystem access.
+Brain is not modified by Article Pipeline. No architectural cleanup is
+needed inside Brain if Article Pipeline changes or is removed.
 
 ## Validation
 Unverified — no automated check confirms Article Pipeline never writes
-to Brain. This is an architectural intent, not a tested invariant.
+to Brain. This is a stated intent, not a tested invariant.
 
 ## Reversal condition
 None specified.

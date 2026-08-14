@@ -1,36 +1,43 @@
 # 0022 — Obsidian access channel: obsidian-local-rest-api
 
 ## Status
-Accepted. Decision recorded, not physically used by any live component
+ACTIVE. Decision recorded, not physically used by any live component
 yet.
 
-## Context
-
-An auditable channel for reading Brain is required (follows from 0001).
-
 ## Decision
-
 `obsidian-local-rest-api` — a single audit point through a REST API key
 — over direct filesystem access.
 
-## Options considered
+## Options
+kObsidian, obsidian-local-rest-api (chosen).
 
-**kObsidian.** Rejected — filesystem-first design does not provide the
-separation between access and audit that this project requires, despite
-having a permissive (MIT) license.
+## Chosen
+obsidian-local-rest-api.
 
-**obsidian-local-rest-api (chosen).**
+## Why
+0001 requires an auditable channel for reading Brain — a filesystem-
+first design (kObsidian) does not provide any separation between
+"having access" and "an auditable record that access happened," which
+is exactly the property this channel needs to have.
+
+## Constraints
+Requires a running Obsidian instance — not confirmed to work headless.
+This constraint was inherited from external reviews, not independently
+re-verified.
+
+## Rejected
+kObsidian — filesystem-first design does not provide the required
+access/audit separation, despite having a permissive (MIT) license.
 
 ## Consequences
-
 Decision is recorded but not wired into any live component — Evidence
 Package currently works only with local Claim Extraction JSON output,
 not through this channel.
 
 ## Validation
-Unverified. A constraint (requires Obsidian running, not headless-
-compatible) was inherited from external reviews without a separate
-live check by the architect on this specific point.
+Unverified. The headless-compatibility constraint was inherited from
+external reviews without a separate live check by the architect on this
+specific point.
 
 ## Reversal condition
 Would need re-evaluation if headless (no running Obsidian instance)
