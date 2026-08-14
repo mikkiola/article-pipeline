@@ -42,6 +42,33 @@ was made," and any conflict that isn't resolved by that priority is
 itself a stop-and-ask case (see below) — don't guess which one is
 stale.
 
+## Keeping documents current
+
+`docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/BACKLOG.md`
+change during normal work, not only at defined checkpoints. Two kinds
+of update, handled differently:
+
+- **Unambiguous fact update** (a component just got implemented and
+  committed, a component broke, a dependency changed, a task in
+  `docs/BACKLOG.md` is done): update the relevant document directly,
+  as part of finishing the task that caused the change. No separate
+  confirmation needed — the commit that makes the fact true and the
+  commit that records it can be the same task.
+- **Architectural change** (adding or removing a component, changing
+  what depends on what, changing the phase plan, rewriting
+  `docs/CONSTITUTION.md` itself): this is the same category as any
+  other architectural decision — stop and ask (see the one
+  stop-and-ask rule below), don't update unilaterally.
+
+If it's unclear which of the two a given update is: treat it as
+architectural and ask, rather than guessing it's unambiguous.
+
+`docs/adr/` and `docs/CONFLICT_MAP.md` have their own, stricter rules
+stated where each is defined (ADRs are never edited after acceptance;
+`docs/CONFLICT_MAP.md` is a point-in-time record superseded by a new
+dated file, not edited in place) — this section doesn't change either
+of those.
+
 ## The one stop-and-ask rule
 
 If the next step is unclear from the available documents, the
