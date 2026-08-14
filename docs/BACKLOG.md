@@ -135,6 +135,19 @@ other for "which to do first."
       before. This is not a same-artifact edit (that would break the
       append-only guarantee) — it needs either a superseding
       append-only record or a separate mechanism, decided at the time.
+- [ ] Add an explicit schema check (or a test) confirming Evidence
+      records always carry `source_url` and `license`, even when
+      null — the invariant `docs/adr/0023` states. A mutation test
+      (2026-08-14) found no independent check: the invariant currently
+      holds only because `build_evidence_run`
+      (`evidence_package/write_evidence.py`) accesses these fields via
+      dict subscript (`item["source_url"]`), which happens to raise
+      `KeyError` on a missing input field rather than silently
+      omitting it from the output record. A future refactor to
+      `.get()`, or any code path that writes an Evidence record
+      without going through this function, would silently break the
+      invariant with nothing in the codebase to catch it — no test
+      suite exists anywhere in this repo.
 
 ## Owner decisions needed
 
