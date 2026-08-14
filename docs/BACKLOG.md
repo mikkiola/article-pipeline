@@ -110,6 +110,14 @@ other for "which to do first."
       duplicate was deleted.
 - [ ] Rewrite `README.md` — it still describes an empty-scaffold state
       that hasn't been true since the first real component landed.
+- [ ] Make the pre-push hook repo-tracked, not local-only. The hook
+      just installed at `.git/hooks/pre-push` works, but `.git/hooks/`
+      isn't tracked by git — it only exists on this machine. Tracking
+      hooks via a committed `.githooks/` directory plus `git config
+      core.hooksPath .githooks` (same pattern already proven in the
+      Drift/`brain.git` project for a filename-length guard) would
+      make the hook travel with the repo instead of disappearing on a
+      fresh clone.
 
 ### P2
 
