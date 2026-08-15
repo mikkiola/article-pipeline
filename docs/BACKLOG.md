@@ -15,6 +15,13 @@ Priority applies within each section separately — a P0 task and a P0
 owner-decision block different things and don't compete with each
 other for "which to do first."
 
+Closed, not previously written here: the gitleaks false-negative on
+Anthropic-key-shaped secrets, found during pre-push hook mutation
+testing, tracked only verbally as a P1. Fixed in `cd796db`, confirmed
+end-to-end (commit → hook → gitleaks → blocked push) via an isolated
+mutation test on 2026-08-15 (temporary clone, not part of this repo's
+history). No open item existed in this file to remove.
+
 ## Tasks
 
 ### P0
