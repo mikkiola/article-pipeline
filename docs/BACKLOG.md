@@ -51,72 +51,53 @@ unaddressed gap. Not resolved — see "Owner decisions needed" below.
 
 ### P0
 
-- [ ] Design and build a context/causal-structure layer between Claim
-      Extraction and Evidence Package.
+- [ ] Design and run a properly isolated experiment to test whether
+      context loss in Claim Extraction's `novelty`+`basis` output is a
+      contributing cause of Evidence Package's poor verification rate.
 
-      **Problem:** Claim Extraction produces two text fields,
-      `novelty` and `basis`, extracted from a source atom. When
-      concatenated as a search query for Evidence Package, the result
-      systematically loses: (a) the atom's domain/topic context —
-      exists in the atom's tags and wiki-links, but the current
-      extraction schema doesn't carry it into `novelty`/`basis`, and
-      (b) the most concrete, specific parts of the original claim
+      **Original problem, for reference:** Claim Extraction produces
+      two text fields, `novelty` and `basis`, extracted from a source
+      atom. When concatenated as a search query for Evidence Package,
+      the result was found to systematically lose: (a) the atom's
+      domain/topic context — exists in the atom's tags and wiki-links,
+      but the extraction schema didn't carry it into `novelty`/`basis`,
+      and (b) the most concrete, specific parts of the original claim
       (named examples, named roles, references to current discourse).
       Found by manually comparing the full text of 5 source atoms
-      against their extracted `novelty`+`basis` output and confirming
-      the same pattern in 4 of the 5 cases — suspected cause of
-      Evidence Package's first live run returning 5/5 unverifiable,
-      not yet confirmed as the root cause in an ADR. Confirming or
-      ruling this out is part of the work.
+      against their extracted `novelty`+`basis` output, confirming the
+      same pattern in 4 of the 5 cases — suspected cause of Evidence
+      Package's first live run returning 5/5 unverifiable.
 
-      **What "design" means:** a written proposal (not code) for a new
-      data layer sitting between Claim Extraction's output and
-      Evidence Package's input, carrying forward the context that
-      `novelty`+`basis` currently drops. Must specify: what new
-      field(s) get added, where they're populated from (tags?
-      wiki-links? a new extraction step?), and how this interacts with
-      the existing `novelty`/`basis` contract without breaking
-      whatever already consumes those two fields elsewhere in the
-      pipeline.
+      **What's done:** the context/causal-structure layer itself was
+      designed and built (`context_layer/SPEC.md`, then five
+      implementation milestones carrying tags/wiki-links forward into
+      the search query additively). The layer was re-run against the
+      same 5 original pilot Claims and produced 1 status change out of
+      5 (unverifiable → verified).
 
-      **How to produce it:** run a `/spec` session — this project's
-      established practice is the Claude Code skill at
-      `skills/spec/SKILL.md` (delivered via `mikkiola/tooltempest`,
-      synced locally via `scripts/sync-tooling.sh` — run that first if
-      `~/.claude/skills/spec/SKILL.md` doesn't exist). If you are the
-      architect (in this chat): formulate the task topic/boundary
-      below as a message for the owner to paste into Claude Code's
-      session — you cannot run `/spec` yourself. If you are Claude
-      Code (in the CLI): run `scripts/sync-tooling.sh` if needed, then
-      the `/spec` skill directly. Interview topic: exactly the problem
-      statement above, nothing more. Do not use this `/spec` run to
-      redesign Evidence Package's `verified` criterion (see blocking
-      constraint below).
+      **Why the causal question is still open, not closed:** a direct
+      audit of that one status change found it confounded — the source
+      responsible was already present in the *original*, pre-layer
+      run's raw search results, and the interactive assessment pass
+      that evaluated it (not the enriched query) is what actually
+      changed the outcome. The experiment varied two things at once
+      (query text and assessment pass) and cannot isolate which one, if
+      either, caused the change. This is recorded as a corrective ADR.
+      The original problem statement — whether context loss
+      contributes to Evidence Package's low verification rate — remains
+      neither confirmed nor refuted.
 
-      **Output location:** a new file, `context_layer/SPEC.md`,
-      following the same section template as the existing `SPEC.md`
-      at repo root (Overview → Goals → Tech Stack → Functional/
-      Non-Functional Requirements → Data Model → Test Plan →
-      Milestones → Open Questions).
+      **What the next attempt needs:** an experiment that holds
+      assessment methodology constant (the same evaluator/pass reused
+      across the old and new query, or a fixed scoring rubric applied
+      identically) while varying only the query text, per the reversal
+      condition stated in the corrective ADR. Without that isolation,
+      any future re-run will have the same confound as this one.
 
-      **Blocking constraint:** do not modify Evidence Package's
-      `verified` criterion (in `evidence_package/`) as part of this
-      task, even if the `/spec` interview surfaces ideas about it —
-      mixing that into this design makes it impossible to tell which
-      fix caused which effect later.
-
-      **Done when:** `context_layer/SPEC.md` exists and is committed;
-      the owner has read and confirmed it, *and the session ends there
-      — do not begin implementation code in the same session, even if
-      the owner responds quickly*; a later session implements it; a
-      re-run of the 5 original pilot Claims through the new layer
-      either confirms or overturns the "5/5 unverifiable" result —
-      whichever it is, record that outcome as an ADR.
-
-      If anything above doesn't match what's actually in the repo
-      (e.g. `SPEC.md`'s template differs, `scripts/sync-tooling.sh` is
-      missing and `~/.claude/skills/spec/SKILL.md` is also missing):
-      stop and ask the owner rather than guessing a substitute.
+      **Done when:** a follow-up experiment with assessment methodology
+      held constant has run against the same or an equivalent Claim
+      set, and its result — confirms, refutes, or remains inconclusive
+      — is recorded as its own ADR.
 - [ ] Fix `SPEC.md`: it still describes a Bitwarden CLI call for
       reading `LINKUP_API_KEY` in four places. The actual code
       (`evidence_package/search_backend.py`) reads only from the
@@ -194,6 +175,16 @@ unaddressed gap. Not resolved — see "Owner decisions needed" below.
       nothing currently checks for a violation of it. No design
       proposed yet — this item is registration of the gap, not a
       solution.
+- [ ] Evidence Package re-run comparisons (old run vs. new run) have
+      never isolated assessment-pass quality as a variable. A second
+      interactive assessment pass can independently change a Claim's
+      status regardless of whether the search query changed at all —
+      surfaced by a direct audit of the context-layer re-run experiment
+      above, where the one observed status change was traced to a
+      reassessment effect, not the query change under test. No
+      experiment run in this project so far has controlled for this.
+      No design proposed yet — this item is registration of the gap,
+      not a solution.
 
 ## Owner decisions needed
 
