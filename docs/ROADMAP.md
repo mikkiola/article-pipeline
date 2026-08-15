@@ -12,7 +12,7 @@ see `docs/adr/`.
 | 0 — Scaffold + `graph_reader.py` | Closed |
 | 1 — Claim Extraction pilot | Closed |
 | 2 — Evidence Package | Closed |
-| 2.5 — Context/causal-structure layer | Next — not started |
+| 2.5 — Context/causal-structure layer | Next — spec approved (`cddf498`), implementation not started |
 | 3 — Strategy Layer + Author + Quality Gate | Blocked on 2.5 |
 | 4 — Platform Adapter (Habr → LinkedIn) + Circuit Breaker | Not started |
 | 5+ — Experiment Log, remaining platforms | Not started |

@@ -11,7 +11,7 @@ dependencies only.
 | Atom Selector | Implemented | Brain (`02_Cards/`) | Tested on real data | `bd7b784`, bugfix `97b87f7` |
 | `graph_reader.py` | Implemented | Atom Selector | Tested on real data | `e7fbc45` |
 | Claim Extraction | Implemented | Atom Selector, `graph_reader.py` | 4 immutable pilot runs, manually verified | `46d1a41` |
-| Context/causal-structure layer | Not started | Claim Extraction | — | — |
+| Context/causal-structure layer | Spec only | Claim Extraction | — | `context_layer/SPEC.md` (`cddf498`) |
 | Evidence Package | Implemented | Claim Extraction output | 5 live Claims tested, 5/5 unverifiable | `2fe0aac..29f716f` |
 | Strategy Layer | Spec only | Context/causal-structure layer | — | — |
 | Author | Spec only | Strategy Layer | — | — |
