@@ -22,6 +22,31 @@ end-to-end (commit → hook → gitleaks → blocked push) via an isolated
 mutation test on 2026-08-15 (temporary clone, not part of this repo's
 history). No open item existed in this file to remove.
 
+Also closed, not previously written here: the two remaining gaps from
+a "Phase 14" methodology metacheck that a prior session started but
+never finished or recorded anywhere (confirmed absent from all
+commits, files, and ADRs by a dedicated audit on 2026-08-15). (1) The
+pre-push hook's ADR-citation gate had never been mutation-tested —
+only ever observed reporting "clean" on real, non-adversarial pushes.
+Tested on 2026-08-15 using the same method as the gitleaks test above
+(isolated clone, fake local bare remote, never touching real
+`origin`): a deliberately introduced ADR-number citation, in the exact
+backtick-wrapped four-digit format the hook's grep matches, appended
+to a copy of `docs/ARCHITECTURE.md`, was confirmed to block the push
+(non-zero exit, "failed to push some refs"), and a clean commit
+afterward was confirmed to still push successfully. This closes the
+gap — the gate is now demonstrated to actually catch a real violation,
+not just report clean by default. (This paragraph itself avoids
+writing that literal pattern, for the same reason.) (2) Whether the component-directory
+/ ARCHITECTURE.md pairing check's warning-only design (it can never
+block a push, by construction — see `.git/hooks/pre-push`) is
+deliberate was investigated and found undocumented: no ADR, BACKLOG
+entry, or commit message anywhere states a rationale for it. The
+hook's own inline comment ("If nothing status-relevant changed... this
+warning is safe to ignore") is the only related text on record, and it
+does not establish whether the soft-only design is intentional or an
+unaddressed gap. Not resolved — see "Owner decisions needed" below.
+
 ## Tasks
 
 ### P0
@@ -185,3 +210,13 @@ answer has architectural consequences.
   pilot — possibly the same mechanism described twice, or two
   separate layers. Not technically verified either way; needs a
   decision on whether this is worth resolving now or deferring.
+- Is the pre-push hook's component-directory/ARCHITECTURE.md pairing
+  check meant to stay warning-only (never blocking a push)
+  permanently, or was that a gap left from initial implementation that
+  should eventually become a hard fail? No rationale for the current
+  design is on record anywhere (checked: the hook itself, `docs/adr/`,
+  `docs/BACKLOG.md`, commit messages). A hard fail would also need to
+  handle the false-positive risk on legitimate non-architectural
+  changes the hook's own inline comment already acknowledges (e.g. a
+  bugfix to a component directory that doesn't change its
+  Status/Validation/Commit).
