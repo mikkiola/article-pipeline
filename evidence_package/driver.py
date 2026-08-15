@@ -63,7 +63,23 @@ def load_claims(pilot_run_path: str, limit: int = 10) -> list[dict]:
 
 
 def build_search_query(claim: dict) -> str:
-    return f"{claim['novelty']['value']} {claim['basis']['value']}"
+    """Builds the Linkup search query text for a Claim.
+
+    Additive only (context_layer/SPEC.md FR#3/invariant): the existing
+    novelty+basis text is never modified. When claim["context"] is
+    present and non-empty (tags/wiki_links from context_layer), its
+    terms are appended, space-joined, after the novelty+basis text.
+    When "context" is absent (every Claim before context_layer's
+    Milestone 2/3) or present but empty, output is byte-identical to
+    the pre-context_layer behavior.
+    """
+    query = f"{claim['novelty']['value']} {claim['basis']['value']}"
+    context = claim.get("context")
+    if context:
+        extra_terms = context.get("tags", []) + context.get("wiki_links", [])
+        if extra_terms:
+            query = f"{query} {' '.join(extra_terms)}"
+    return query
 
 
 def run_searches(
