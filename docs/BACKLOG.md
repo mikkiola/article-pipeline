@@ -156,6 +156,12 @@ other for "which to do first."
       without going through this function, would silently break the
       invariant with nothing in the codebase to catch it — no test
       suite exists anywhere in this repo.
+- [ ] Add mechanical detection/prevention of modifications to accepted
+      ADR files in docs/adr/ — the rule "an accepted ADR is never
+      edited after acceptance" exists in docs/CONSTITUTION.md, but
+      nothing currently checks for a violation of it. No design
+      proposed yet — this item is registration of the gap, not a
+      solution.
 
 ## Owner decisions needed
 
