@@ -76,7 +76,7 @@ Rubric Nature Question in Section 5 — these are option labels A/B, not
   of a query effect. It does not by itself speak to the causal
   question in Section 1.
 
-## 5. Assessment rubric — OPEN
+## 5. Assessment rubric — Rubric Nature Question RESOLVED, rubric content still OPEN
 
 **Rubric Nature Question** (kept distinct from the Option A/B choice
 in Section 4 to avoid confusing the two): should the experimental
@@ -88,10 +88,45 @@ rubric be —
 (ii) a separate experimental scoring layer, distinct from the
      production `verified` criterion?
 
-This question is **not resolved** in this draft. No rubric content,
-scoring scale, or pass/fail line is proposed here. Whichever option is
-eventually chosen, the production Evidence Package `verified`
-criterion must not be modified as part of this experiment (Section 8).
+**Resolved in favor of (ii), a separate experimental scoring layer.**
+
+**FINDING (closes the question):** a read-only audit of `SPEC.md`,
+`context_layer/SPEC.md`, and `evidence_package/write_evidence.py`
+found no formalized content-level rule anywhere in this project
+defining what makes a source `verified` — only a four-value status
+enum, with assignment happening entirely through interactive
+judgment (`write_evidence.py` performs no content validation beyond
+checking `status` is one of the four allowed strings). Both `SPEC.md`
+and `context_layer/SPEC.md` explicitly and separately defer any
+change to the `verified` criterion as future, out-of-scope work.
+Therefore option (i) is not achievable as stated — there is no
+existing content-level criterion to operationalize, only an enum plus
+interactive practice. This finding, not a preference, is what
+resolves the question in favor of (ii).
+
+**SEPARATE CAUTION** (does not bear on the (i)/(ii) choice, applies to
+whichever option had been chosen): the only concretely documented
+precedent for how `verified` has been judged in practice is the
+single `_04` Claim case from ADR-0029 (AdIndex.ru accepted after
+full-page reading and finding topical/causal support; begemot.ai
+rejected as an AI-generated source, not a human expert/researcher).
+Two observed factors from one case are a thin evidentiary base for
+designing a full rubric — this is a caution about the difficulty and
+care needed when the rubric is actually written (a later, separate
+step), not evidence relevant to the (i)/(ii) choice itself.
+
+Production Evidence Package's `verified` criterion is **not** being
+changed, redefined, or improved by this resolution. The experimental
+rubric is a new, separate measurement instrument for testing the
+causal hypothesis in Section 1 only — it has no effect on production
+behavior.
+
+The **content** of the rubric (the scale, criteria, pass/fail line) is
+**not** written in this edit and remains a separate, future
+architectural step, deliberately not combined with this resolution.
+Whichever option had been chosen, the production Evidence Package
+`verified` criterion must not be modified as part of this experiment
+(Section 8).
 
 ## 6. Control-run re-scoring and Immutable Lineage
 
@@ -129,13 +164,11 @@ Consolidated from Sections 4, 5, and 7 — a single entry point for the
 next session to see everything unresolved without reading the whole
 file:
 
-- **Rubric Nature Question (Section 5)**: should the experimental
-  rubric be (i) an operationalization of the existing `verified`
-  criterion, or (ii) a separate experimental scoring layer? Not
-  resolved.
 - **Rubric content (Section 5)**: no actual rubric — scale, criteria,
-  or pass/fail line — has been written yet, independent of how the
-  Rubric Nature Question resolves.
+  or pass/fail line — has been written yet. Section 5's caution
+  applies: the only concretely documented precedent is a single
+  Claim case (ADR-0029's `_04`), a thin evidentiary base for
+  designing a full rubric.
 - **Structural option (Section 4)**: applying the same rubric to
   both control and treatment sets is the current preference, but is
   explicitly noted as not yet finally decided.
