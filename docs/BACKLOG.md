@@ -98,11 +98,11 @@ unaddressed gap. Not resolved — see "Owner decisions needed" below.
       held constant has run against the same or an equivalent Claim
       set, and its result — confirms, refutes, or remains inconclusive
       — is recorded as its own ADR.
-- [ ] Fix `SPEC.md`: it still describes a Bitwarden CLI call for
+- [x] Fix `SPEC.md`: it still describes a Bitwarden CLI call for
       reading `LINKUP_API_KEY` in four places. The actual code
       (`evidence_package/search_backend.py`) reads only from the
       environment, no Bitwarden CLI call anywhere. Update the text to
-      match.
+      match. Done in `e98a119`.
 
 ### P1
 
