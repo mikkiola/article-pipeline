@@ -50,31 +50,52 @@ that pick is not yet a decision record.
 
 ## 4. Experimental design structure
 
-Structural options for applying the chosen rubric (separate from the
-Rubric Nature Question in Section 5 — these are option labels A/B, not
-(i)/(ii)):
+**Resolved: a paired design on the same Claim.** Each Claim is run
+through both the control query (novelty+basis) and the treatment
+query (novelty+basis+context) under identical search procedure and
+identical search budget. The comparison is the within-Claim
+difference (Δ) between the two resulting evidence sets, not a
+between-group comparison across two separately-run sets of Claims.
 
-- **Structural option — current preference, not yet finally decided**:
-  apply the same rubric to both the control and treatment result sets.
-- Do not use the historical interactive assessment (the original
-  2026-08-13 run's assessment) as the control measurement if doing so
-  would create asymmetric assessment methodology between control and
-  treatment — i.e., the control side must be scored the same way the
-  treatment side is scored, not read off the historical run's
-  recorded `status` values.
-- Re-scoring the historical control under the new rubric is a **new
-  experimental result**, distinct from and not a substitute for the
-  historical interactive assessment recorded in
-  `evidence_run_20260813T114717.json`.
-- Re-scoring must never modify or overwrite the historical
-  `evidence_run_20260813T114717.json` or its recorded `status` values.
-  Immutable Lineage applies (see Section 6).
-- A retrospective re-scoring may produce a different status from the
-  historical interactive assessment for the same Claim. That
-  difference is, by construction, an **assessment-methodology
-  effect** (old interactive pass vs. new fixed rubric), not evidence
-  of a query effect. It does not by itself speak to the causal
-  question in Section 1.
+This resolves the earlier open question about using the historical
+run as control: the historical interactively-assessed run
+(`evidence_run_20260813T114717.json`) is **not** used as control.
+Instead, a **new** control run is produced in the same experimental
+session, under the same conditions, as the treatment run. This
+removes a specific risk: if the historical run and a new treatment run
+were compared instead, any difference between them could reflect
+changes in the search backend, ranking, page availability, code,
+environment, or evaluator over the intervening time, not just the
+query. This is the specific mechanism removed by the paired design —
+not a general claim that all such concerns are eliminated.
+
+Both the control and treatment evidence sets, for a given Claim, are
+scored using the same frozen measurement instrument. "Frozen" here is
+a **structural** requirement only — it means the instrument does not
+change between scoring the control and treatment sides of a pair. It
+does **not** mean the instrument's content (the scale, criteria, or
+pass/fail line) has been decided; that remains open per Section 5,
+unchanged by this resolution.
+
+What remains genuinely **OPEN** and is **not** resolved by this
+structural decision:
+
+- the content of the experimental score/rubric (Section 5);
+- whether blind assessment or randomized order are needed as
+  additional protections against evaluator/order bias — this is an
+  empirical question about whether such bias is plausible here, not
+  yet decided;
+- whether a pairwise comparison is used as an additional measurement
+  alongside the score, or the score alone suffices;
+- how calibration of the measurement instrument would be done without
+  leaking information from the specific control/treatment data being
+  compared.
+
+This paired design fixes the experimental **unit** (one Claim,
+compared to itself under two query conditions) and removes the earlier
+asymmetry concern, but does **not** by itself define what the score
+measures or how strong the causal claim is — those remain separate,
+later decisions.
 
 ## 5. Assessment rubric — Rubric Nature Question RESOLVED, rubric content still OPEN
 
@@ -169,9 +190,15 @@ file:
   applies: the only concretely documented precedent is a single
   Claim case (ADR-0029's `_04`), a thin evidentiary base for
   designing a full rubric.
-- **Structural option (Section 4)**: applying the same rubric to
-  both control and treatment sets is the current preference, but is
-  explicitly noted as not yet finally decided.
+- **Blind assessment / randomized order (Section 4)**: whether either
+  is needed as an additional protection against evaluator/order bias
+  is an open empirical question, not yet decided.
+- **Pairwise comparison as an additional measurement (Section 4)**:
+  whether a pairwise comparison is used alongside the score, or the
+  score alone suffices, is not decided.
+- **Calibration approach (Section 4)**: how the measurement instrument
+  would be calibrated without leaking information from the specific
+  control/treatment data being compared is not decided.
 - **Outcome interpretation (Section 7)**: what counts as "confirms,"
   "refutes," or "inconclusive" for the causal question is not decided.
 
