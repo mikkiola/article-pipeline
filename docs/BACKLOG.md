@@ -126,6 +126,20 @@ unaddressed gap. Not resolved — see "Owner decisions needed" below.
       Drift/`brain.git` project for a filename-length guard) would
       make the hook travel with the repo instead of disappearing on a
       fresh clone.
+- [ ] Investigate atom tag quality / disambiguation: the D-025 paired
+      experiment (context_layer/experiment_20260816_D025_paired.json,
+      Claim `20260811T165911_03`) found a concrete failure mechanism —
+      a tag ("доверие") that means interpersonal/epistemic trust in
+      the atom's own sense got matched by search-query enrichment into
+      an unrelated IT-security sense (trust certification standards,
+      GOST/ISO 15408), causing a topic-drift regression (Δ = -1) in an
+      otherwise-positive-leaning experiment. This suggests atom tag
+      quality — specifically disambiguating polysemous tags — may be
+      a contributing factor upstream of Claim Extraction and
+      context_layer, not something either of those components can fix
+      on their own. Not started; explicitly deferred until the D-025
+      paired experiment (both language runs) is fully synthesized and
+      closed as an ADR — not to be worked in parallel with it.
 
 ### P2
 
