@@ -214,18 +214,21 @@ causal-structure layer", зависящая от Claim Extraction). Не
 
 ## Milestones
 
-1. [ ] `context_layer/enrich.py`: `extract_context()` +
+1. [x] `context_layer/enrich.py`: `extract_context()` +
        `backfill_pilot_run()`, без изменений в `evidence_package/`.
-2. [ ] Backfill всех 4 существующих `pilot_run_*.json` → 4 новых файла
+       Done in `792feb0`.
+2. [x] Backfill всех 4 существующих `pilot_run_*.json` → 4 новых файла
        с полем `context` (Immutable Lineage: новые файлы, старые не
-       трогаются).
-3. [ ] `evidence_package/driver.py`: аддитивное изменение
+       трогаются). Done in `007a429`.
+3. [x] `evidence_package/driver.py`: аддитивное изменение
        `build_search_query()`, с обратной совместимостью для записей
-       без `context`.
-4. [ ] Повторный прогон Evidence Package на 5 backfilled Claims из
-       исходного пилота, сравнение с результатом 2026-08-13.
-5. [ ] ADR, фиксирующий исход шага 4 (подтверждение или опровержение
-       гипотезы о причине "5/5 unverifiable").
+       без `context`. Done in `bb549ee`.
+4. [x] Повторный прогон Evidence Package на 5 backfilled Claims из
+       исходного пилота, сравнение с результатом 2026-08-13. Done in
+       `2b7c8a6`.
+5. [x] ADR, фиксирующий исход шага 4 (подтверждение или опровержение
+       гипотезы о причине "5/5 unverifiable"). Done in `b32e883`/
+       `d2050de` (ADR-0029).
 6. [ ] (Отдельная, будущая сессия) `claim_extraction/
        build_pilot_output.py`: добавить `context` в `SCHEMA_FIELDS`
        для новых прогонов — не блокирует шаги 1-5.
