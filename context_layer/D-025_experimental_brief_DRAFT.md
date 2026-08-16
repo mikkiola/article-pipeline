@@ -246,9 +246,9 @@ file:
   minimum Δ counts as a "meaningful" or "substantive" improvement, as
   opposed to noise in the scoring instrument, is not decided — it
   depends on the rubric's content and scale (Section 5), which is
-  itself still open.
-- **Outcome interpretation (Section 7)**: what counts as "confirms,"
-  "refutes," or "inconclusive" for the causal question is not decided.
+  itself still open. This is the only unresolved part of Section 7's
+  outcome interpretation; the three-outcome structure itself
+  (positive/no clear/negative signal) is already resolved.
 
 ## 10. Sources
 
