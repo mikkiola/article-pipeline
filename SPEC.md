@@ -62,18 +62,16 @@ Strategy Layer и остальной конвейер под это.
   экспортирует одну функцию `search(query: str) -> list[SearchResult]`. Вся
   специфика Linkup инкапсулирована внутри этого файла; замена вендора в
   будущем — переписать только его, не драйвер-скрипт и не схему Evidence.
-- **LINKUP_API_KEY** хранится в Bitwarden, запись
-  `linkup-api-key-article-pipeline`. Скрипт получает ключ вызовом:
-  ```
-  bw get password linkup-api-key-article-pipeline --session $BW_SESSION
-  ```
-  Сессию (`bw login` / `bw unlock`, экспорт `BW_SESSION`) Ольга открывает
-  вручную перед запуском — скрипт никогда не хранит и не логирует сам
-  ключ. Не `.env`, не macOS Keychain (Keychain в этом проекте зарезервирован
-  под ключи самого Bitwarden, а не под рабочие токены — см. CONSTITUTION_ap).
-- Bitwarden CLI `bitwarden-cli` (2026.7.0) установлен через Homebrew в этой
-  сессии; авторизацию (`bw login`) выполняет Ольга вручную — вне периметра
-  задач, которые может делать Claude Code без ввода мастер-пароля/2FA.
+- **LINKUP_API_KEY** читается `search_backend.py` исключительно из
+  переменной окружения (`os.environ["LINKUP_API_KEY"]`). Bitwarden CLI не
+  вызывается нигде в рабочем коде — ни напрямую, ни как fallback (ADR-0024).
+  Bitwarden — один из способов *локально* положить значение в переменную
+  окружения перед запуском (`bw get password
+  linkup-api-key-article-pipeline --session $BW_SESSION`, сессию Ольга
+  открывает вручную); в CI тем же путём подойдёт masked-переменная — без
+  изменений кода. Скрипт никогда не хранит и не логирует сам ключ. Не
+  `.env`, не macOS Keychain (Keychain в этом проекте зарезервирован под
+  ключи самого Bitwarden, а не под рабочие токены — см. CONSTITUTION_ap).
 
 ## Расположение кода
 
@@ -209,12 +207,14 @@ Claims со `status: "claim"` меньше 5 — это фиксируется �
 
 ## Security Considerations
 
-Единственный новый секрет в этом пилоте — `LINKUP_API_KEY`, хранится
-исключительно в Bitwarden (запись `linkup-api-key-article-pipeline`), не в
-`.env`, не в системной связке ключей macOS (она зарезервирована под ключи
-самого Bitwarden). Скрипт получает ключ через `bw CLI` с явной,
-Ольгой открытой сессией (`$BW_SESSION`), не хранит его на диске и не
-логирует.
+Единственный новый секрет в этом пилоте — `LINKUP_API_KEY`. Скрипт
+(`search_backend.py`) читает его исключительно из переменной окружения;
+Bitwarden CLI не используется в рабочем коде ни в каком виде — хранение
+секрета (Bitwarden) отделено от механизма его получения в рантайме
+(ADR-0024). Bitwarden — способ локально положить значение в переменную
+окружения перед запуском, не в `.env` и не в системной связке ключей macOS
+(она зарезервирована под ключи самого Bitwarden). Скрипт не хранит ключ на
+диске и не логирует его.
 
 Это первый компонент конвейера с реальным исходящим сетевым вызовом на
 платный сторонний API (Linkup, ~$20/мес) — в отличие от Claim Extraction,
@@ -239,8 +239,11 @@ Git-операции на запись — только через Claude Code, 
 ## Milestones
 
 1. [ ] Установить `linkup-sdk` (`pip install linkup-sdk`); подтвердить, что
-       запись `linkup-api-key-article-pipeline` в Bitwarden создана и
-       читается через `bw get password ... --session $BW_SESSION`.
+       `LINKUP_API_KEY` доступен в переменной окружения (например, через
+       `bw get password linkup-api-key-article-pipeline --session
+       $BW_SESSION` локально) —
+       `test -n "$LINKUP_API_KEY" && echo "LINKUP_API_KEY is set" || echo
+       "LINKUP_API_KEY is not set"`, без вывода самого значения.
 2. [ ] Написать `search_backend.py` (swappable interface, реализация на
        Linkup).
 3. [ ] Написать driver-скрипт: читает Claims из последнего `pilot_run_*.json`,
