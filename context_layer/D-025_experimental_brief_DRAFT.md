@@ -160,13 +160,56 @@ project's Immutable Lineage principle (the same principle governing
 project). The exact form of the new artifact (naming, location,
 schema) is not decided by this draft.
 
-## 7. Outcome interpretation — OPEN
+## 7. Outcome interpretation — structure resolved, significance threshold still OPEN
 
-What observations would constitute "confirms," "refutes," or
-"inconclusive" for the causal question in Section 1 is not decided
-here. No numerical thresholds, source-count requirements, AI-source
-rules, or verification criteria are proposed in this draft. This is
-left as an open decision for a future session or ADR.
+**Core principle:** interpretation is based on the paired difference
+(Δ = Treatment score − Control score) for each Claim, averaged across
+all Claims in the experiment — **not** on a simple count or majority
+of how many Claims improved. Concrete illustration of why: two
+outcomes can both show "3 of 5 Claims improved" while having very
+different total magnitude (e.g., small +1 improvements in 3 Claims vs.
+one large +4 improvement in 3 Claims) — a majority-count rule alone
+would treat these as equivalent when they are not. The mean Δ captures
+magnitude; a count of improved Claims does not.
+
+Three interpretive outcomes replace the plain confirms/refutes/
+inconclusive language from Section 1 with an operational structure:
+
+- **Positive signal**: mean Δ is positive and the improvement is
+  substantively meaningful (not just barely above zero) — the exact
+  numeric threshold for "meaningful" is **not** decided in this draft
+  (see the open item below). No requirement that every single Claim
+  individually improves.
+- **No clear signal**: mean Δ is close to zero, or the pattern across
+  Claims is mixed with no consistent direction.
+- **Negative signal**: mean Δ is negative, or a consistent, repeated
+  failure pattern is observed across multiple Claims (not just a
+  single outlier).
+
+A single Claim showing a worse treatment score than control does
+**not** by itself count as a failure of the hypothesis, unless "zero
+regressions allowed" is explicitly declared as a required safety
+condition in advance — which this draft does **not** declare. Any
+individual regression must still be recorded and looked at separately
+(is it random retrieval noise, or a systematic failure mode affecting
+a specific type of Claim?) rather than averaged away and ignored.
+
+On "No clear signal" / an ambiguous result: this does **not**
+automatically mean "refuted," and it does **not** automatically
+trigger a bigger follow-up experiment. The first step is to examine
+why the result was ambiguous (was a negative Claim random noise or a
+systematic pattern? are the improvements actually attributable to the
+context enrichment? are the Δ magnitudes practically meaningful or
+within noise range of the scoring instrument? does one single Claim
+dominate the average?). Only after that examination, if uncertainty
+remains, would a larger-sample follow-up be considered — this is not
+decided in advance as the automatic next step.
+
+**OPEN**: what minimum Δ magnitude counts as a "meaningful" or
+"substantive" improvement (as opposed to noise in the scoring
+instrument) is not decided by this draft. This depends on the content
+of the rubric itself (Section 5, still open) and cannot be fixed
+before the rubric's scale is defined.
 
 ## 8. Fixed conditions / inherited constraints
 
@@ -199,6 +242,11 @@ file:
 - **Calibration approach (Section 4)**: how the measurement instrument
   would be calibrated without leaking information from the specific
   control/treatment data being compared is not decided.
+- **Δ magnitude / significance threshold (Sections 5 and 7)**: what
+  minimum Δ counts as a "meaningful" or "substantive" improvement, as
+  opposed to noise in the scoring instrument, is not decided — it
+  depends on the rubric's content and scale (Section 5), which is
+  itself still open.
 - **Outcome interpretation (Section 7)**: what counts as "confirms,"
   "refutes," or "inconclusive" for the causal question is not decided.
 
