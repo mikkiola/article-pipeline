@@ -1,0 +1,130 @@
+{
+  "run_id": "20260816_D025_paired",
+  "created_at": "2026-08-16T05:44:33+00:00",
+  "design": "paired, per context_layer/D-025_experimental_brief_DRAFT.md",
+  "rubric": "0/1/2 scale per DRAFT Section 5",
+  "runs": {
+    "russian": {
+      "requests_used": 10,
+      "claims": [
+        {
+          "claim_id": "20260811T165911_01",
+          "control_query": "Разнообразия агентов недостаточно для генерации нового — нужны несовместимые/конфликтующие стимулы (функции вознаграждения); напряжение между агентами с разными стимулами — не сбой, а механизм генерации нового. Атом обосновывает тезис внутренней логикой и собственным иллюстративным примером (пять ролей с несовместимыми метриками вознаграждения) — пример придуман самим атомом как иллюстрация, не как внешне проверяемый случай, поэтому это не внешняя фактическая опора.",
+          "treatment_query": "Разнообразия агентов недостаточно для генерации нового — нужны несовместимые/конфликтующие стимулы (функции вознаграждения); напряжение между агентами с разными стимулами — не сбой, а механизм генерации нового. Атом обосновывает тезис внутренней логикой и собственным иллюстративным примером (пять ролей с несовместимыми метриками вознаграждения) — пример придуман самим атомом как иллюстрация, не как внешне проверяемый случай, поэтому это не внешняя фактическая опора. агенты стимулы архитектура эмерджентность Координация это пять обязательных элементов Сильная система имеет два слоя - правила и механизм изменения правил MOC_Агентная_ОС MOC_Граф_доверия Качество мышления определяется числом удерживаемых противоречий",
+          "control_score": 0,
+          "treatment_score": 1,
+          "delta": 1,
+          "control_note": "No topically relevant source in top 20. Closest candidate (lesswrong.ru, 'Согласование ИИ') checked via full-page read: discusses single-agent AI alignment / reward-function modification, not multi-agent incompatible-incentive tension as a novelty mechanism — not credited.",
+          "treatment_note": "Best candidate: proza.ru essay by named human author (Vladimir Gavruk) drawing an analogical connection via GANs (two networks with opposing objectives producing emergent capability). Self-published essay platform, not an expert/research venue; connection is analogical, not direct — weak support. A second candidate (carbonfay.ru) was checked and found to frame incentive conflict as a problem to control, not a generative mechanism — rejected."
+        },
+        {
+          "claim_id": "20260811T165911_02",
+          "control_query": "Расширение познавательных/технологических возможностей не сокращает пространство неизвестного, а увеличивает его быстрее, чем пространство известного — вопреки интуиции, что прогресс приближает к «завершению картины мира». Атом обосновывает инвариант конкретными историческими примерами — телескоп, квантовая механика, генетика, компьютеры — каждый из которых, по истории науки, не закрыл вопросы, а породил новые области исследования; это апелляция к внешне проверяемым историческим фактам о развитии науки, а не только к внутренней логике атома.",
+          "treatment_query": "Расширение познавательных/технологических возможностей не сокращает пространство неизвестного, а увеличивает его быстрее, чем пространство известного — вопреки интуиции, что прогресс приближает к «завершению картины мира». Атом обосновывает инвариант конкретными историческими примерами — телескоп, квантовая механика, генетика, компьютеры — каждый из которых, по истории науки, не закрыл вопросы, а породил новые области исследования; это апелляция к внешне проверяемым историческим фактам о развитии науки, а не только к внутренней логике атома. мышление познание инвариант Автоматизация смещает уровень сложности, а не устраняет ее После автоматизации бутылочное горлышко системы не данные и не модели, а когнитивные возможности человека принимающего решение",
+          "control_score": 1,
+          "treatment_score": 1,
+          "delta": 0,
+          "control_note": "Same source found on both sides: Andrey Shkolnikov (zavtra.ru). Confirmed via full-page read: directly argues progress reveals unknowns faster than it resolves them, cites genetics as an example (matching the atom's own example set). No established researcher credentials — opinion/blog piece — weak support.",
+          "treatment_note": "Same article as control (present in both result sets, same score). A treatment-only candidate (Fomenko, an academic-journal PDF, chsu.kubsu.ru) looked promising by title/snippet but its content could not be verified — PDF rendering unavailable in this environment — not credited either way."
+        },
+        {
+          "claim_id": "20260811T165911_03",
+          "control_query": "Опасность — не в том, что данные устарели, а в отсутствии сигнала/механизма, который бы это обнаружил; «живучесть» системы определяется способностью замечать, когда знания перестают быть верными, а не тем, что она хранит верные знания. Атом обосновывает тезис исключительно внутренней логикой (знание нуждается не только в хранении, но и в механизме проверки актуальности) — без внешних данных, источников или примеров.",
+          "treatment_query": "Опасность — не в том, что данные устарели, а в отсутствии сигнала/механизма, который бы это обнаружил; «живучесть» системы определяется способностью замечать, когда знания перестают быть верными, а не тем, что она хранит верные знания. Атом обосновывает тезис исключительно внутренней логикой (знание нуждается не только в хранении, но и в механизме проверки актуальности) — без внешних данных, источников или примеров. одс граф_доверия граф доверие MOC_ОДС Граф это операционная память системы а не её визуализация Универсальный протокол доверия - пять вопросов к любому утверждению Граф живёт только если обновляется по триггерам а не вручную Граф знаний без истории версий не восстанавливается после деградации",
+          "control_score": 1,
+          "treatment_score": 0,
+          "delta": -1,
+          "control_note": "Habr article on preventing knowledge-base staleness. Confirmed via full-page read: genuinely engages detection-mechanism reasoning (validation scripts surfacing staleness), though framing differs somewhat from the atom's exact thesis. Author is an unverified Habr handle (VsBirdEye), not an established expert — weak support.",
+          "treatment_note": "Complete topic drift: all 20 results are about IT security trust-certification standards (ОУД / GOST/ISO 15408, PKI) — none topically relevant to the atom's actual thesis (knowledge-staleness detection). Mechanism: the tag 'доверие' (interpersonal/epistemic trust in the atom's own sense) was matched into the IT-security 'trust levels' domain by the search engine. No source found — 0."
+        },
+        {
+          "claim_id": "20260811T165911_04",
+          "control_query": "Системы наблюдения за обществом подвержены эффекту наблюдателя — сам акт измерения (например, настроения) меняет то, что измеряется; задача сводится к минимизации этого искажения, а не к его полному устранению. Атом обосновывает тезис отсылкой к общему явлению «эффект наблюдателя» (по аналогии с одноимённым феноменом), но не приводит конкретных проверяемых данных или примеров измерения — только называет явление, не подтверждает его внешними данными в тексте.",
+          "treatment_query": "Системы наблюдения за обществом подвержены эффекту наблюдателя — сам акт измерения (например, настроения) меняет то, что измеряется; задача сводится к минимизации этого искажения, а не к его полному устранению. Атом обосновывает тезис отсылкой к общему явлению «эффект наблюдателя» (по аналогии с одноимённым феноменом), но не приводит конкретных проверяемых данных или примеров измерения — только называет явление, не подтверждает его внешними данными в тексте. доверие наблюдение системы эффект-наблюдателя Проблема демократии не в механизме голосования, а в отсутствии измерения доверия Репутация агента вычисляется автоматически, но арбитром остается реальность MOC_Граф_доверия Архив личной истории создаётся ради памяти, а расследование и сигнал резкой смены поведения — его побочный эффект Нейтральность это интерпретация, правила которой известны и одинаковы для всех",
+          "control_score": 2,
+          "treatment_score": 2,
+          "delta": 0,
+          "control_note": "AdIndex.ru, authored by Polina Kanysheva — named human expert, lead researcher in neurocognitive research at T1 Innotech's Client Experience Lab. Confirmed via full-page read: direct, on-topic support for the observer-effect thesis (minimize, not eliminate, distortion). Strong support.",
+          "treatment_note": "Same AdIndex.ru source present in the treatment result set too (position shifted, but still in top 20 despite the rest of the set drifting toward an election-observation cluster). Same score as control — reconfirms ADR-0029's finding that this source was discoverable under both conditions, independent of query enrichment."
+        },
+        {
+          "claim_id": "20260811T165911_05",
+          "control_query": "Архитектура управляема только тогда, когда заранее определяет не только переходы/продолжение работы, но и явные условия остановки/выхода из процессов — условия остановки такая же часть архитектуры, как цели, роли и правила взаимодействия. Атом обосновывает тезис исключительно внутренней логикой (система без явных критериев завершения процессов «перестаёт принимать решения и начинает просто продолжаться») — без внешних данных, источников или примеров.",
+          "treatment_query": "Архитектура управляема только тогда, когда заранее определяет не только переходы/продолжение работы, но и явные условия остановки/выхода из процессов — условия остановки такая же часть архитектуры, как цели, роли и правила взаимодействия. Атом обосновывает тезис исключительно внутренней логикой (система без явных критериев завершения процессов «перестаёт принимать решения и начинает просто продолжаться») — без внешних данных, источников или примеров. агентная_ОС мышление архитектура эксперимент MOC_Агентная_ОС Агентная система имеет три типа связей- информационные, доверительные, управляющие Эксперимент не спроектирован если его нельзя автоматически закрыть по метрикам Успех без системы выхода создаёт рабочее место с улучшенной зарплатой и ухудшенной ответственностью Координация это пять обязательных элементов",
+          "control_score": 0,
+          "treatment_score": 1,
+          "delta": 1,
+          "control_note": "No source in top 10 addresses the atom's meta-thesis (stop conditions as co-equal to goals/roles/rules). Results were about OS process-termination APIs or generic business-process architecture, neither matching.",
+          "treatment_note": "Carbonfay.ru article (multi-agent architecture). Confirmed via full-page read: mentions exit conditions only as a minor operational constraint on coordination ('coordination has limits: iteration counts, timeouts, early exit'), not as a core architectural principle equal to roles/contracts — indirect/analogical connection, weak support."
+        }
+      ],
+      "mean_delta": 0.2,
+      "interpretation": "no_clear_signal"
+    },
+    "english": {
+      "requests_used": 10,
+      "claims": [
+        {
+          "claim_id": "20260811T165911_01",
+          "control_query_en": "Diversity among agents alone is not enough to generate novelty — incompatible/conflicting incentives (reward functions) are needed; tension between agents with different incentives is not a malfunction but a mechanism for generating novelty. The atom justifies the thesis through internal logic and its own illustrative example (five roles with incompatible reward metrics) — the example is invented by the atom itself as an illustration, not as an externally verifiable case, so this is not external factual support.",
+          "treatment_query_en": "Diversity among agents alone is not enough to generate novelty — incompatible/conflicting incentives (reward functions) are needed; tension between agents with different incentives is not a malfunction but a mechanism for generating novelty. The atom justifies the thesis through internal logic and its own illustrative example (five roles with incompatible reward metrics) — the example is invented by the atom itself as an illustration, not as an externally verifiable case, so this is not external factual support. agents incentives architecture emergence Coordination is five mandatory elements A strong system has two layers - rules and a mechanism for changing rules MOC_Agentic_OS MOC_Trust_Graph Quality of thinking is determined by the number of contradictions held simultaneously",
+          "control_score": 2,
+          "treatment_score": 2,
+          "delta": 0,
+          "control_note": "Identical top-8 result set as treatment. Best source: 'Constructive Conflict-Driven Multi-Agent Reinforcement Learning for Strategic Diversity' (arXiv, University of Chinese Academy of Sciences researchers — Mai, Yin, Ni, Xu, Huang). Confirmed via full-page read: directly argues conflicting incentives generate strategy diversity in multi-agent systems. Strong, credible support.",
+          "treatment_note": "Same source, same score — treatment and control top-8 result sets were identical for this Claim; the appended context terms had no effect on ranking."
+        },
+        {
+          "claim_id": "20260811T165911_02",
+          "control_query_en": "Expanding cognitive/technological capabilities does not shrink the space of the unknown but grows it faster than the space of the known — contrary to the intuition that progress brings us closer to \"completing the picture of the world.\" The atom grounds this invariant in concrete historical examples — the telescope, quantum mechanics, genetics, computers — each of which, according to the history of science, did not close questions but spawned new fields of research; this is an appeal to externally verifiable historical facts about the development of science, not just to the atom's internal logic.",
+          "treatment_query_en": "Expanding cognitive/technological capabilities does not shrink the space of the unknown but grows it faster than the space of the known — contrary to the intuition that progress brings us closer to \"completing the picture of the world.\" The atom grounds this invariant in concrete historical examples — the telescope, quantum mechanics, genetics, computers — each of which, according to the history of science, did not close questions but spawned new fields of research; this is an appeal to externally verifiable historical facts about the development of science, not just to the atom's internal logic. thinking cognition invariant Automation shifts the level of complexity, it does not eliminate it After automation, the system's bottleneck is neither data nor models, but the cognitive capacity of the human decision-maker",
+          "control_score": 0,
+          "treatment_score": 1,
+          "delta": 1,
+          "control_note": "No on-thesis source in top 8 — generic 'history of science' content (space exploration overviews, science-history listicles), none making the atom's specific inversion-of-intuition argument.",
+          "treatment_note": "Forbes contributor piece (Chuck Brooks, cybersecurity thought leader — not domain-matched expert for this epistemological claim). Confirmed via full-page read: makes an implicit, indirect version of the argument (progress creates novel risks alongside solutions) but does not cite historical examples and does not explicitly argue which grows faster — weak/indirect support. A dead-link candidate (Medium, 'Knowledge — like an expanding void') was checked and found to be a 404 — not credited."
+        },
+        {
+          "claim_id": "20260811T165911_03",
+          "control_query_en": "The danger is not that the data has become outdated, but the absence of a signal/mechanism that would detect this; a system's \"resilience\" is determined by its ability to notice when knowledge stops being true, not by the fact that it stores true knowledge. The atom justifies the thesis purely through internal logic (knowledge needs not only storage but also a mechanism for checking its relevance) — without external data, sources, or examples.",
+          "treatment_query_en": "The danger is not that the data has become outdated, but the absence of a signal/mechanism that would detect this; a system's \"resilience\" is determined by its ability to notice when knowledge stops being true, not by the fact that it stores true knowledge. The atom justifies the thesis purely through internal logic (knowledge needs not only storage but also a mechanism for checking its relevance) — without external data, sources, or examples. ODS trust_graph graph trust MOC_ODS The graph is the system's operational memory, not its visualization Universal trust protocol - five questions for any statement The graph is alive only if it updates by triggers, not manually A knowledge graph without version history cannot recover after degradation",
+          "control_score": 2,
+          "treatment_score": 0,
+          "delta": -2,
+          "control_note": "Donald Firesmith, named researcher at Carnegie Mellon University's Software Engineering Institute. Confirmed via full-page read: directly argues resilience requires detection mechanisms, not just prevention/correct storage — matches the atom's thesis closely. Strong, credible support.",
+          "treatment_note": "Complete topic drift into trust/financial/legal content (wills, estates, security-model 'trust' definitions) — none topically relevant. Same 'доверие'/'trust' collision mechanism as the Russian run, more severe here: English 'trust' pulled toward finance/law/estate-planning content rather than IT-security certification. No source found — 0."
+        },
+        {
+          "claim_id": "20260811T165911_04",
+          "control_query_en": "Systems that observe society are subject to the observer effect — the very act of measurement (for example, of sentiment) changes what is being measured; the task reduces to minimizing this distortion, not eliminating it entirely. The atom justifies the thesis by referencing the general phenomenon of the \"observer effect\" (by analogy with the eponymous phenomenon), but does not provide concrete verifiable data or measurement examples — it only names the phenomenon without confirming it with external data in the text.",
+          "treatment_query_en": "Systems that observe society are subject to the observer effect — the very act of measurement (for example, of sentiment) changes what is being measured; the task reduces to minimizing this distortion, not eliminating it entirely. The atom justifies the thesis by referencing the general phenomenon of the \"observer effect\" (by analogy with the eponymous phenomenon), but does not provide concrete verifiable data or measurement examples — it only names the phenomenon without confirming it with external data in the text. trust observation systems observer-effect The problem of democracy is not the voting mechanism, but the absence of trust measurement An agent's reputation is calculated automatically, but reality remains the arbiter MOC_Trust_Graph A personal history archive is created for the sake of memory, while investigation and signaling of a sharp behavior change are its side effect Neutrality is an interpretation whose rules are known and the same for everyone",
+          "control_score": 2,
+          "treatment_score": 0,
+          "delta": -2,
+          "control_note": "CHI 2024 paper (Koustuv Saha, Pranshu Gupta, Gloria Mark, Emre Kiciman, Munmun De Choudhury — Honorable Mention), confirmed via full-page read (Microsoft Research publication page): directly on-thesis, observer effect in social-media monitoring, explicitly about correcting rather than eliminating the distortion. Strong, peer-reviewed support.",
+          "treatment_note": "Drifted into political/institutional trust and reputation-systems research (voter subjectivity, social trust measurement) — same tag-collision mechanism as _03, unrelated to the observer-effect thesis. No source found — 0."
+        },
+        {
+          "claim_id": "20260811T165911_05",
+          "control_query_en": "Architecture is manageable only when it defines in advance not only transitions/continuation of work but also explicit stopping/exit conditions for processes — stopping conditions are as much a part of architecture as goals, roles, and interaction rules. The atom justifies the thesis purely through internal logic (a system without explicit process-termination criteria \"stops making decisions and just continues\") — without external data, sources, or examples.",
+          "treatment_query_en": "Architecture is manageable only when it defines in advance not only transitions/continuation of work but also explicit stopping/exit conditions for processes — stopping conditions are as much a part of architecture as goals, roles, and interaction rules. The atom justifies the thesis purely through internal logic (a system without explicit process-termination criteria \"stops making decisions and just continues\") — without external data, sources, or examples. agentic_OS thinking architecture experiment MOC_Agentic_OS An agentic system has three types of connections - informational, trust-based, and control An experiment is not properly designed if it cannot be automatically closed by metrics Success without an exit system creates a job with improved pay and worsened accountability Coordination is five mandatory elements",
+          "control_score": 1,
+          "treatment_score": 0,
+          "delta": -1,
+          "control_note": "SageFlow glossary entry on stopping conditions. Confirmed via full-page read: topically relevant (agent stopping conditions) but frames them as safety guardrails, not a co-equal architectural principle to goals/roles/rules as the atom claims — indirect/analogical, weak support.",
+          "treatment_note": "Drifted into 'Agentic OS' commercial product-marketing content (MindStudio blog: file structure, business-brain setup, component lists) — unrelated to the atom's stop-condition thesis. No source found — 0."
+        }
+      ],
+      "mean_delta": -0.8,
+      "interpretation": "negative_signal"
+    }
+  },
+  "cross_run_finding": {
+    "mechanism": "polysemous tag collision — 'доверие'/'trust' pulled the query into an unrelated domain (IT-security certification in Russian; finance/law/security in English, more severe) for Claims _03 and _04 in both language runs",
+    "affected_claims": [
+      "20260811T165911_03",
+      "20260811T165911_04"
+    ],
+    "note": "This is the same identifiable failure mechanism in both language runs, not two unrelated problems — see docs/BACKLOG.md's atom-tag-disambiguation item."
+  }
+}
