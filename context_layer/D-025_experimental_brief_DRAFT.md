@@ -81,12 +81,16 @@ What remains genuinely **OPEN** and is **not** resolved by this
 structural decision:
 
 - the content of the experimental score/rubric (Section 5);
-- whether blind assessment or randomized order are needed as
-  additional protections against evaluator/order bias — this is an
-  empirical question about whether such bias is plausible here, not
-  yet decided;
-- whether a pairwise comparison is used as an additional measurement
-  alongside the score, or the score alone suffices;
+- **Blind assessment / randomized order**: RESOLVED — not used. The
+  evaluator (Claude Code) knows which result set is control and which
+  is treatment while scoring. Instead of blinding, post-hoc analytics
+  will be collected after the experiment to check whether scores show
+  a systematic bias pattern favoring treatment beyond what the Δ
+  values themselves would suggest — this is a lighter-weight
+  safeguard than blinding, chosen for this pilot's small scale.
+- **Pairwise comparison as an additional measurement**: RESOLVED —
+  not used. The 3-level score (Section 5) alone is sufficient; no
+  additional "which is better" comparison is collected.
 - how calibration of the measurement instrument would be done without
   leaking information from the specific control/treatment data being
   compared.
@@ -97,7 +101,7 @@ asymmetry concern, but does **not** by itself define what the score
 measures or how strong the causal claim is — those remain separate,
 later decisions.
 
-## 5. Assessment rubric — Rubric Nature Question RESOLVED, rubric content still OPEN
+## 5. Assessment rubric — Rubric Nature Question RESOLVED, rubric content RESOLVED
 
 **Rubric Nature Question** (kept distinct from the Option A/B choice
 in Section 4 to avoid confusing the two): should the experimental
@@ -149,6 +153,36 @@ Whichever option had been chosen, the production Evidence Package
 `verified` criterion must not be modified as part of this experiment
 (Section 8).
 
+**Rubric content:**
+
+A 3-level score, applied identically to each Claim's control and
+treatment evidence:
+
+- **Strong support (2)**: the source is a human expert/researcher on
+  the topic (not an AI-generated source), contains direct topical/
+  causal support for the Claim, confirmed by reading the full source
+  page (not just the snippet).
+- **Weak/partial support (1)**: the source is topically relevant but
+  either (a) is AI-generated or has unverifiable authorship, or (b)
+  only provides indirect/analogical connection to the Claim, not
+  direct support.
+- **No support (0)**: no source found, or a source was found but is
+  not topically relevant to the Claim at all.
+
+Δ (Section 7) = Treatment score − Control score, computed per Claim
+using this scale.
+
+Explicitly note: this rubric is a fixed rule for this pilot only, not
+a self-learning or reinforcement-learning system. The sample size (5
+Claims) is intentionally too small to support learning a general rule
+— any move toward an adaptive/learned criterion is separate, future,
+out-of-scope work for this experiment.
+
+Explicitly note: this rubric is informed by the single documented
+`_04` precedent (Section 5's existing caution about thin evidentiary
+base still applies — this is a reasonable starting rule, not a
+validated general theory of what makes sources credible).
+
 ## 6. Control-run re-scoring and Immutable Lineage
 
 Any re-scoring of the historical control run (Section 4) produces a
@@ -160,7 +194,7 @@ project's Immutable Lineage principle (the same principle governing
 project). The exact form of the new artifact (naming, location,
 schema) is not decided by this draft.
 
-## 7. Outcome interpretation — structure resolved, significance threshold still OPEN
+## 7. Outcome interpretation — structure resolved, significance threshold RESOLVED
 
 **Core principle:** interpretation is based on the paired difference
 (Δ = Treatment score − Control score) for each Claim, averaged across
@@ -205,11 +239,14 @@ dominate the average?). Only after that examination, if uncertainty
 remains, would a larger-sample follow-up be considered — this is not
 decided in advance as the automatic next step.
 
-**OPEN**: what minimum Δ magnitude counts as a "meaningful" or
-"substantive" improvement (as opposed to noise in the scoring
-instrument) is not decided by this draft. This depends on the content
-of the rubric itself (Section 5, still open) and cannot be fixed
-before the rubric's scale is defined.
+**Resolved**: given the 3-level scale in Section 5 (0/1/2), a mean Δ
+of **at least 1.0** across the Claim set counts as a "Positive
+signal" (substantively meaningful). A mean Δ between 0 and 1.0 (not
+reaching 1.0) falls under "No clear signal." This threshold reflects
+the coarseness of the 3-level scale — a mean shift of a full point is
+a real, visible change on this scale, not sub-scale noise. This
+threshold is specific to this pilot's 3-level scale and is not
+intended to generalize to any future, finer-grained rubric.
 
 ## 8. Fixed conditions / inherited constraints
 
@@ -224,31 +261,12 @@ before the rubric's scale is defined.
 
 ## 9. Open decisions
 
-Consolidated from Sections 4, 5, and 7 — a single entry point for the
-next session to see everything unresolved without reading the whole
-file:
+Only one open item remains — the rest have been resolved in this and
+prior commits:
 
-- **Rubric content (Section 5)**: no actual rubric — scale, criteria,
-  or pass/fail line — has been written yet. Section 5's caution
-  applies: the only concretely documented precedent is a single
-  Claim case (ADR-0029's `_04`), a thin evidentiary base for
-  designing a full rubric.
-- **Blind assessment / randomized order (Section 4)**: whether either
-  is needed as an additional protection against evaluator/order bias
-  is an open empirical question, not yet decided.
-- **Pairwise comparison as an additional measurement (Section 4)**:
-  whether a pairwise comparison is used alongside the score, or the
-  score alone suffices, is not decided.
 - **Calibration approach (Section 4)**: how the measurement instrument
   would be calibrated without leaking information from the specific
   control/treatment data being compared is not decided.
-- **Δ magnitude / significance threshold (Sections 5 and 7)**: what
-  minimum Δ counts as a "meaningful" or "substantive" improvement, as
-  opposed to noise in the scoring instrument, is not decided — it
-  depends on the rubric's content and scale (Section 5), which is
-  itself still open. This is the only unresolved part of Section 7's
-  outcome interpretation; the three-outcome structure itself
-  (positive/no clear/negative signal) is already resolved.
 
 ## 10. Sources
 
