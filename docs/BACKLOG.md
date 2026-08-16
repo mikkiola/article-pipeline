@@ -101,16 +101,12 @@ unaddressed gap. Not resolved — see "Owner decisions needed" below.
 
 ### P1
 
-- [ ] Commit or discard the uncommitted English search-query
-      translation code (`translate_query`, `search_query_en` in
-      `evidence_package/driver.py`). It is not currently committed, so
-      a fresh clone of this repo does not have it — first step is
-      deciding whether to commit it at all, not deciding what to do
-      with code a new session can't see. Test results so far: better
-      for 3 of 5 Claims, worse for 1, mixed for 1. Once committed (or
-      explicitly discarded), decide: adopt permanently or drop.
-      Chinese-language translation was not attempted — separate,
-      later decision, not blocked on the English one.
+- [ ] Implement the English-first cascading search decided in
+      ADR-0030: extend evidence_package/driver.py's
+      QUERY_TRANSLATIONS_RU_EN table to cover treatment-query text and
+      all future Claims (not just this pilot's 5), and wire the
+      score-based cascade (English first, Russian fallback if score <
+      2) into build_search_query()/run_searches(). Not started.
 - [ ] Migrate Atom Selector and `graph_reader.py` from vendored copies
       into this repo as the single source of truth (currently
       duplicated with `brain.git`). Confirm after migration that
