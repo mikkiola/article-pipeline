@@ -8,16 +8,16 @@ dependencies only.
 
 | Component | Status | Depends on | Validation | Commit |
 |---|---|---|---|---|
-| Atom Selector | Implemented | Brain (`02_Cards/`) | Tested on real data | `bd7b784`, bugfix `97b87f7` |
-| `graph_reader.py` | Implemented | Atom Selector | Tested on real data | `e7fbc45` |
+| Atom Selector | Implemented | Brain (`02_Cards/`) | Tested on real data | `brain.git: bd7b784`, bugfix `97b87f7` (vendored copy; not migrated to single source) |
+| `graph_reader.py` | Implemented | Atom Selector | Tested on real data | `brain.git: e7fbc45` (vendored copy; not migrated to single source) |
 | Claim Extraction | Implemented | Atom Selector, `graph_reader.py` | 4 immutable pilot runs, manually verified | `46d1a41` |
 | Context/causal-structure layer | Implemented | Claim Extraction | M1-M5 complete; context-loss hypothesis not established (see corrective ADR for this milestone) | `792feb0`..`d2050de` |
 | Evidence Package | Implemented | Claim Extraction output | 5 live Claims tested, 5/5 unverifiable | `2fe0aac..29f716f` |
-| Strategy Layer | Spec only | Context/causal-structure layer | — | — |
-| Author | Spec only | Strategy Layer | — | — |
-| Quality Gate | Spec only | Author | — | — |
-| Platform Adapter | Spec only | Quality Gate | — | — |
-| Experiment Log | Spec only | Platform Adapter | — | — |
+| Strategy Layer | Not started | Context/causal-structure layer | — | — |
+| Author | Not started | Strategy Layer | — | — |
+| Quality Gate | Not started | Author | — | — |
+| Platform Adapter | Not started | Quality Gate | — | — |
+| Experiment Log | Not started | Platform Adapter | — | — |
 | ToolTempest lock+sync (manual) | Implemented | `mikkiola/tooltempest` | End-to-end tested, byte-for-byte diff verified | `3d4ad09` |
 | ToolTempest CLI adapter + discovery | Not started | ToolTempest lock+sync | — | — |
 
