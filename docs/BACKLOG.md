@@ -51,53 +51,8 @@ unaddressed gap. Not resolved — see "Owner decisions needed" below.
 
 ### P0
 
-- [ ] Design and run a properly isolated experiment to test whether
-      context loss in Claim Extraction's `novelty`+`basis` output is a
-      contributing cause of Evidence Package's poor verification rate.
-
-      **Original problem, for reference:** Claim Extraction produces
-      two text fields, `novelty` and `basis`, extracted from a source
-      atom. When concatenated as a search query for Evidence Package,
-      the result was found to systematically lose: (a) the atom's
-      domain/topic context — exists in the atom's tags and wiki-links,
-      but the extraction schema didn't carry it into `novelty`/`basis`,
-      and (b) the most concrete, specific parts of the original claim
-      (named examples, named roles, references to current discourse).
-      Found by manually comparing the full text of 5 source atoms
-      against their extracted `novelty`+`basis` output, confirming the
-      same pattern in 4 of the 5 cases — suspected cause of Evidence
-      Package's first live run returning 5/5 unverifiable.
-
-      **What's done:** the context/causal-structure layer itself was
-      designed and built (`context_layer/SPEC.md`, then five
-      implementation milestones carrying tags/wiki-links forward into
-      the search query additively). The layer was re-run against the
-      same 5 original pilot Claims and produced 1 status change out of
-      5 (unverifiable → verified).
-
-      **Why the causal question is still open, not closed:** a direct
-      audit of that one status change found it confounded — the source
-      responsible was already present in the *original*, pre-layer
-      run's raw search results, and the interactive assessment pass
-      that evaluated it (not the enriched query) is what actually
-      changed the outcome. The experiment varied two things at once
-      (query text and assessment pass) and cannot isolate which one, if
-      either, caused the change. This is recorded as a corrective ADR.
-      The original problem statement — whether context loss
-      contributes to Evidence Package's low verification rate — remains
-      neither confirmed nor refuted.
-
-      **What the next attempt needs:** an experiment that holds
-      assessment methodology constant (the same evaluator/pass reused
-      across the old and new query, or a fixed scoring rubric applied
-      identically) while varying only the query text, per the reversal
-      condition stated in the corrective ADR. Without that isolation,
-      any future re-run will have the same confound as this one.
-
-      **Done when:** a follow-up experiment with assessment methodology
-      held constant has run against the same or an equivalent Claim
-      set, and its result — confirms, refutes, or remains inconclusive
-      — is recorded as its own ADR.
+No open items remain — the isolated D-025 causal-question experiment
+(the only P0 item) is done; see ADR-0031.
 
 ### P1
 
