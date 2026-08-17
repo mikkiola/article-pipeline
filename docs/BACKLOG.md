@@ -62,6 +62,8 @@ No open items remain — the isolated D-025 causal-question experiment
       all future Claims (not just this pilot's 5), and wire the
       score-based cascade (English first, Russian fallback if score <
       2) into build_search_query()/run_searches(). Not started.
+      Control-query translation table landed in commit 672a8d4 — cascade
+      logic and treatment-query coverage still not implemented.
 - [ ] Migrate Atom Selector and `graph_reader.py` from vendored copies
       into this repo as the single source of truth (currently
       duplicated with `brain.git`). Confirm after migration that
