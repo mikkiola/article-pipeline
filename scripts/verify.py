@@ -1,14 +1,20 @@
 #!/usr/bin/env python3
-"""Component + VC-source-pattern discovery.
+"""Component + VC-source-pattern discovery, plus structural validation.
 
-Step 1 of the SPEC -> checklist -> harness -> drift -> doc-sync
-automation track. Scans the repo for SPEC.md files and determines,
-for each, which mechanism currently tracks that component's
-milestone/verification state ("VC-source pattern"): a paired
-CHECKPOINT.md, or milestone checkboxes inline in SPEC.md itself.
+Steps 1-2 of the SPEC -> checklist -> harness -> drift -> doc-sync
+automation track.
 
-Discovery only. Does not extract verification criteria, generate a
-checklist, or run any validation — those are later steps.
+Step 1: scans the repo for SPEC.md files and determines, for each,
+which mechanism currently tracks that component's milestone/
+verification state ("VC-source pattern"): a paired CHECKPOINT.md, or
+milestone checkboxes inline in SPEC.md itself.
+
+Step 2: for each discovered source_file, confirms it's structurally
+parseable into individual verification-criteria-like units (a
+CHECKPOINT.md "## <label>" block with verify:/done-when:/status:
+lines, or an inline Milestones checkbox line with description text) —
+and reports which units, if any, are malformed. Does not extract
+actual VC-IDs or build a checklist — that's a later step.
 """
 import argparse
 import json
@@ -19,6 +25,14 @@ from pathlib import Path
 MILESTONES_HEADING_RE = re.compile(r"^##\s+Milestones\s*$", re.MULTILINE)
 NEXT_HEADING_RE = re.compile(r"^##\s+\S", re.MULTILINE)
 CHECKBOX_LINE_RE = re.compile(r"^\s*(?:-|\d+\.)\s*\[[ xX]\]", re.MULTILINE)
+CHECKBOX_FULL_LINE_RE = re.compile(r"^\s*(?:-|\d+\.)\s*\[[ xX]\](.*)$", re.MULTILINE)
+
+CHECKPOINT_BLOCK_HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
+CHECKPOINT_REQUIRED_FIELD_RES = {
+    "verify": re.compile(r"^\s*-\s*verify:", re.MULTILINE),
+    "done-when": re.compile(r"^\s*-\s*done-when:", re.MULTILINE),
+    "status": re.compile(r"^\s*-\s*status:", re.MULTILINE),
+}
 
 # Directories that hold project infrastructure, not a pipeline
 # component, and are therefore never SPEC.md/component candidates.
@@ -100,14 +114,26 @@ def resolve_component_name(spec_path: Path, repo_root: Path, owned_dirs: set):
     return best_guess, True
 
 
-def has_milestones_checkboxes(spec_path: Path) -> bool:
-    text = spec_path.read_text(encoding="utf-8")
+def isolate_milestones_section(text: str):
+    """Returns (section_text, section_start_offset), or (None, None)
+    if there's no "## Milestones" heading. section_start_offset is
+    the absolute offset of the section's start within `text`, used to
+    recover real line numbers for anything found inside it."""
     match = MILESTONES_HEADING_RE.search(text)
     if not match:
-        return False
-    rest = text[match.end():]
+        return None, None
+    start = match.end()
+    rest = text[start:]
     next_heading = NEXT_HEADING_RE.search(rest)
-    section = rest[: next_heading.start()] if next_heading else rest
+    end = start + (next_heading.start() if next_heading else len(rest))
+    return text[start:end], start
+
+
+def has_milestones_checkboxes(spec_path: Path) -> bool:
+    text = spec_path.read_text(encoding="utf-8")
+    section, _ = isolate_milestones_section(text)
+    if section is None:
+        return False
     return bool(CHECKBOX_LINE_RE.search(section))
 
 
@@ -125,6 +151,111 @@ def classify(spec_path: Path):
     if has_milestones_checkboxes(spec_path):
         return "inline_spec", str(spec_path)
     return "UNKNOWN", None
+
+
+def validate_checkpoint_structure(checkpoint_path: str) -> dict:
+    """A well-formed CHECKPOINT.md is a sequence of "## <label>"
+    blocks, each containing its own verify:/done-when:/status: lines.
+    Reports which blocks, if any, are missing which of the three."""
+    text = Path(checkpoint_path).read_text(encoding="utf-8")
+    headings = list(CHECKPOINT_BLOCK_HEADING_RE.finditer(text))
+
+    if not headings:
+        return {
+            "status": "MALFORMED",
+            "total_units": 0,
+            "well_formed": 0,
+            "malformed_details": [
+                {"heading": None, "missing_fields": ["no '## <label>' blocks found"]}
+            ],
+        }
+
+    total_units = len(headings)
+    well_formed = 0
+    malformed_details = []
+
+    for i, match in enumerate(headings):
+        heading = match.group(1).strip()
+        start = match.end()
+        end = headings[i + 1].start() if i + 1 < len(headings) else len(text)
+        content = text[start:end]
+
+        missing = [
+            name
+            for name, pattern in CHECKPOINT_REQUIRED_FIELD_RES.items()
+            if not pattern.search(content)
+        ]
+        if missing:
+            malformed_details.append({"heading": heading, "missing_fields": missing})
+        else:
+            well_formed += 1
+
+    status = "MALFORMED" if malformed_details else "OK"
+    return {
+        "status": status,
+        "total_units": total_units,
+        "well_formed": well_formed,
+        "malformed_details": malformed_details,
+    }
+
+
+def validate_inline_spec_structure(spec_path: str) -> dict:
+    """Within the Milestones section (isolated via the same
+    MILESTONES_HEADING_RE/NEXT_HEADING_RE logic Step 1 uses), each
+    checkbox line must carry non-empty description text after the
+    checkbox marker on that same line."""
+    text = Path(spec_path).read_text(encoding="utf-8")
+    section, section_start = isolate_milestones_section(text)
+
+    if section is None:
+        return {
+            "status": "MALFORMED",
+            "total_units": 0,
+            "well_formed": 0,
+            "malformed_details": [
+                {"line": None, "text": "no '## Milestones' section found"}
+            ],
+        }
+
+    matches = list(CHECKBOX_FULL_LINE_RE.finditer(section))
+    if not matches:
+        return {
+            "status": "MALFORMED",
+            "total_units": 0,
+            "well_formed": 0,
+            "malformed_details": [
+                {"line": None, "text": "no checkbox lines found in Milestones section"}
+            ],
+        }
+
+    total_units = len(matches)
+    well_formed = 0
+    malformed_details = []
+
+    for match in matches:
+        description = match.group(1).strip()
+        if description:
+            well_formed += 1
+        else:
+            abs_pos = section_start + match.start()
+            line_no = text[:abs_pos].count("\n") + 1
+            malformed_details.append({"line": line_no, "text": match.group(0).strip()})
+
+    status = "MALFORMED" if malformed_details else "OK"
+    return {
+        "status": status,
+        "total_units": total_units,
+        "well_formed": well_formed,
+        "malformed_details": malformed_details,
+    }
+
+
+def validate_structure(pattern: str, source_file) -> dict:
+    if pattern == "checkpoint":
+        return validate_checkpoint_structure(source_file)
+    if pattern == "inline_spec":
+        return validate_inline_spec_structure(source_file)
+    return {"status": "UNKNOWN", "total_units": 0, "well_formed": 0, "malformed_details": []}
 
 
 def main() -> int:
@@ -149,14 +280,12 @@ def main() -> int:
     owned_dirs = {p.parent.name for p in spec_files if p.parent != repo_root}
 
     results = []
-    unknown_found = False
 
     for spec_path in spec_files:
         component, ambiguous = resolve_component_name(spec_path, repo_root, owned_dirs)
         pattern, source_file = classify(spec_path)
 
         if pattern == "UNKNOWN":
-            unknown_found = True
             print(
                 f"discover: WARNING - {spec_path} has no CHECKPOINT.md and no "
                 f"'## Milestones' section with checkbox lines. VC-source "
@@ -172,18 +301,36 @@ def main() -> int:
                 file=sys.stderr,
             )
 
+        structure = validate_structure(pattern, source_file)
+        for detail in structure["malformed_details"]:
+            if "heading" in detail:
+                print(
+                    f"discover: MALFORMED block in {source_file} — heading "
+                    f"'{detail['heading']}' is missing: "
+                    f"{', '.join(detail['missing_fields'])}",
+                    file=sys.stderr,
+                )
+            else:
+                where = f"{source_file}:{detail['line']}" if detail["line"] else source_file
+                print(
+                    f"discover: MALFORMED unit at {where} — {detail['text']!r}",
+                    file=sys.stderr,
+                )
+
         results.append(
             {
                 "component": component,
                 "spec_path": str(spec_path),
                 "pattern": pattern,
                 "source_file": source_file,
+                "structure": structure,
             }
         )
 
     print(json.dumps(results, indent=2, ensure_ascii=False))
 
-    return 1 if unknown_found else 0
+    any_not_ok = any(r["structure"]["status"] != "OK" for r in results)
+    return 1 if any_not_ok else 0
 
 
 if __name__ == "__main__":
