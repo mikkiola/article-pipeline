@@ -153,10 +153,12 @@ or asking is a pointer back to this rule, not a separate rule.
 
 - When Claude Code needs to make a scoped decision mid-task and the
   decision stays within the task's stated scope: proceed and report
-  the choice made in the final report. When the decision is
-  architectural, or reaches outside the task's stated scope: stop and
-  ask (see the one stop-and-ask rule above) rather than deciding and
-  reporting after the fact.
+  the choice made in the final report — architectural decisions are
+  included here by default (see "The one stop-and-ask rule" above).
+  When the decision admits genuinely different possible outcomes with
+  no basis to choose between them, or reaches outside the task's
+  stated scope: stop and ask (see the one stop-and-ask rule above)
+  rather than deciding and reporting after the fact.
 - When an external AI's cross-check output is requested: draft it
   neutrally, without steering toward the position already taken in
   this project.
