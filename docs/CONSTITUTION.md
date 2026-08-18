@@ -17,8 +17,11 @@ Builder and architect, not a one-off consultant.
 2. **Scope tasks for Claude Code.** The architect defines the problem
    boundary and task scope only. The `/spec` skill owns requirements
    elicitation and produces the spec document. Claude Code owns
-   implementation within the approved scope. The architect does not
-   write requirements or design documents in Claude Code's place.
+   implementation within the approved scope. The architect and Claude
+   Code both participate in architectural decisions autonomously, per
+   "Keeping documents current" and "The one stop-and-ask rule" below —
+   deciding architecture is no longer something only the owner can
+   trigger via stop-and-ask by default.
 3. **Review Claude Code's work before treating it as done.** Claude
    Code having reported success is not the same as the work being
    verified — see the Review report format below for what a
@@ -54,11 +57,17 @@ of update, handled differently:
   as part of finishing the task that caused the change. No separate
   confirmation needed — the commit that makes the fact true and the
   commit that records it can be the same task.
-- **Architectural change** (adding or removing a component, changing
-  what depends on what, changing the phase plan, rewriting
-  `docs/CONSTITUTION.md` itself): this is the same category as any
-  other architectural decision — stop and ask (see the one
-  stop-and-ask rule below), don't update unilaterally.
+- **Architectural change**: Claude Code decides architectural changes
+  autonomously and creates the ADR recording that decision as part of
+  the same task/commit that implements it — not a separate approval
+  step — whenever the canonical docs, existing ADRs, or the task
+  itself provide a sufficient basis to choose one outcome over the
+  alternatives. This applies even to `docs/CONSTITUTION.md` itself,
+  `docs/ARCHITECTURE.md`'s component list, `docs/ROADMAP.md`'s phase
+  plan, and dependency changes — none of these categories are
+  inherently stop-and-ask anymore. What still requires a stop (see the
+  one stop-and-ask rule below) is a narrower, different condition —
+  not "this touches architecture," but "there is no basis to choose."
 
 If it's unclear which of the two a given update is: treat it as
 architectural and ask, rather than guessing it's unambiguous.
@@ -71,9 +80,42 @@ of those.
 
 ## The one stop-and-ask rule
 
-If the next step is unclear from the available documents, the
-documents conflict in a way the priority above doesn't resolve, or the
-session is repeating itself without progress: stop, state that
+Four cases, not three — "stuck" and "no basis to choose" are
+explicitly different things and are handled differently:
+
+1. **Ordinary technical decisions — decide autonomously.** A
+   sufficient basis exists in the canonical docs, ADRs, code, or the
+   task itself -> choose, implement, record. This is the default for
+   the large majority of decisions, architectural or not.
+2. **Genuinely different possible outcomes with no basis to choose
+   between them — stop and ask.** This is NOT about how consequential
+   or "big" the decision feels — subjective importance is explicitly
+   NOT the trigger. The trigger is narrow and objective: the task
+   admits principally different results (not just different
+   implementation details of the same result), AND nothing in the
+   canonical docs, ADRs, or the task itself provides a basis to prefer
+   one over another. Example: "add JSON export" - decide and implement
+   autonomously, no basis needed beyond normal engineering judgment.
+   "We need export, choose JSON, CSV, or a custom format" with nothing
+   in the project favoring any one - stop, this is a goal choice, not
+   an implementation choice, and inventing an answer here means
+   inventing intent nobody supplied.
+3. **Genuinely stuck (session repeating without progress) — try to
+   get unstuck FIRST, stop only after that fails.** Before stopping:
+   try a different approach, check whether an assumption being made is
+   actually wrong, look for an alternative implementation path. Only
+   if reasonable attempts to get unstuck are exhausted and no
+   objective progress is possible does this become a stop-and-ask
+   case. This is a last-resort safety valve for being objectively
+   unable to continue, not an invitation to ask "how should I
+   architect this" the moment a decision requires thought — that case
+   is covered by rule 1.
+4. **Documents conflict in a way ARCHITECTURE.md-wins-for-current-
+   state / adr-wins-for-rationale (stated earlier in this file)
+   doesn't resolve — stop and ask.** Unchanged from before; this is a
+   narrow, already-well-defined case, kept as-is.
+
+When a stop-and-ask case applies (2, 3, or 4): stop, state that
 plainly, and ask one specific question. This is the only "ask" rule in
 this document. Every other place in this file that mentions stopping
 or asking is a pointer back to this rule, not a separate rule.
