@@ -114,6 +114,32 @@ No open items remain — the isolated D-025 causal-question experiment
       anything Step 6+ builds on top of it) before deciding whether a
       new PREREQ_MISSING class is warranted or whether an existing
       class can be repurposed with clearer semantics.
+- [ ] `resolve_component_name()` (scripts/verify.py, Step 1 of the
+      automation track) has a checkout-name dependency that silently
+      degrades to a coin-flip on any clone not literally named
+      `article-pipeline`. Found via a Step 7 mutation test
+      (scripts/doc_impact.py, commit 2e3f982): the function's strong-
+      signal match requires the literal string
+      `f"{repo_root.name}/{component}/"` in a root-level SPEC.md's
+      text — under a differently-named checkout this signal never
+      fires, and the function falls back to a bare `"{component}/"`
+      occurrence count, which produced a tied 4-4 count between
+      `evidence_package` and `claim_extraction` and silently picked
+      the wrong one. `ambiguous=True` IS set correctly in this case
+      (verify.py already warns), but the wrong component name still
+      propagates forward into everything built on top of it (Steps
+      3-7's checklist/harness/drift/doc-impact outputs), where the
+      warning is easy to miss in a large stdout stream. This would
+      affect CI or any second clone/worktree today, not just a
+      hypothetical. Not started. When picked up: either make the
+      strong-signal match independent of the actual checkout directory
+      name (e.g. match any `<dir>/<component>/` pattern rather than
+      requiring the real root dir's literal name), or have downstream
+      consumers (checklist.py, doc_impact.py, etc.) treat
+      ambiguous=True as a hard stop rather than a warning to carry
+      forward silently — needs a decision, not just a patch, since
+      changing ambiguous-handling downstream affects multiple already-
+      committed scripts.
 
 ### P2
 
