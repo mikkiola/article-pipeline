@@ -30,11 +30,24 @@ A component code file that changed without a SPEC/CHECKPOINT update
 is always left for human judgment too — deciding what SPEC/CHECKPOINT
 prose should say about a code change requires understanding the
 change's meaning, never mechanical.
+
+Step 8 extension — Commit-column-only mechanical fix. Scope: ONLY
+docs/ARCHITECTURE.md's table's Commit column, for the two rows whose
+mapping to a Steps 1-7 discovered component is defensible by a named,
+non-fuzzy method (see ARCHITECTURE_ROW_TO_COMPONENT below and this
+task's own report for the full per-row audit, including the ten
+unresolved rows). A row's Commit cell is only ever a candidate for a
+mechanical update when it's currently a single literal SHA — a range
+or multiple-SHA cell always requires human judgment about what the
+range is meant to represent, never a mechanical extension. Status,
+"Depends on", and Validation columns are never touched, proposed, or
+even flagged, per explicit owner decision.
 """
 import argparse
 import difflib
 import json
 import re
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -55,6 +68,29 @@ FILES_HEADING_TEMPLATE = r"^###\s+Files:\s+{}\s*$"
 NEXT_HEADING_RE = re.compile(r"^#{1,6}\s+\S", re.MULTILINE)
 LIST_ITEM_RE = re.compile(r"^-\s+(.*)$", re.MULTILINE)
 PURE_PATH_ITEM_RE = re.compile(r"^`[\w./-]+\.[A-Za-z0-9]+`$")
+
+# Explicit, human-reviewed ARCHITECTURE.md row -> discovered-component
+# mapping for the Commit-column pattern. NOT computed by fuzzy string
+# matching at runtime — every row in the table was individually
+# audited; only these two resolved via a named, reproducible method,
+# and the other ten (Atom Selector, `graph_reader.py`, Claim
+# Extraction, Strategy Layer, Author, Quality Gate, Platform Adapter,
+# Experiment Log, both ToolTempest rows) do not appear here because
+# none of them are in discover_components()'s discovered set (no
+# SPEC.md of their own) — see this task's report for the full audit.
+ARCHITECTURE_ROW_TO_COMPONENT = {
+    # Exact match after normalization (lowercase, strip spaces):
+    # "evidencepackage" == "evidencepackage" for discovered component
+    # "evidence_package".
+    "Evidence Package": "evidence_package",
+    # context_layer/SPEC.md (lines 112-113) literally quotes this exact
+    # row label as its own docs/ARCHITECTURE.md reference — an exact
+    # substring match once markdown line-wrap whitespace is collapsed
+    # (verified by direct inspection, not fuzzy similarity).
+    "Context/causal-structure layer": "context_layer",
+}
+
+SINGLE_SHA_RE = re.compile(r"^`[0-9a-f]{7,40}`$")
 
 
 def _now_iso() -> str:
@@ -166,50 +202,159 @@ def try_files_enumeration_fix(repo_root: Path, component: str, components: dict)
     return diff_text, note
 
 
-def write_proposal(repo_root: Path, source_file_rel: str, diff_text: str) -> Path:
+def find_table_row(text: str, row_label: str):
+    """Locates a docs/ARCHITECTURE.md table row by its exact,
+    literal first-column label. Returns the match object (group(4) is
+    the Commit cell) or None."""
+    row_re = re.compile(
+        rf"^\|\s*{re.escape(row_label)}\s*\|([^|]*)\|([^|]*)\|([^|]*)\|([^|]*)\|\s*$",
+        re.MULTILINE,
+    )
+    return row_re.search(text)
+
+
+def commit_cell_kind(raw_cell: str) -> str:
+    return "single" if SINGLE_SHA_RE.match(raw_cell.strip()) else "complex"
+
+
+def latest_commit_touching(repo_root: Path, component: str):
+    proc = subprocess.run(
+        ["git", "log", "-1", "--format=%h", "--", f"{component}/"],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+    )
+    if proc.returncode != 0:
+        return None
+    sha = proc.stdout.strip()
+    return sha or None
+
+
+def try_commit_column_fix(repo_root: Path, row_label: str, component: str):
+    """The Step 8 extension's one mechanical-fix pattern: a row whose
+    Commit cell is currently a single literal SHA, and that SHA no
+    longer matches the latest commit touching the mapped component
+    directory, gets that one cell replaced — nothing else in the row,
+    nothing else in the document. Returns (diff_text_or_None, note)."""
+    doc_path = repo_root / ARCHITECTURE_DOC
+    text = doc_path.read_text(encoding="utf-8")
+
+    match = find_table_row(text, row_label)
+    if match is None:
+        return None, f"No table row found for '{row_label}' in {ARCHITECTURE_DOC} — cannot check its Commit cell."
+
+    commit_cell = match.group(4).strip()
+    kind = commit_cell_kind(commit_cell)
+
+    latest_sha = latest_commit_touching(repo_root, component)
+    if latest_sha is None:
+        return None, f"'git log -- {component}/' produced no result — nothing to compare '{row_label}''s Commit cell against."
+
+    if kind == "complex":
+        return None, (
+            f"'{row_label}' row's Commit cell ({commit_cell!r}) is a range/"
+            f"multi-SHA/non-single value — extending or replacing it would "
+            f"require judgment about what the range is meant to represent "
+            f"(e.g. a specific validated milestone span vs. simply 'the "
+            f"latest commit'), not a mechanical fact. Requires human judgment."
+        )
+
+    current_sha = commit_cell.strip("`")
+    if current_sha == latest_sha:
+        return None, (
+            f"'{row_label}' row's Commit cell already matches the latest "
+            f"commit touching {component}/ ({latest_sha}) — nothing to update."
+        )
+
+    new_text = text[: match.start(4)] + f" `{latest_sha}` " + text[match.end(4) :]
+    diff_text = "".join(
+        difflib.unified_diff(
+            text.splitlines(keepends=True),
+            new_text.splitlines(keepends=True),
+            fromfile=str(doc_path.relative_to(repo_root)),
+            tofile=str(doc_path.relative_to(repo_root)),
+        )
+    )
+    note = (
+        f"Proposed updating '{row_label}' row's Commit cell from "
+        f"`{current_sha}` to `{latest_sha}` (latest commit touching "
+        f"{component}/). Status/Depends on/Validation columns untouched."
+    )
+    return diff_text, note
+
+
+def write_proposal(repo_root: Path, name_stem: str, diff_text: str) -> Path:
     proposals_dir = repo_root / "doc_sync_proposals"
     proposals_dir.mkdir(exist_ok=True)
-    safe_name = source_file_rel.replace("/", "__")
+    safe_name = name_stem.replace("/", "__")
     out_path = proposals_dir / f"{safe_name}.diff"
     out_path.write_text(diff_text, encoding="utf-8")
     return out_path
 
 
 def process_derived_update_required(repo_root: Path, rel_path: str, components: dict) -> dict:
+    notes = []
+    proposals = []
+
     spec_owner = spec_file_owner(rel_path, components, repo_root)
+    code_owner = code_file_owner(rel_path, components)
+    owner = spec_owner or code_owner
+
     if spec_owner is not None:
         diff_text, note = try_files_enumeration_fix(repo_root, spec_owner, components)
         if diff_text:
-            proposal_path = write_proposal(repo_root, rel_path, diff_text)
-            return {
-                "doc_sync_action": "PROPOSED",
-                "doc_sync_note": note,
-                "proposal_path": str(proposal_path.relative_to(repo_root)),
-            }
-        return {"doc_sync_action": "BLOCKED_NEEDS_HUMAN_DECISION", "doc_sync_note": note}
-
-    code_owner = code_file_owner(rel_path, components)
-    if code_owner is not None:
-        return {
-            "doc_sync_action": "BLOCKED_NEEDS_HUMAN_DECISION",
-            "doc_sync_note": (
-                f"{rel_path} is a {code_owner} code file changed with no "
-                f"SPEC/CHECKPOINT update. Deciding what SPEC/CHECKPOINT prose "
-                f"should say about a code change requires understanding the "
-                f"change's meaning — never mechanical. doc_sync.py does not "
-                f"attempt this class of fix at all."
-            ),
-        }
-
-    return {
-        "doc_sync_action": "BLOCKED_NEEDS_HUMAN_DECISION",
-        "doc_sync_note": (
+            proposals.append((f"{rel_path}__files_enumeration", diff_text, note))
+        else:
+            notes.append(note)
+    elif code_owner is not None:
+        notes.append(
+            f"{rel_path} is a {code_owner} code file changed with no "
+            f"SPEC/CHECKPOINT update. Deciding what SPEC/CHECKPOINT prose "
+            f"should say about a code change requires understanding the "
+            f"change's meaning — never mechanical. doc_sync.py does not "
+            f"attempt a SPEC/CHECKPOINT-text fix for this at all."
+        )
+    else:
+        notes.append(
             f"{rel_path} is classified DERIVED_UPDATE_REQUIRED but is neither a "
             f"known component's SPEC/CHECKPOINT file nor a known component's "
             f"code file — no recognized mechanical-fix pattern applies; "
             f"treating conservatively as requiring human judgment rather than "
             f"guessing."
-        ),
+        )
+
+    if owner is not None:
+        row_labels = [label for label, comp in ARCHITECTURE_ROW_TO_COMPONENT.items() if comp == owner]
+        if not row_labels:
+            notes.append(
+                f"{owner} has no reviewed docs/ARCHITECTURE.md row mapping "
+                f"(see ARCHITECTURE_ROW_TO_COMPONENT / this task's audit) — "
+                f"Commit-column check does not apply to this component."
+            )
+        for row_label in row_labels:
+            diff_text, note = try_commit_column_fix(repo_root, row_label, owner)
+            if diff_text:
+                proposals.append((f"{rel_path}__commit_column__{row_label}", diff_text, note))
+            else:
+                notes.append(note)
+
+    if proposals:
+        written = [
+            {
+                "proposal_path": str(write_proposal(repo_root, stem, diff_text).relative_to(repo_root)),
+                "note": note,
+            }
+            for stem, diff_text, note in proposals
+        ]
+        return {
+            "doc_sync_action": "PROPOSED",
+            "doc_sync_note": " | ".join(w["note"] for w in written),
+            "proposals": written,
+        }
+
+    return {
+        "doc_sync_action": "BLOCKED_NEEDS_HUMAN_DECISION",
+        "doc_sync_note": " | ".join(notes) if notes else "No mechanical-fix pattern applied.",
     }
 
 
@@ -297,7 +442,8 @@ def main() -> int:
         f"{s['NONE']} none"
     )
     for r in proposed:
-        print(f"doc_sync: PROPOSED -> {r['proposal_path']} (from {r['file']})")
+        for p in r["proposals"]:
+            print(f"doc_sync: PROPOSED -> {p['proposal_path']} (from {r['file']})")
 
     return 0
 

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-18T08:56:13.656024+00:00",
-  "findings_source": "read from /Users/olgastroganova/Dev/github.com/mikkiola/article-pipeline/doc_reports/doc_impact_report.json (generated_at=2026-08-18T08:43:38.998109+00:00)",
+  "generated_at": "2026-08-18T09:17:32.814757+00:00",
+  "findings_source": "regenerated fresh via git diff --name-only 676eaec HEAD",
   "results": [
     {
       "file": "checklists/checklist_context_layer.json",
@@ -15,6 +15,20 @@
       "reason": "checklists/checklist_evidence_package.json is inside a generated-artifact directory (checklists/harness_results/drift_reports) — a derived output of this automation track's own scripts, not a source of doc-relevant change.",
       "doc_sync_action": "NONE",
       "doc_sync_note": "No doc impact; nothing to sync."
+    },
+    {
+      "file": "doc_reports/doc_impact_report.json",
+      "classification": "UNKNOWN",
+      "reason": "doc_reports/doc_impact_report.json does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory.",
+      "doc_sync_action": "BLOCKED_NEEDS_HUMAN_DECISION",
+      "doc_sync_note": "Never auto-updated by doc_sync.py — UNKNOWN always requires a human decision."
+    },
+    {
+      "file": "doc_sync_proposals/summary.json",
+      "classification": "UNKNOWN",
+      "reason": "doc_sync_proposals/summary.json does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory.",
+      "doc_sync_action": "BLOCKED_NEEDS_HUMAN_DECISION",
+      "doc_sync_note": "Never auto-updated by doc_sync.py — UNKNOWN always requires a human decision."
     },
     {
       "file": "docs/BACKLOG.md",
@@ -66,6 +80,20 @@
       "doc_sync_note": "Never auto-updated by doc_sync.py — UNKNOWN always requires a human decision."
     },
     {
+      "file": "scripts/doc_impact.py",
+      "classification": "UNKNOWN",
+      "reason": "scripts/doc_impact.py does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory.",
+      "doc_sync_action": "BLOCKED_NEEDS_HUMAN_DECISION",
+      "doc_sync_note": "Never auto-updated by doc_sync.py — UNKNOWN always requires a human decision."
+    },
+    {
+      "file": "scripts/doc_sync.py",
+      "classification": "UNKNOWN",
+      "reason": "scripts/doc_sync.py does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory.",
+      "doc_sync_action": "BLOCKED_NEEDS_HUMAN_DECISION",
+      "doc_sync_note": "Never auto-updated by doc_sync.py — UNKNOWN always requires a human decision."
+    },
+    {
       "file": "scripts/drift.py",
       "classification": "UNKNOWN",
       "reason": "scripts/drift.py does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory.",
@@ -89,7 +117,7 @@
   ],
   "summary": {
     "PROPOSED": 0,
-    "BLOCKED_NEEDS_HUMAN_DECISION": 6,
+    "BLOCKED_NEEDS_HUMAN_DECISION": 10,
     "NONE": 6
   }
 }
