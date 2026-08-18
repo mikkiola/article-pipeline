@@ -1,0 +1,56 @@
+{
+  "component": "context_layer",
+  "source_pattern": "inline_spec",
+  "source_file": "/Users/olgastroganova/Dev/github.com/mikkiola/article-pipeline/context_layer/SPEC.md",
+  "generated_at": "2026-08-18T08:02:25.688610+00:00",
+  "items": [
+    {
+      "vc_id": "context_layer-VC-001",
+      "label": "`context_layer/enrich.py`: `extract_context()` +",
+      "verify_command": null,
+      "verify_type": "MANUAL",
+      "done_when": "UNKNOWN",
+      "status": "DONE"
+    },
+    {
+      "vc_id": "context_layer-VC-002",
+      "label": "Backfill всех 4 существующих `pilot_run_*.json` → 4 новых файла",
+      "verify_command": null,
+      "verify_type": "MANUAL",
+      "done_when": "UNKNOWN",
+      "status": "DONE"
+    },
+    {
+      "vc_id": "context_layer-VC-003",
+      "label": "`evidence_package/driver.py`: аддитивное изменение",
+      "verify_command": null,
+      "verify_type": "MANUAL",
+      "done_when": "UNKNOWN",
+      "status": "DONE"
+    },
+    {
+      "vc_id": "context_layer-VC-004",
+      "label": "Повторный прогон Evidence Package на 5 backfilled Claims из",
+      "verify_command": null,
+      "verify_type": "MANUAL",
+      "done_when": "UNKNOWN",
+      "status": "DONE"
+    },
+    {
+      "vc_id": "context_layer-VC-005",
+      "label": "ADR, фиксирующий исход шага 4 (подтверждение или опровержение",
+      "verify_command": null,
+      "verify_type": "MANUAL",
+      "done_when": "UNKNOWN",
+      "status": "DONE"
+    },
+    {
+      "vc_id": "context_layer-VC-006",
+      "label": "(Отдельная, будущая сессия) `claim_extraction/",
+      "verify_command": null,
+      "verify_type": "MANUAL",
+      "done_when": "UNKNOWN",
+      "status": "NOT_STARTED"
+    }
+  ]
+}
