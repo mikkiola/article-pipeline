@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from verify import (  # noqa: E402
     CHECKBOX_FULL_LINE_RE,
+    CHECKBOX_LINE_RE,
     CHECKPOINT_BLOCK_HEADING_RE,
     CHECKPOINT_REQUIRED_FIELD_RES,
     classify,
@@ -97,19 +98,37 @@ def generate_checkpoint_items(checkpoint_path: str, component: str) -> list:
 
 
 def generate_inline_spec_items(spec_path: str, component: str) -> list:
-    """One VC per Milestones checkbox line in a SPEC.md. verify_command
-    is always null and done_when is always "UNKNOWN" — the SPEC's Test
-    Plan describes verification at the SPEC level, not per-Milestone,
-    and inferring that mapping would be guessing, not extraction."""
+    """One VC per Milestones checkbox item in a SPEC.md. A milestone's
+    description commonly wraps across several physical lines (no
+    blank line, no next marker until the item ends) — CHECKBOX_FULL_LINE_RE
+    only matches the first such line, so it's used here just to locate
+    each checkbox marker's start position; the full item text is then
+    sliced from that position to the next marker (or section end) and
+    the marker itself stripped with CHECKBOX_LINE_RE, so a wrapped
+    description isn't truncated mid-sentence. Neither regex is
+    modified — both are scripts/verify.py's, reused as-is, so Step 2's
+    single-line-based validation there is unaffected.
+
+    verify_command is always null and done_when is always "UNKNOWN" —
+    the SPEC's Test Plan describes verification at the SPEC level, not
+    per-Milestone, and inferring that mapping would be guessing, not
+    extraction."""
     text = Path(spec_path).read_text(encoding="utf-8")
     section, _ = isolate_milestones_section(text)
     if section is None:
         return []
 
+    matches = list(CHECKBOX_FULL_LINE_RE.finditer(section))
     items = []
-    for i, match in enumerate(CHECKBOX_FULL_LINE_RE.finditer(section)):
-        description = match.group(1).strip()
+    for i, match in enumerate(matches):
+        start = match.start()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(section)
+        block = section[start:end]
+
         is_done = "[x]" in match.group(0).lower()
+        description = CHECKBOX_LINE_RE.sub("", block, count=1)
+        description = " ".join(description.split())
+
         vc_id = f"{component}-VC-{i + 1:03d}"
         items.append(
             {

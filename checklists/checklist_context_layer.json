@@ -2,11 +2,11 @@
   "component": "context_layer",
   "source_pattern": "inline_spec",
   "source_file": "/Users/olgastroganova/Dev/github.com/mikkiola/article-pipeline/context_layer/SPEC.md",
-  "generated_at": "2026-08-18T08:02:25.688610+00:00",
+  "generated_at": "2026-08-18T08:09:16.416269+00:00",
   "items": [
     {
       "vc_id": "context_layer-VC-001",
-      "label": "`context_layer/enrich.py`: `extract_context()` +",
+      "label": "`context_layer/enrich.py`: `extract_context()` + `backfill_pilot_run()`, без изменений в `evidence_package/`. Done in `792feb0`.",
       "verify_command": null,
       "verify_type": "MANUAL",
       "done_when": "UNKNOWN",
@@ -14,7 +14,7 @@
     },
     {
       "vc_id": "context_layer-VC-002",
-      "label": "Backfill всех 4 существующих `pilot_run_*.json` → 4 новых файла",
+      "label": "Backfill всех 4 существующих `pilot_run_*.json` → 4 новых файла с полем `context` (Immutable Lineage: новые файлы, старые не трогаются). Done in `007a429`.",
       "verify_command": null,
       "verify_type": "MANUAL",
       "done_when": "UNKNOWN",
@@ -22,7 +22,7 @@
     },
     {
       "vc_id": "context_layer-VC-003",
-      "label": "`evidence_package/driver.py`: аддитивное изменение",
+      "label": "`evidence_package/driver.py`: аддитивное изменение `build_search_query()`, с обратной совместимостью для записей без `context`. Done in `bb549ee`.",
       "verify_command": null,
       "verify_type": "MANUAL",
       "done_when": "UNKNOWN",
@@ -30,7 +30,7 @@
     },
     {
       "vc_id": "context_layer-VC-004",
-      "label": "Повторный прогон Evidence Package на 5 backfilled Claims из",
+      "label": "Повторный прогон Evidence Package на 5 backfilled Claims из исходного пилота, сравнение с результатом 2026-08-13. Done in `2b7c8a6`.",
       "verify_command": null,
       "verify_type": "MANUAL",
       "done_when": "UNKNOWN",
@@ -38,7 +38,7 @@
     },
     {
       "vc_id": "context_layer-VC-005",
-      "label": "ADR, фиксирующий исход шага 4 (подтверждение или опровержение",
+      "label": "ADR, фиксирующий исход шага 4 (подтверждение или опровержение гипотезы о причине \"5/5 unverifiable\"). Done in `b32e883`/ `d2050de` (ADR-0029).",
       "verify_command": null,
       "verify_type": "MANUAL",
       "done_when": "UNKNOWN",
@@ -46,7 +46,7 @@
     },
     {
       "vc_id": "context_layer-VC-006",
-      "label": "(Отдельная, будущая сессия) `claim_extraction/",
+      "label": "(Отдельная, будущая сессия) `claim_extraction/ build_pilot_output.py`: добавить `context` в `SCHEMA_FIELDS` для новых прогонов — не блокирует шаги 1-5.",
       "verify_command": null,
       "verify_type": "MANUAL",
       "done_when": "UNKNOWN",
