@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Integrated ToolTempest DocOps Protocol (Canon: ToolTempest ADR-0001)
+# Pinned version in .tooltempest.lock
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+fail=0
+
+echo "[pre-push] Checking for ADR-number citations in top-level docs..."
+if grep -rn '`00[0-9][0-9]`' docs/ARCHITECTURE.md docs/ROADMAP.md docs/BACKLOG.md docs/CONSTITUTION.md 2>/dev/null; then
+  echo "[pre-push] FAIL: found ADR-number citation(s) above in a top-level doc."
+  echo "[pre-push] Top-level docs describe decisions in prose, never by ADR number — see docs/CONSTITUTION.md."
+  fail=1
+else
+  echo "[pre-push] OK: no ADR-number citations found."
+fi
+
+echo "[pre-push] Running gitleaks..."
+if command -v gitleaks >/dev/null 2>&1; then
+  if ! gitleaks detect --source . --no-git -v; then
+    echo "[pre-push] FAIL: gitleaks found a potential secret."
+    fail=1
+  fi
+else
+  echo "[pre-push] WARNING: gitleaks not installed, skipping secret scan."
+fi
+
+echo "[pre-push] Running DocOps hard validation (scripts/doc_sync.py pre-push)..."
+if ! python3 scripts/doc_sync.py pre-push; then
+  fail=1
+fi
+
+echo "[pre-push] Checking whether component-directory changes are paired with an ARCHITECTURE.md update..."
+component_dirs="claim_extraction evidence_package strategy_layer author quality_gate platform_adapter experiment_log"
+range="$(git rev-parse @{u} 2>/dev/null || echo "")..HEAD"
+if [ -n "$range" ] && git rev-parse @{u} >/dev/null 2>&1; then
+  changed_files="$(git diff --name-only "$range" 2>/dev/null || echo "")"
+  changed_components=""
+  for d in $component_dirs; do
+    if echo "$changed_files" | grep -q "^${d}/"; then
+      changed_components="$changed_components $d"
+    fi
+  done
+  if [ -n "$changed_components" ]; then
+    if ! echo "$changed_files" | grep -q "^docs/ARCHITECTURE.md$"; then
+      echo "[pre-push] WARNING: these component directories changed in this push:$changed_components"
+      echo "[pre-push] docs/ARCHITECTURE.md was NOT updated in the same push."
+      echo "[pre-push] If a component's Status/Validation/Commit changed, update docs/ARCHITECTURE.md before pushing."
+      echo "[pre-push] If nothing status-relevant changed (e.g. a bugfix), this warning is safe to ignore."
+    fi
+  fi
+else
+  echo "[pre-push] No upstream branch to diff against yet, skipping the component/ARCHITECTURE.md check."
+fi
+
+if [ "$fail" -eq 1 ]; then
+  echo "[pre-push] Push blocked. Fix the FAIL items above and try again."
+  exit 1
+fi
+
+echo "[pre-push] All hard checks passed."
+exit 0
