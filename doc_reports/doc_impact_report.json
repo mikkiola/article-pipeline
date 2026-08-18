@@ -1,0 +1,76 @@
+{
+  "generated_at": "2026-08-18T08:43:38.998109+00:00",
+  "diff_range": {
+    "since": "676eaec",
+    "command": "git diff --name-only 676eaec HEAD"
+  },
+  "changed_files_count": 12,
+  "findings": [
+    {
+      "file": "checklists/checklist_context_layer.json",
+      "classification": "NO_IMPACT",
+      "reason": "checklists/checklist_context_layer.json is inside a generated-artifact directory (checklists/harness_results/drift_reports) — a derived output of this automation track's own scripts, not a source of doc-relevant change."
+    },
+    {
+      "file": "checklists/checklist_evidence_package.json",
+      "classification": "NO_IMPACT",
+      "reason": "checklists/checklist_evidence_package.json is inside a generated-artifact directory (checklists/harness_results/drift_reports) — a derived output of this automation track's own scripts, not a source of doc-relevant change."
+    },
+    {
+      "file": "docs/BACKLOG.md",
+      "classification": "UNKNOWN",
+      "reason": "docs/BACKLOG.md does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory."
+    },
+    {
+      "file": "drift_reports/drift_report_context_layer.json",
+      "classification": "NO_IMPACT",
+      "reason": "drift_reports/drift_report_context_layer.json is inside a generated-artifact directory (checklists/harness_results/drift_reports) — a derived output of this automation track's own scripts, not a source of doc-relevant change."
+    },
+    {
+      "file": "drift_reports/drift_report_evidence_package.json",
+      "classification": "NO_IMPACT",
+      "reason": "drift_reports/drift_report_evidence_package.json is inside a generated-artifact directory (checklists/harness_results/drift_reports) — a derived output of this automation track's own scripts, not a source of doc-relevant change."
+    },
+    {
+      "file": "evidence_package/driver.py",
+      "classification": "ARCHITECTURAL_REVIEW_REQUIRED",
+      "reason": "evidence_package/driver.py is a evidence_package code file literally named in evidence_package's own SPEC text (Step 6 part C's file-naming logic), changed with no corresponding SPEC.md/CHECKPOINT.md update in this range."
+    },
+    {
+      "file": "harness_results/harness_result_context_layer.json",
+      "classification": "NO_IMPACT",
+      "reason": "harness_results/harness_result_context_layer.json is inside a generated-artifact directory (checklists/harness_results/drift_reports) — a derived output of this automation track's own scripts, not a source of doc-relevant change."
+    },
+    {
+      "file": "harness_results/harness_result_evidence_package.json",
+      "classification": "NO_IMPACT",
+      "reason": "harness_results/harness_result_evidence_package.json is inside a generated-artifact directory (checklists/harness_results/drift_reports) — a derived output of this automation track's own scripts, not a source of doc-relevant change."
+    },
+    {
+      "file": "scripts/checklist.py",
+      "classification": "UNKNOWN",
+      "reason": "scripts/checklist.py does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory."
+    },
+    {
+      "file": "scripts/drift.py",
+      "classification": "UNKNOWN",
+      "reason": "scripts/drift.py does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory."
+    },
+    {
+      "file": "scripts/harness.py",
+      "classification": "UNKNOWN",
+      "reason": "scripts/harness.py does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory."
+    },
+    {
+      "file": "scripts/verify.py",
+      "classification": "UNKNOWN",
+      "reason": "scripts/verify.py does not match any specified rule: not a generated-artifact directory, not docs/adr/, not a known component's SPEC/CHECKPOINT source, and not inside a known component's code directory."
+    }
+  ],
+  "summary": {
+    "NO_IMPACT": 6,
+    "DERIVED_UPDATE_REQUIRED": 0,
+    "ARCHITECTURAL_REVIEW_REQUIRED": 1,
+    "UNKNOWN": 5
+  }
+}
