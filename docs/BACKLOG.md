@@ -93,6 +93,27 @@ No open items remain — the isolated D-025 causal-question experiment
       on their own. Not started; explicitly deferred until the D-025
       paired experiment (both language runs) is fully synthesized and
       closed as an ADR — not to be worked in parallel with it.
+- [ ] Harness result classification currently conflates "verification
+      failed" with "verification's prerequisite/environment was
+      unavailable". Found in Step 4 of the automation track
+      (scripts/harness.py, commit bd676b4): evidence_package-VC-001's
+      verify_command chains `pip show linkup-sdk && bw get password
+      ...` — when `pip` itself isn't on PATH, the command fails at
+      exit 127 before `bw`/`BW_SESSION` is ever reached, and this gets
+      recorded as plain FAIL, identical to how a real invariant
+      violation would be recorded. A harness meant for unattended use
+      needs to distinguish "the thing being checked is actually
+      broken" from "a tool/session this check depends on isn't present
+      in this environment" — otherwise a missing local dependency
+      looks exactly like a real regression in any report or gate built
+      on top of harness results. Not started; deliberately deferred
+      out of Step 4 to avoid changing the harness result-class contract
+      (currently PASS/FAIL/MANUAL/SKIPPED/UNKNOWN) mid-step. When
+      picked up: grep every place `result`, `FAIL`, `SKIPPED`, and
+      `UNKNOWN` are assigned or read across scripts/harness.py (and
+      anything Step 6+ builds on top of it) before deciding whether a
+      new PREREQ_MISSING class is warranted or whether an existing
+      class can be repurposed with clearer semantics.
 
 ### P2
 
