@@ -71,6 +71,12 @@ No open items remain — the isolated D-025 causal-question experiment
       duplicate was deleted.
 - [ ] Rewrite `README.md` — it still describes an empty-scaffold state
       that hasn't been true since the first real component landed.
+      This is the one-time catch-up fix for staleness that already
+      exists; going forward, per `docs/CONSTITUTION.md`'s "Keeping
+      documents current" rule, `README.md` updates directly as part of
+      whatever task next makes its content stale — no separate
+      BACKLOG item needed for that kind of drift after this one is
+      done.
 - [ ] Make the pre-push hook repo-tracked, not local-only. The hook
       just installed at `.git/hooks/pre-push` works, but `.git/hooks/`
       isn't tracked by git — it only exists on this machine. Tracking

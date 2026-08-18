@@ -56,7 +56,15 @@ of update, handled differently:
   `docs/BACKLOG.md` is done): update the relevant document directly,
   as part of finishing the task that caused the change. No separate
   confirmation needed — the commit that makes the fact true and the
-  commit that records it can be the same task.
+  commit that records it can be the same task. This applies to
+  `README.md` too, same principle as `docs/ARCHITECTURE.md`/
+  `docs/ROADMAP.md`/`docs/BACKLOG.md` — whenever a task's outcome
+  makes `README.md`'s content stale, update it directly as part of
+  that task. `README.md` getting this autonomous-update treatment
+  does not make it a fifth canonical top-level document — see
+  "`SPEC.md`'s status" below, which is unchanged: the four top-level
+  documents remain exactly `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
+  `docs/BACKLOG.md`, and this file.
 - **Architectural change**: Claude Code decides architectural changes
   autonomously and creates the ADR recording that decision as part of
   the same task/commit that implements it — not a separate approval
