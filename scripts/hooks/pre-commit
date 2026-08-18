@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# Integrated ToolTempest DocOps Protocol (Canon: ToolTempest ADR-0001)
+# Pinned version in .tooltempest.lock
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+python3 scripts/doc_sync.py pre-commit

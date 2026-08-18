@@ -1,0 +1,31 @@
+{
+  "run_id": "docops_20260818T140045Z_734415",
+  "protocol_version": "1.0.0",
+  "hook": "pre-commit",
+  "started_at": "2026-08-18T14:00:45.597292+00:00",
+  "finished_at": "2026-08-18T14:00:45.761783+00:00",
+  "total_duration_sec": 0.164,
+  "steps": [
+    "detect",
+    "reconcile",
+    "validate",
+    "record"
+  ],
+  "step_durations_ms": {
+    "detect": 70,
+    "reconcile": 21,
+    "validate": 71
+  },
+  "counters": {
+    "scanned": 3,
+    "affected": 1,
+    "updated": 1
+  },
+  "token_usage": {
+    "calls": 0,
+    "input_tokens": 0,
+    "output_tokens": 0
+  },
+  "timeline_summary": "Scanned 3 doc-owned file(s); 1 structurally malformed; 1 reconciled (missing CHECKPOINT field(s) filled with TODO); validate passed after reconcile.",
+  "result": "SUCCESS"
+}

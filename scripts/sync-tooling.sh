@@ -43,5 +43,19 @@ cp "${CACHE_DIR}/skills/spec/SKILL.md" "${CLAUDE_DIR}/skills/spec/SKILL.md" || f
 cp "${CACHE_DIR}/skills/verify/SKILL.md" "${CLAUDE_DIR}/skills/verify/SKILL.md" || fail "failed to copy skills/verify/SKILL.md"
 cp "${CACHE_DIR}/rules/drift-control.md" "${CLAUDE_DIR}/rules/drift-control.md" || fail "failed to copy rules/drift-control.md"
 
-echo "OK: installed ToolTempest commit ${ACTUAL_SHA} into ${CLAUDE_DIR}"
+echo "OK: installed ToolTempest V1 primitives (commit ${ACTUAL_SHA}) into ${CLAUDE_DIR}"
+
+# DocOps Protocol (ADR-0001, ToolTempest V2). scripts/doc_sync.py and
+# schemas/execution-record.schema.json are executable/reference material
+# consumed by this project's own git hooks, so they are vendored into
+# this repo (gitignored -- see .gitignore) rather than into ~/.claude/.
+# skills/doc-sync/SKILL.md is Claude Code client config, like the V1
+# skills above, so it follows the same ~/.claude/ path.
+mkdir -p "${REPO_ROOT}/scripts" "${REPO_ROOT}/schemas" "${CLAUDE_DIR}/skills/doc-sync"
+
+cp "${CACHE_DIR}/scripts/doc_sync.py" "${REPO_ROOT}/scripts/doc_sync.py" || fail "failed to copy scripts/doc_sync.py"
+cp "${CACHE_DIR}/schemas/execution-record.schema.json" "${REPO_ROOT}/schemas/execution-record.schema.json" || fail "failed to copy schemas/execution-record.schema.json"
+cp "${CACHE_DIR}/skills/doc-sync/SKILL.md" "${CLAUDE_DIR}/skills/doc-sync/SKILL.md" || fail "failed to copy skills/doc-sync/SKILL.md"
+
+echo "OK: installed ToolTempest DocOps Protocol (commit ${ACTUAL_SHA}) into ${REPO_ROOT} and ${CLAUDE_DIR}"
 exit 0
