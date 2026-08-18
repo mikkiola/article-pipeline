@@ -80,11 +80,9 @@ of update, handled differently:
 If it's unclear which of the two a given update is: treat it as
 architectural and ask, rather than guessing it's unambiguous.
 
-`docs/adr/` and `docs/CONFLICT_MAP.md` have their own, stricter rules
-stated where each is defined (ADRs are never edited after acceptance;
-`docs/CONFLICT_MAP.md` is a point-in-time record superseded by a new
-dated file, not edited in place) — this section doesn't change either
-of those.
+`docs/adr/` has its own, stricter rule stated where it's defined (ADRs
+are never edited after acceptance) — this section doesn't change
+that.
 
 ## The one stop-and-ask rule
 
