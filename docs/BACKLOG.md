@@ -294,3 +294,34 @@ Source. DocOps Protocol V2.0 hardening session, 2026-08-19. Finding #2
 from Claude Code's read-only comparison of ADR-0001 against
 scripts/doc_sync.py, plus systems-loop analysis (O'Connor lens) in the
 architect chat.
+
+### P2 — doc_sync.py STAGE step can raise an unhandled exception on index.lock contention
+
+Found during the 2026-08-19 edge-case audit (Scenario 4b, ToolTempest
+scripts/doc_sync.py). The STAGE step's `git add` call
+(`subprocess.run(["git", "add", *git_add_paths], cwd=root, check=True)`)
+has no try/except, unlike every other failure path in the file, which
+prints a `[doc_sync pre-commit] FAIL: ...` message and does a clean
+`return 1`. If it collides with another process holding
+`.git/index.lock`, `check=True` raises `subprocess.CalledProcessError`
+unhandled — a raw Python traceback surfaces to the user instead of the
+file's otherwise-consistent clean-FAIL pattern.
+
+Reproduction note, important for triage: this was only reproduced by
+bypassing git's own commit-time serialization — two `doc_sync.py
+pre-commit` processes launched directly and concurrently against the
+same staged state, not two real sequential `git commit`s. Two real,
+back-to-back commits were also tested in the same session and did not
+race (git's own `.git/index.lock` serializes them, so the hook never
+actually runs twice at once under normal usage — one `doc_sync.py`
+invocation per real `git commit`).
+
+- [ ] Harden the STAGE step's `git add` call against `index.lock`
+      contention (or otherwise decide it's out of scope, since normal
+      hook usage doesn't trigger it) — not started. Classified P2, not
+      P1: narrow, requires an abnormal invocation pattern to surface,
+      not something normal single-commit-at-a-time hook usage hits.
+      Filing only; no fix implemented as part of this entry.
+
+Source. DocOps Protocol V2.0 hardening session, 2026-08-19 edge-case
+audit (Scenario 4b) in the architect chat.
