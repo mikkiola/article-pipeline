@@ -377,6 +377,21 @@ auto-resync, which would propagate a bad fix instantly to every
 consumer with no pause. Worth a real decision when this is picked up,
 not assumed either way here.
 
+**Drift Warning mechanism — decided (2026-08-19).** The check runs at
+pre-push, not pre-commit. Rationale: pre-commit fires often and must
+stay instant and offline-safe (no network call should be added to the
+most frequent, most latency-sensitive git operation). pre-push is the
+point where network access is already guaranteed -- the author is
+about to send data to GitHub regardless, so checking whether
+origin/main in tooltempest has advanced past the local
+.tooltempest.lock pin adds no new network dependency, only reuses the
+connection the push itself requires. The warning surfaces slightly
+later than a commit-time check would (at push, not at the moment of
+the local commit), which is an accepted, deliberate trade-off, not a
+gap -- push is also the natural moment to notice drift, since it's
+when the author is about to share this state externally anyway. Not
+yet implemented; scoping happens alongside CI.
+
 **Not this session's scope.** Sizing, choosing the CI platform, and
 writing the actual pipeline config are a dedicated task, not something
 to bundle into DocOps V2.0 hardening. Flagging with a concrete timing
