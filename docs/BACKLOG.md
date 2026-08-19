@@ -325,3 +325,65 @@ invocation per real `git commit`).
 
 Source. DocOps Protocol V2.0 hardening session, 2026-08-19 edge-case
 audit (Scenario 4b) in the architect chat.
+
+### P1 — [TOOLTEMPEST] CI for ToolTempest, before the second consumer connects
+
+<!--
+  FILED HERE, NOT IN TOOLTEMPEST: this task is about ToolTempest's own
+  infrastructure (CI for the shared tool), not about article-pipeline.
+  It's filed in article-pipeline's docs/BACKLOG.md anyway, as a
+  deliberate exception, not an architectural default — ToolTempest
+  doesn't have an established backlog/issue-tracking convention of its
+  own yet, and the owner explicitly chose "filed somewhere I'll
+  actually see it again" over "filed in the technically correct repo
+  but likely to be forgotten." The [TOOLTEMPEST] tag exists so this
+  entry is never mistaken for an article-pipeline task — when picked
+  up, the actual work (CI config, pipeline) happens in the tooltempest
+  repository, this entry is a pointer, not the task's home.
+-->
+
+**Why now, not "someday."** ToolTempest currently has one consumer
+(article-pipeline). A second and third consumer are realistically
+expected within the next few months (per the owner's own roadmap
+timeline, 2026-08-19 session), with up to eight eventually. Every fix
+landed in ToolTempest today only reaches consumers via a manual,
+easy-to-forget resync step — this session alone hit that exact gap
+three separate times (the verify.py exit-code fix, ADR-0002's push,
+and the UNKNOWN-pattern fix), each caught only because the architect
+or Claude Code happened to notice, not because anything enforced it.
+With one consumer, a missed resync or a bad fix is inconvenient. With
+several, the same gap becomes silent divergence across projects — some
+running a fixed version, some not, with no visibility into which is
+which.
+
+**What's needed, concretely.** A CI pipeline in ToolTempest itself
+(most likely GitHub Actions, given the repo already lives on GitHub)
+that automatically runs the pre-commit/pre-push scenario suite already
+exercised manually in this session — no-op, ordinary RECONCILE,
+genuine staged/unstaged conflict HARD BLOCK, detached HEAD, no
+upstream, UNKNOWN-pattern touched/untouched, verify.py missing/broken
+— on every commit to main, before it's mergeable. This catches a bad
+fix at the source, before any consumer can pull it, rather than
+relying on manual scratch-repo testing being repeated correctly every
+single time a change lands.
+
+**Not required alongside CI, but worth deciding together when this is
+scoped:** whether resync should also become semi-automatic (e.g., a
+bot that opens a PR in each consumer repo when origin/main advances,
+requiring one approval click rather than a fully manual
+scripts/sync-tooling.sh invocation each time) — this closes the "we
+forgot" gap without removing the human review step, unlike full
+auto-resync, which would propagate a bad fix instantly to every
+consumer with no pause. Worth a real decision when this is picked up,
+not assumed either way here.
+
+**Not this session's scope.** Sizing, choosing the CI platform, and
+writing the actual pipeline config are a dedicated task, not something
+to bundle into DocOps V2.0 hardening. Flagging with a concrete timing
+rationale so it isn't lost as abstract "someday" backlog noise.
+
+**Source.** DocOps Protocol V2.0 hardening session, 2026-08-19 —
+raised after the third resync-gap instance in one session, discussed
+in the architect chat regarding solo-developer risk tolerance for
+propagating a shared-tooling fix (e.g., a Python version bump breaking
+the recipe for every connected project).
