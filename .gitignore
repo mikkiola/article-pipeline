@@ -44,4 +44,5 @@ evidence_package/output/_m4_staging_*.json
 # .tooltempest.lock via scripts/sync-tooling.sh -- not authored here,
 # so not tracked here. Source of truth: ToolTempest ADR-0001.
 /scripts/doc_sync.py
+/scripts/doc_sync_tier2.py
 /schemas/execution-record.schema.json

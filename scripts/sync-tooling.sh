@@ -45,15 +45,19 @@ cp "${CACHE_DIR}/rules/drift-control.md" "${CLAUDE_DIR}/rules/drift-control.md" 
 
 echo "OK: installed ToolTempest V1 primitives (commit ${ACTUAL_SHA}) into ${CLAUDE_DIR}"
 
-# DocOps Protocol (ADR-0001, ToolTempest V2). scripts/doc_sync.py and
-# schemas/execution-record.schema.json are executable/reference material
-# consumed by this project's own git hooks, so they are vendored into
-# this repo (gitignored -- see .gitignore) rather than into ~/.claude/.
+# DocOps Protocol (ADR-0001, ToolTempest V2; Tier 2 per ADR-0002).
+# scripts/doc_sync.py and schemas/execution-record.schema.json are
+# executable/reference material consumed by this project's own git
+# hooks. scripts/doc_sync_tier2.py is invoked directly by the agent's
+# own judgment (ADR-0002c), not by a git hook, but is vendored here for
+# the same reason: it needs to exist inside this repo, not only in
+# ~/.claude/.
 # skills/doc-sync/SKILL.md is Claude Code client config, like the V1
 # skills above, so it follows the same ~/.claude/ path.
 mkdir -p "${REPO_ROOT}/scripts" "${REPO_ROOT}/schemas" "${CLAUDE_DIR}/skills/doc-sync"
 
 cp "${CACHE_DIR}/scripts/doc_sync.py" "${REPO_ROOT}/scripts/doc_sync.py" || fail "failed to copy scripts/doc_sync.py"
+cp "${CACHE_DIR}/scripts/doc_sync_tier2.py" "${REPO_ROOT}/scripts/doc_sync_tier2.py" || fail "failed to copy scripts/doc_sync_tier2.py"
 cp "${CACHE_DIR}/schemas/execution-record.schema.json" "${REPO_ROOT}/schemas/execution-record.schema.json" || fail "failed to copy schemas/execution-record.schema.json"
 cp "${CACHE_DIR}/skills/doc-sync/SKILL.md" "${CLAUDE_DIR}/skills/doc-sync/SKILL.md" || fail "failed to copy skills/doc-sync/SKILL.md"
 
