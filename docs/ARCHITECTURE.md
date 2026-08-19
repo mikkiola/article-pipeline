@@ -1,6 +1,6 @@
 # Article Pipeline — Architecture
 
-State as of 2026-08-14. Every fact is a table cell — no prose
+State as of 2026-08-19. Every fact is a table cell — no prose
 sections. Rationale for any decision: `docs/adr/`. Plan:
 `docs/ROADMAP.md`. Tasks: `docs/BACKLOG.md`. This document does not
 duplicate what those three own — it states current state and
@@ -18,8 +18,8 @@ dependencies only.
 | Quality Gate | Not started | Author | — | — |
 | Platform Adapter | Not started | Quality Gate | — | — |
 | Experiment Log | Not started | Platform Adapter | — | — |
-| ToolTempest lock+sync (manual) | Implemented | `mikkiola/tooltempest` | End-to-end tested, byte-for-byte diff verified | `3d4ad09` |
-| ToolTempest CLI adapter + discovery | Not started | ToolTempest lock+sync | — | — |
+| ToolTempest DocOps Protocol (pre-commit/pre-push hooks + Drift Warning) | Implemented | `mikkiola/tooltempest` (pinned via `.tooltempest.lock`) | Regression-tested: RECONCILE, HARD BLOCK (staged/unstaged conflict, UNKNOWN-pattern), crash-vs-content-problem messages, Drift Warning — see ADR-0001/ADR-0002 (`mikkiola/tooltempest`), ADR-0032 (this repo) | `.tooltempest.lock` pinned at `43549a6`; Drift Warning `404c24c` |
+| ToolTempest CLI adapter + discovery | Not started | ToolTempest DocOps Protocol | — | — |
 
 ## Repositories
 
