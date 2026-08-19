@@ -486,7 +486,23 @@ Two separable pieces, do not conflate:
       without hand-maintaining a list. Candidate direction discussed: a
       manifest file living in ToolTempest itself, with
       `sync-tooling.sh` reading from it instead of hardcoding paths.
-      Not decided.
+      Decided — see below.
+
+**Decision (owner, 2026-08-19).** Option A — a manifest file living in
+ToolTempest, which `sync-tooling.sh` reads instead of hardcoding
+paths. Chosen over a ToolTempest-side CI check (Option B) because B
+has a hard dependency on CI infrastructure that doesn't exist yet (see
+the separate "[TOOLTEMPEST] CI... before the second consumer connects"
+item) — A has no such dependency and can proceed now. B remains a
+valid future addition on top of A once CI exists (see the new
+"Email notification on vendoring drift" item below), not a competing
+alternative.
+
+Implementation of Option A itself is NOT scoped by this decision —
+this entry's own text already notes it "changes what ToolTempest
+commits to exposing to consumers," likely needs its own ADR,
+ToolTempest-side. This records the decision; a future task scopes and
+implements it.
 
 Sequencing: after current Tier 2 work closes (Tier 1 regression check
 + final doc-sync marking Tier 2 as implemented).
@@ -526,3 +542,30 @@ Validation sections, do not re-derive):
 
 **Source.** ADR-0033 (article-pipeline), architect chat session
 2026-08-19.
+
+### P2 — Email notification on vendoring drift (depends on [TOOLTEMPEST] CI)
+
+Found: 2026-08-19, during the sync-tooling.sh completeness (Phase 5)
+piece-2 decision. The owner wants to be notified by email if a
+vendoring drift or CI failure occurs while not actively working the
+project (e.g., away on another project) — a silent local script
+failure isn't enough. This is not a competing mechanism to the
+manifest decision (Option A, above) or a future CI check (Option B)
+— it's a notification channel layered on top of whichever detection
+mechanism exists.
+
+Hard dependency: cannot be implemented before the "[TOOLTEMPEST] CI,
+before the second consumer connects" item exists and runs, since
+there is no CI job to attach a failure notification to yet. GitHub
+Actions supports failure-triggered email natively via repository
+notification settings once a workflow exists — no custom code is
+expected to be needed for the basic case, but this hasn't been
+verified against this project's specific setup.
+
+- [ ] Not actionable until the [TOOLTEMPEST] CI item is built.
+- [ ] When CI exists: confirm whether GitHub's built-in
+      failed-workflow email notification is sufficient, or whether a
+      custom notification step is needed.
+
+**Source.** Architect chat session, 2026-08-19, sync-tooling.sh
+completeness (Phase 5) piece-2 decision discussion.
