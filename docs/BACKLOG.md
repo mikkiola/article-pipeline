@@ -226,3 +226,71 @@ answer has architectural consequences.
   changes the hook's own inline comment already acknowledges (e.g. a
   bugfix to a component directory that doesn't change its
   Status/Validation/Commit).
+
+### P1 — Audit implicit text-based contracts in the DocOps protocol
+
+Pattern, not a one-off finding. Twice in the DocOps Protocol, one
+component has inferred another component's state from an unstructured
+text signal instead of an explicit code or field:
+
+1. Staged-conflict bug (ToolTempest, commit c25dd72). RECONCILE
+   inferred git-flow intent from the fact that a file was staged,
+   without checking for a staged/unstaged divergence. Found only
+   through a live test, not a code review.
+2. verify.py substring match (found 2026-08-19, DocOps V2.0 hardening
+   session). doc_sync.py determined "nothing to check" by testing
+   `"no SPEC.md files found" in verify_stderr`. Fixed by introducing
+   exit codes 0/1/2: article-pipeline commit `c8641cd7e84624a3ca03d7927d7872ab654a3cd1`
+   (scripts/verify.py:276, `return 1` → `return 2`) and tooltempest
+   commit `b66de81f9011ccd5e957a93ece15a77edc872881`
+   (scripts/doc_sync.py:304, substring match → `exit_code == 2`). Both
+   commit messages name the accepted risk explicitly: external callers
+   of verify.py outside this repository, invisible to a grep search,
+   that currently treat exit 1 as "nothing to check" will break
+   silently. Regression-tested: HARD BLOCK on a MALFORMED file still
+   returns exit 1; the no-SPEC.md case now cleanly returns exit 0.
+
+Root cause, not coincidence. Any point in the protocol where component
+A infers component B's state from text (stderr content, git diff
+heuristics, string comparison) rather than a structured signal (exit
+code, JSON field, explicit API) is a candidate for a future silent
+failure. Both findings above belong to this same class.
+
+- [ ] Action item: before ToolTempest gains a second consumer
+      (deliberately out of scope for now — this is not readiness for
+      replication), run a targeted grep audit of scripts/doc_sync.py
+      and related hook scripts for any other place where parsing
+      depends on text matching instead of a structured signal. Do not
+      fix everything at once — list findings read-only first, weigh
+      each one individually (as was done for finding #2 above), and
+      fix selectively, not in bulk. Not started.
+
+Out of scope for this item: re-testing the already-fixed staged-
+conflict and substring-match cases — both are closed separately.
+
+### Resolved — .tooltempest.lock resync (closed)
+
+article-pipeline/.tooltempest.lock was pinned at c25dd72 (pre-fix) when
+the substring-match fix above landed in ToolTempest. Resynced via
+scripts/sync-tooling.sh, then the pin itself committed: article-pipeline
+commit `f681e59774471f5a2291478217f1fe1d815aaac1` ("fix(docops): repin
+.tooltempest.lock to tooltempest@b66de81").
+
+Verified independently, not just by trusting script output: hash and
+byte-diff of the vendored scripts/doc_sync.py and
+schemas/execution-record.schema.json (both gitignored — vendoring
+split by design, not a diff-scope gap) confirmed the on-disk content
+matches ToolTempest b66de81 exactly. The no-op and HARD BLOCK checks
+were re-run against the synced article-pipeline copy specifically —
+both matched the results already confirmed directly against
+ToolTempest, no divergence.
+
+ToolTempest's `main` also needed a push (b66de81 existed only in the
+local checkout; origin/main was still at 31f48b7) — confirmed and
+approved before pushing, since publishing to a shared remote is a
+visible action, not push straight from a routine sync.
+
+Source. DocOps Protocol V2.0 hardening session, 2026-08-19. Finding #2
+from Claude Code's read-only comparison of ADR-0001 against
+scripts/doc_sync.py, plus systems-loop analysis (O'Connor lens) in the
+architect chat.
