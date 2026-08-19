@@ -273,7 +273,7 @@ def main() -> int:
     spec_files = find_spec_files(repo_root)
     if not spec_files:
         print("discover: no SPEC.md files found", file=sys.stderr)
-        return 1
+        return 2
 
     # Resolve directories that own their own SPEC.md directly first,
     # so a root-level SPEC.md's inference excludes them as candidates.
