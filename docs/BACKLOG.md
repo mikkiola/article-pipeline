@@ -468,10 +468,17 @@ file that should be vendored but isn't — remains.
 
 Two separable pieces, do not conflate:
 
-- [ ] Regression test (cheap): verify every file currently listed in
+- [x] Regression test (cheap): verify every file currently listed in
       `sync-tooling.sh`'s copy commands actually exists in ToolTempest
       at the pinned commit. Catches typos/renames/deletions in the
-      existing list, not missing new entries.
+      existing list, not missing new entries. Implemented as
+      `scripts/test-sync-tooling-manifest.sh`, 2026-08-19: parses the
+      `cp` lines out of `sync-tooling.sh`, resolves the pinned commit
+      from `.tooltempest.lock`, and checks each vendored path's
+      existence in the ToolTempest repo at that commit via `git
+      cat-file -e`. Passes against current state (7/7 files found);
+      failure path confirmed with a synthetic missing-file case
+      (non-zero exit, names the missing file).
 - [ ] Completeness design (architectural, needs its own decision —
       likely its own ADR, ToolTempest-side, since it changes what
       ToolTempest commits to exposing to consumers): how a consumer
