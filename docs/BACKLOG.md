@@ -586,8 +586,32 @@ supplying `proposed` per PR (adds a manual step this decision avoids).
       decision now depends on closing. Do not assume either way; check
       `scripts/doc_sync.py`'s actual logic.
 
-**Source.** ADR-0033 (article-pipeline), architect chat session
-2026-08-19.
+**Finding (2026-08-19).** Tier 1's `doc_sync.py` does NOT cover this —
+confirmed gap, not covered. Read in full: `cmd_pre_commit()` and
+`cmd_pre_push()` both operate entirely through `run_verify()`
+(`scripts/verify.py`), which discovers and structurally validates only
+per-component `SPEC.md`/`CHECKPOINT.md` files (required-field
+presence, milestone-checkbox structure) — it contains no logic that
+inspects `ARCHITECTURE.md`, `BACKLOG.md`, or `ROADMAP.md` at all, and
+no logic that checks whether a commit/PR touching functionality
+requiring doc updates actually included them. `pre-commit`'s own
+success message ("N doc-owned file(s) scanned, all structurally OK")
+is accurate: it is a structural check of files already present, not a
+completeness check of whether the right files are present.
+
+The one place `ARCHITECTURE.md` is examined at all is a separate
+mechanism, not part of `doc_sync.py`: `scripts/hooks/pre-push`'s own
+inline "component-directory changes paired with an ARCHITECTURE.md
+update" check. It is warning-only (never sets `fail=1`, never blocks
+a push — confirmed by reading the script), checks `ARCHITECTURE.md`
+only (never `BACKLOG.md`/`ROADMAP.md`), and only fires for a
+hardcoded list of component directories. This check, and whether its
+warning-only design is deliberate, is already a separate, open item
+in this file's "Owner decisions needed" section — not resolved here.
+
+ADR-0034's Consequences section correctly flagged this as an open,
+unverified dependency. This confirms it as a real gap; no fix is
+proposed here — a future task scopes one.
 
 ### P2 — Email notification on vendoring drift (depends on [TOOLTEMPEST] CI)
 
