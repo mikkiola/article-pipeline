@@ -570,9 +570,11 @@ style — already built and explicitly abandoned in this repo, commit
 `a8487c4`, as "too conservative, wrong scope"); the owner manually
 supplying `proposed` per PR (adds a manual step this decision avoids).
 
-- [ ] Write a new ADR (article-pipeline, next free number per `ls
+- [x] Write a new ADR (article-pipeline, next free number per `ls
       docs/adr/`) documenting this decision before resuming Part B's
-      GitHub Actions workflow implementation.
+      GitHub Actions workflow implementation. Done: ADR-0034
+      (`docs/adr/0034-contributor-supplied-doc-updates.md`),
+      2026-08-19.
 - [ ] Add a `CONTRIBUTING.md` requirement (new or existing file, check
       first) stating that a PR touching functionality requiring
       `ARCHITECTURE.md`/`BACKLOG.md`/`ROADMAP.md` updates must include
