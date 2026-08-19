@@ -540,6 +540,18 @@ Validation sections, do not re-derive):
       equivalents of Tier 2 Stage 3's scenarios, plus the
       close-and-reopen path under a simulated concurrent merge.
 
+**Status correction (2026-08-19).** No `.github/workflows/` file
+exists yet — confirmed via `find .github`, `git log --all -- .github/`,
+and `git status`, all empty. A "first slice" implementation of point 1
+was attempted this session but stopped at a BLOCKING finding-unknowns
+result (the `proposed`-content-source gap, since resolved — see
+ADR-0034 and `CONTRIBUTING.md` below) before any file was created.
+Resolving that blocker did not retroactively build the skeleton; none
+of the checkboxes above should be read as started. A later task
+attempting to "extend" or build on an existing workflow file should
+first re-confirm this file still doesn't exist, rather than assuming
+a prior session completed it.
+
 **Decision (owner, 2026-08-19).** The content passed as `proposed` to
 `apply_tier2_sync()` is supplied by the contributor — their own PR
 includes the doc updates (`ARCHITECTURE.md`/`BACKLOG.md`/`ROADMAP.md`)
