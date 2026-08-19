@@ -575,11 +575,12 @@ supplying `proposed` per PR (adds a manual step this decision avoids).
       GitHub Actions workflow implementation. Done: ADR-0034
       (`docs/adr/0034-contributor-supplied-doc-updates.md`),
       2026-08-19.
-- [ ] Add a `CONTRIBUTING.md` requirement (new or existing file, check
+- [x] Add a `CONTRIBUTING.md` requirement (new or existing file, check
       first) stating that a PR touching functionality requiring
       `ARCHITECTURE.md`/`BACKLOG.md`/`ROADMAP.md` updates must include
       those doc updates in the same PR, in the format Tier 1/Tier 2
-      doc-sync expects.
+      doc-sync expects. Done: `CONTRIBUTING.md` created (new file),
+      2026-08-19.
 - [ ] Confirm what Tier 1's existing pre-commit/pre-push doc_sync
       validation actually checks today — whether it already flags a
       PR missing required doc updates, or whether that's a gap this
