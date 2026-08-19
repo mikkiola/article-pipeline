@@ -485,3 +485,37 @@ Sequencing: after current Tier 2 work closes (Tier 1 regression check
 + final doc-sync marking Tier 2 as implemented).
 
 **Source.** Tier 2 /doc-sync implementation session, 2026-08-19.
+
+### P1 — Implement ADR-0033's GitHub Actions workflow
+
+Found: 2026-08-19. ADR-0033
+(docs/adr/0033-contributor-governance-post-merge-reconciliation.md) is
+Accepted — the design for a contributor-facing GitHub Actions workflow
+is fully specified, including token scoping, the
+reconciliation-PR-as-confirmation mechanism, and the close-and-reopen
+resolution for concurrent `docs/` changes. The workflow itself has not
+been built. Acceptance of the ADR was mistakenly treated as equivalent
+to this being scheduled work in an earlier draft of a session handoff
+document — it wasn't; this entry corrects that gap.
+
+Scope of the implementation task (per ADR-0033's own Decision and
+Validation sections, do not re-derive):
+
+- [ ] GitHub Actions workflow calling `apply_tier2_sync()` exactly
+      once per contributor PR merge (ADR-0033 point 1).
+- [ ] Reconciliation PR opened for `BACKLOG.md`/`ROADMAP.md` changes;
+      merge = accept, close-without-merge = reject (point 2).
+- [ ] Rollback on PR close triggers `restore_snapshots()` via a
+      GitHub event handler (point 3).
+- [ ] Scope-zeroed, least-privilege token permissions per job — no job
+      scoped to merge authority (point 4).
+- [ ] Close-and-reopen handling for concurrent `docs/`-touching merges
+      (point 5).
+- [ ] Evidence logging matching Tier 1's existing record format
+      (point 6).
+- [ ] Testing per ADR-0033's Validation section — GitHub-event-adapted
+      equivalents of Tier 2 Stage 3's scenarios, plus the
+      close-and-reopen path under a simulated concurrent merge.
+
+**Source.** ADR-0033 (article-pipeline), architect chat session
+2026-08-19.
