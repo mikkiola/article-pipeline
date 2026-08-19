@@ -402,3 +402,86 @@ raised after the third resync-gap instance in one session, discussed
 in the architect chat regarding solo-developer risk tolerance for
 propagating a shared-tooling fix (e.g., a Python version bump breaking
 the recipe for every connected project).
+
+### P2 — doc_sync_tier2.py CLI exit-code semantics for no-op runs
+
+Found during Tier 2 Stage 4 (CLI entry point) implementation,
+2026-08-19. `apply_tier2_sync()`'s CLI wrapper exits 0 only when
+`result["status"] == "applied"`; a fully valid invocation where the
+proposed content matches what's already on disk (`status ==
+"no_changes"`) exits non-zero, per the literal Stage 4 task wording
+("0 if applied, non-zero otherwise"). A future scripted/CI caller
+treating any non-zero exit as a hard failure would conflate "nothing
+needed to change" with a real error (bad JSON, a gated-document
+rejection, etc.).
+
+- [ ] Not fixed now: no automated caller exists yet to be affected by
+      it. Revisit when Phase 5 (sync-tooling completeness, below) or
+      ADR-0033's GitHub Actions implementation gives this a real
+      caller.
+
+**Source.** Tier 2 /doc-sync implementation session, 2026-08-19,
+Stage 4.
+
+### P2 — ADR lifecycle state machine + structural validation + generated index
+
+Found during the ADR-0033 discussion (contributor governance),
+2026-08-19. Currently ADR status is free-text and unenforced: there is
+no automated check that a new ADR's number is unique, that a
+"Supersedes" relationship is followed through (the old ADR actually
+marked Superseded), or that status transitions are valid. Not urgent
+while the project has one contributor, but becomes relevant once
+ADR-0033's contributor flow is live and external PRs can introduce
+ADRs.
+
+Two separable pieces, do not conflate:
+
+- [ ] Lightweight: a CI check that a new ADR's number doesn't collide
+      with an existing one and that the file's header number matches
+      its filename.
+- [ ] Full design (explicitly deferred — needs its own ADR before
+      implementation, per the external review discussed this session):
+      Proposed → Accepted → Deprecated/Superseded as an enforced state
+      machine, an explicit "Supersedes"/"Superseded by" field pair
+      checked by CI, and a generated `ADR-INDEX.md` as a derived
+      artifact (not hand-maintained). Do not implement this piece
+      without a preceding ADR describing the lifecycle contract itself
+      — decided this session, per the discussion of Log4brains/
+      MADR-style tooling as prior art.
+
+**Source.** Tier 2 /doc-sync implementation session, 2026-08-19,
+ADR-0033 discussion.
+
+### P1 — sync-tooling.sh completeness testing (Phase 5)
+
+Found during the Tier 2 implementation session, 2026-08-19.
+`.tooltempest.lock` was repinned to a new ToolTempest commit that
+included a new file (`scripts/doc_sync_tier2.py`), but
+`sync-tooling.sh`'s vendored-file list is a static, hand-maintained
+list written before Tier 2 existed. The repin succeeded (correct SHA
+pinned, Drift Warning silenced) while the new file silently failed to
+reach article-pipeline — caught only because Claude Code manually
+diffed the two ToolTempest commits during an unrelated task, not by
+any automated check. Fixed for this specific case (see commit
+`f51c528`), but the underlying gap — no test catches a new ToolTempest
+file that should be vendored but isn't — remains.
+
+Two separable pieces, do not conflate:
+
+- [ ] Regression test (cheap): verify every file currently listed in
+      `sync-tooling.sh`'s copy commands actually exists in ToolTempest
+      at the pinned commit. Catches typos/renames/deletions in the
+      existing list, not missing new entries.
+- [ ] Completeness design (architectural, needs its own decision —
+      likely its own ADR, ToolTempest-side, since it changes what
+      ToolTempest commits to exposing to consumers): how a consumer
+      discovers that a new ToolTempest file should be vendored,
+      without hand-maintaining a list. Candidate direction discussed: a
+      manifest file living in ToolTempest itself, with
+      `sync-tooling.sh` reading from it instead of hardcoding paths.
+      Not decided.
+
+Sequencing: after current Tier 2 work closes (Tier 1 regression check
++ final doc-sync marking Tier 2 as implemented).
+
+**Source.** Tier 2 /doc-sync implementation session, 2026-08-19.
