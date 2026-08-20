@@ -797,3 +797,33 @@ e.g. `git show c480ab4:context_layer/SPEC.md`).
       being scoped) — flag as a follow-on dependency only.
 
 **Source.** Architect chat session, 2026-08-20, SPEC.md audit.
+
+### P2 — CHECKPOINT.md orphaning recurs: same pattern as the SPEC.md finding above, no rule of its own
+
+Found: 2026-08-20, while writing the DocOps SPEC.md (this session). Root
+`CHECKPOINT.md` is entirely about the closed Evidence Package component
+("Milestones перенесены из `SPEC.md`" — its own header line — tracking
+M1-M6 of the old root SPEC.md this session overwrote with the DocOps
+spec). `scripts/verify.py` still discovers and structurally validates it
+(6/6 well-formed units, exit 0) as the paired VC-source for whatever
+SPEC.md currently lives at root — it has no way to detect that the pairing
+is now topically stale, only that it's structurally parseable.
+
+This is the same orphaning pattern as the entry directly above (two
+unlinked SPEC.md copies, one deleted) — a derived/paired doc-tracking file
+left behind when the document it was paired with moved on, with no
+location/lifecycle rule of its own to say what should happen to it. That
+entry added a rule for SPEC.md's own lifecycle (`docs/CONSTITUTION.md`,
+"SPEC.md's status" section); no equivalent rule exists for CHECKPOINT.md.
+
+Owner decision (2026-08-20, this session): not resolved now — CHECKPOINT.md
+is left in place, stale, deliberately. Filing this entry is the entire
+scope of the finding; it does not decide whether CHECKPOINT.md should get
+its own single-location/overwrite rule (mirroring SPEC.md's), should be
+deleted outright now that its paired SPEC.md changed topic, or something
+else. A future task or `/spec` pass resolves this, not this entry.
+
+- [ ] Decide CHECKPOINT.md's own location/lifecycle rule (or confirm none
+      is needed) — not started.
+
+**Source.** Architect chat session, 2026-08-20, DocOps SPEC.md session.
