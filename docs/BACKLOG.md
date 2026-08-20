@@ -765,11 +765,26 @@ Validation sections, do not re-derive):
       runtime. Verified by reading the workflow file instead (the
       condition is present and correctly gated); not independently
       re-executable outside GitHub Actions.
-- [ ] Manual follow-up, not a code task: configure GitHub branch
+- [x] Manual follow-up, not a code task: configure GitHub branch
       protection on `main` to require code-owner review on
       `docs/BACKLOG.md`/`docs/ROADMAP.md` (the `.github/CODEOWNERS`
       file alone has no enforcement effect until this is turned on —
-      per ADR-0035's Validation section).
+      per ADR-0035's Validation section). Done — configured in a prior
+      session (not logged separately at the time) and independently
+      re-verified live, 2026-08-20, via `gh api
+      repos/mikkiola/article-pipeline/branches/main/protection`:
+      `required_pull_request_reviews.require_code_owner_reviews: true`,
+      `required_approving_review_count: 1`. ADR-0035's Validation
+      section's open verification step is satisfied.
+
+      Same configuration action also left GitHub's `enforce_admins`
+      (admin bypass) toggle disabled — a separate facet of this same
+      branch-protection rule, adjacent to but distinct from the
+      review-requirement question this checkbox tracked. That was
+      likewise decided and applied in a prior session but never
+      recorded anywhere; closed now as its own documentation gap, not
+      a new decision — see ADR-0039
+      (`docs/adr/0039-branch-protection-admin-bypass.md`).
 
 **Status correction (2026-08-19).** No `.github/workflows/` file
 exists yet — confirmed via `find .github`, `git log --all -- .github/`,
