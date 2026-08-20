@@ -1,187 +1,258 @@
-# DocOps — Specification (Mechanism As Built)
+# DocOps — Consolidated Specification (Remaining Gaps)
 
 ## Overview
 
-Documents, as currently built and verified, the full set of real mutation
-paths that can write to article-pipeline's five canonical documents
-(`docs/ARCHITECTURE.md`, `docs/BACKLOG.md`, `docs/ROADMAP.md`,
-`docs/CONSTITUTION.md`, `README.md`) — a consolidation spec, not new design
-work. Written 2026-08-20.
+Designs the fixes for all currently-open DocOps-adjacent gaps in
+`docs/BACKLOG.md`, consolidated into one pass per owner decision
+(2026-08-20): README.md's missing mutation path, Tier 1's content-blind
+validation, ADR-0033 point 5's status, the implicit-text-contract audit,
+ADR lifecycle validation, and CHECKPOINT.md's lifecycle. Supersedes the
+"separate `/spec` pass per item" plan from earlier this session — that
+rule was meant for genuinely independent architectural decisions, not for
+splitting one coherent documentation effort. The retrospective
+mechanism-as-built spec committed as `dcb84e4` is unaffected; this SPEC.md
+overwrites it at the single root location per `docs/CONSTITUTION.md`'s
+SPEC.md rule, `dcb84e4`'s content stays recoverable via `git log -- SPEC.md`.
 
 ## Scope
 
-**In scope:** every mechanism that can mutate one of the five docs today —
-manual/interactive editing, Tier 1 pre-commit/pre-push validation, Tier 2
-interactive `/doc-sync`, the contributor pre-merge gate (ADR-0035), and the
-post-merge reconciliation Action (ADR-0033/0034, narrowed by ADR-0035).
+**Glossary, broadened from `dcb84e4`.** "DocOps" here covers document-
+governance automation generally, not only the 5-canonical-doc sync
+mechanism: it also includes ADR lifecycle validation (`docs/adr/*.md`,
+a different artifact class — ADRs aren't kept in sync with code, they're
+immutable records, but their structural governance is adjacent DocOps
+territory) and CHECKPOINT.md's lifecycle (not one of the 5 canonical docs,
+but Tier 1's own direct validation target).
 
-**Out of scope (owner decision, this session):** designing or deciding
-solutions for currently open DocOps-adjacent items in `docs/BACKLOG.md` —
-README.md's automation gap, ADR-0035's close-and-reopen re-scoping, the
-Tier 1 completeness gap, the "audit implicit text-based contracts" P1 item,
-ADR lifecycle validation. Each is recorded below as a known gap with a
-pointer to its BACKLOG.md entry; none is resolved here. Each gets its own
-future `/spec` pass — README.md's gap is queued next, per this session's
-plan.
+**Design constraint carried forward from ADR-0035.** Post-hoc gating
+(confirming a mutation *after* it already landed) is the pattern ADR-0035
+moved away from for BACKLOG.md/ROADMAP.md, for a documented reason (a
+TOCTOU-adjacent structural no-op). Any new mechanism designed in this SPEC
+that touches confirmation/gating (M1, M2) should not reintroduce that
+pattern without a stated reason — checked below per milestone.
 
-**Glossary.** "DocOps" = the whole cross-layer protocol below (Tier 1 +
-Tier 2 + pre-merge gate + post-merge reconciliation), not only the
-ADR-0033/34/35 slice — matches the `doc-sync` skill's own established usage.
+**Out of scope, unchanged:** everything not listed in the six items below
+(numeric red-flag thresholds, contributor scoring/reputation, the
+warning-only pre-push pairing check's own hard-fail decision — noted as a
+dependency in M2, not resolved here).
 
-## Mutation Path Matrix
+## Investigation Findings (this session, first-hand)
 
-Five real paths exist. P1 is the only path available to two of the five
-docs.
+Three factual claims verified directly, informing M3 and M6 below —
+recorded here rather than only in a milestone, since they're evidence, not
+design choices:
 
-- **P1 — Manual/interactive edit.** The architect or Claude Code session
-  edits the file directly, per `docs/CONSTITUTION.md`'s "Keeping documents
-  current" section (unambiguous fact update vs. architectural change).
-  Always available; predates and coexists with every other path.
-- **P2 — Tier 1 pre-commit/pre-push validation** (`scripts/doc_sync.py`,
-  vendored from ToolTempest, ADR-0001). Structurally validates
-  `SPEC.md`/`CHECKPOINT.md` only. Confirmed this session by direct grep:
-  `scripts/doc_sync.py` contains zero references to `ARCHITECTURE.md`,
-  `BACKLOG.md`, `ROADMAP.md`, `CONSTITUTION.md`, or `README.md` by name —
-  it does not inspect any of the five docs' content.
-- **P3 — Tier 2 interactive `/doc-sync`** (`scripts/doc_sync_tier2.py`,
-  ADR-0002/0003). Snapshot/diff/role-gated-apply over exactly three files
-  (`TIER2_DOCS`): `ARCHITECTURE.md` direct-write, `BACKLOG.md`/`ROADMAP.md`
-  gated on interactive human confirmation (`GATED_DOCS`). `CONSTITUTION.md`
-  is deliberately, permanently excluded per ADR-0002's Scope/Invariants —
-  confirmed this session by reading the code comment at its exclusion.
-  `README.md` was never in scope.
-- **P4 — Contributor pre-merge gate** (`.github/CODEOWNERS` + branch
-  protection, ADR-0035). Confirmed this session by reading
-  `.github/CODEOWNERS`: protects exactly `/docs/BACKLOG.md` and
-  `/docs/ROADMAP.md`. The contributor's own PR review is the confirmation
-  gate — no separate post-merge step for these two files. Supersedes
-  ADR-0033 points 2/3. Has no effect until branch protection is actually
-  configured in GitHub's repo settings (per ADR-0035's own Validation
-  section — a manual step, not verified as done by this SPEC).
-- **P5 — Post-merge reconciliation Action**
-  (`.github/workflows/adr-0033-reconciliation.yml` +
-  `.github/scripts/reconcile.py`, ADR-0033 points 1/4/5/6 as narrowed by
-  ADR-0034/0035). Fires on `pull_request: closed` with `merged == true`.
-  Writes `ARCHITECTURE.md` directly from the merged PR's own tree
-  (contributor-supplied content per ADR-0034, not generated by the
-  Action), logs one evidence record per run to `.tempest/runs/`.
-  `BACKLOG.md`/`ROADMAP.md` are never touched by this path — their
-  confirmation moved to P4.
-
-| Doc | P1 Manual | P2 Tier 1 hooks | P3 Tier 2 `/doc-sync` | P4 Pre-merge gate | P5 Post-merge reconcile |
-|---|---|---|---|---|---|
-| `ARCHITECTURE.md` | Yes | Validates SPEC/CHECKPOINT only, doesn't inspect this file | Direct-write, no confirmation | Not CODEOWNERS-protected | Direct-write from merged PR tree |
-| `BACKLOG.md` | Yes | Same caveat | Gated — human confirmation required | CODEOWNERS-protected, owner review pre-merge | N/A — superseded by P4 for this file |
-| `ROADMAP.md` | Yes | Same caveat | Gated — human confirmation required | CODEOWNERS-protected, owner review pre-merge | N/A — superseded by P4 for this file |
-| `CONSTITUTION.md` | Yes — only path | Not covered | Deliberately, permanently excluded (ADR-0002) | Not configured | Not touched |
-| `README.md` | Yes — only path | Not covered | Never in scope (not in `TIER2_DOCS`) | Not configured | Not touched |
-
-## Security Considerations
-
-Token scoping in P5's workflow is scope-zeroed per ADR-0033 point 4,
-simplified by ADR-0035: top-level `permissions: {}`, with only the
-`reconcile` job granted `contents: write`. No job anywhere in the workflow
-holds `pull-requests` write scope — there is no reconciliation-PR-opening
-step left to need it, since P4 replaced that mechanism for the two gated
-files. Enforcement for P4 depends entirely on GitHub branch protection
-actually being turned on for the CODEOWNERS-protected paths; the
-`CODEOWNERS` file alone has no effect (ADR-0035's own Validation section,
-not independently re-verified by this SPEC — tracked as an open manual
-step in `docs/BACKLOG.md`).
-
-## Known Gaps / Deliberate Exclusions
-
-Kept separate deliberately — conflating "decided this way on purpose" with
-"nobody's gotten to it yet" would misrepresent both.
-
-**Deliberate, not gaps:**
-- `CONSTITUTION.md`'s exclusion from Tier 2 is a permanent, sourced design
-  decision (ADR-0002 Scope/Invariants), not an oversight.
-
-**Acknowledged gaps, not solved here — each tracked in `docs/BACKLOG.md`:**
-- `README.md` has no automated mutation path at all (P1 only), despite
-  getting the same "update directly as part of the task" policy as
-  ARCHITECTURE/BACKLOG/ROADMAP per `docs/CONSTITUTION.md`. Next queued
-  `/spec` pass, per this session's decision.
-- Tier 1 (P2) never inspects the five docs' content — it validates
-  `SPEC.md`/`CHECKPOINT.md` structure only. See `docs/BACKLOG.md`'s
-  "P1 — Implement ADR-0033's GitHub Actions workflow" entry, Finding
-  2026-08-19.
-- P5's `status: "applied"` outcome is structurally unreachable by
-  construction: `proposed` is always read from the same on-disk content
-  `apply_tier2_sync()`'s own snapshot also reads, so the diff is always
-  empty. Only `no_changes`/`error` are reachable. Noted, not fixed — see
-  the same BACKLOG.md entry, point 1's note.
-- ADR-0033 point 5 (close-and-reopen on concurrent `docs/` merges) was
-  written for the now-superseded reconciliation-PR flow; whether/how it
-  needs re-scoping under ADR-0035 has not been assessed. See
-  `docs/BACKLOG.md`'s same entry, the point-5 checkbox.
-- `docs/ARCHITECTURE.md`'s own DocOps-related rows (its "ToolTempest
-  DocOps Protocol", "ToolTempest Tier 2 doc-sync", and "ToolTempest CLI
-  adapter" rows) predate ADR-0033/0034/0035 and don't mention the
-  pre-merge gate or post-merge reconciliation at all — confirmed this
-  session by reading those rows directly. Flagged here as now-stale;
-  updating them is a separate future task, not done as part of this SPEC.
-- "Audit implicit text-based contracts in the DocOps protocol" — a
-  broader pattern-level audit item, open in `docs/BACKLOG.md`, not
-  touched here.
-
-## Verification (Claim-Accuracy Checklist)
-
-Each claim below is independently re-checkable; re-run after any future
-DocOps-related ADR to catch drift.
-
-- [x] `scripts/doc_sync.py` contains no reference to `ARCHITECTURE.md`,
-      `BACKLOG.md`, `ROADMAP.md`, `CONSTITUTION.md`, or `README.md`.
-      Verified: `grep -n "ARCHITECTURE.md\|BACKLOG.md\|ROADMAP.md" scripts/doc_sync.py`
-      → no matches.
-- [x] `scripts/doc_sync_tier2.py`'s `TIER2_DOCS` is exactly
-      `("docs/ARCHITECTURE.md", "docs/BACKLOG.md", "docs/ROADMAP.md")`,
-      and its own comment states `CONSTITUTION.md` is explicitly out of
-      scope per ADR-0002. Verified by reading the file directly, this
-      session.
-- [x] `.github/CODEOWNERS` protects exactly `/docs/BACKLOG.md` and
-      `/docs/ROADMAP.md`. Verified: `cat .github/CODEOWNERS`, this
-      session.
-- [x] `.github/workflows/adr-0033-reconciliation.yml` triggers on
-      `pull_request: closed`, gated on `merged == true`, and grants only
-      `contents: write` to the single `reconcile` job (top-level
-      `permissions: {}`). Verified by reading the workflow file directly,
-      this session.
-- [x] `.github/scripts/reconcile.py` reads `ARCHITECTURE.md` from the
-      already-checked-out tree (not generated), calls
-      `apply_tier2_sync(..., interactive=False)`, and never references
-      `BACKLOG.md`/`ROADMAP.md`. Verified by reading the file directly,
-      this session.
-- [x] `docs/ARCHITECTURE.md`'s three DocOps-related rows don't cite
-      ADR-0033, ADR-0034, or ADR-0035. Verified: `grep -n -i
-      "docops\|doc.sync" docs/ARCHITECTURE.md`, this session.
+1. **`.github/CODEOWNERS`/`TIER2_DOCS` state, re-confirmed:** `TIER2_DOCS`
+   is `("docs/ARCHITECTURE.md", "docs/BACKLOG.md", "docs/ROADMAP.md")`;
+   `README.md` is absent from it and from `CODEOWNERS` — the gap M1
+   closes.
+2. **`scripts/verify.py`'s component discovery gives a paired
+   `CHECKPOINT.md` unconditional priority over a SPEC.md's own inline
+   Milestones section** — confirmed by reading its discovery logic:  a
+   SPEC.md is classified as pattern `"checkpoint"` whenever a
+   `CHECKPOINT.md` sits next to it, regardless of whether that SPEC.md
+   also has a well-formed inline Milestones section. Consequence: the
+   `dcb84e4` SPEC.md's own inline Milestones section was never actually
+   structurally validated by Tier 1 — root `CHECKPOINT.md`'s mere
+   presence silently redirected validation to it instead, the whole time.
+   Repo-wide search confirms exactly one `CHECKPOINT.md` exists (root).
+3. **`.github/scripts/reconcile.py`'s `git commit`/`git push` steps run
+   with no retry or rejection handling** — confirmed by reading the
+   script: the only `try`/`except` wraps the `apply_tier2_sync()` call;
+   the commit and push calls after it are unguarded. Two contributor PRs
+   merging close together could each trigger their own reconciliation
+   run; if both attempt to push to `main` from stale local state, the
+   second push is rejected (non-fast-forward) and crashes the script
+   uncaught — losing that run's evidence record silently, since it was
+   already written to disk but the commit containing it never reaches
+   `origin`. This is a different mechanism than ADR-0033 point 5's
+   original close-and-reopen (which was about a reconciliation PR going
+   stale, not a git push race) — point 5 itself is confirmed moot (no
+   reconciliation PR exists anywhere in the current, ADR-0035-narrowed
+   design), but this is a live gap point 5's closure shouldn't paper over.
 
 ## Milestones
 
-- [x] Write and verify this SPEC.md — single milestone, no staged
-      implementation follows. Done: written and each factual claim above
-      independently re-verified this session (not inherited from a prior
-      session's summary).
+Six items below, ~19 checklist entries total. Each states verify/done-when
+per this project's CHECKPOINT.md field convention, now inline (see M6 —
+this SPEC.md's own Milestones section is the first real exercise of the
+inline pattern once `CHECKPOINT.md` is removed).
 
-## Deferred to Future `/spec` Passes
+### M1 — README.md joins Tier 2 as a direct-write file
 
-Not decisions made here — pointers only, per this session's scope
-decision:
+Per owner decision: Tier 2 direct-write, not CODEOWNERS-gated — README.md
+doesn't encode owner judgment the way BACKLOG.md/ROADMAP.md do, so it
+takes the same treatment as ARCHITECTURE.md, not the gated treatment.
+Consistent with the ADR-0035 constraint above: no new post-hoc-gate
+pattern introduced.
 
-- `README.md`'s automation gap (next queued pass).
-- ADR-0035's close-and-reopen re-scoping (ADR-0033 point 5).
-- Tier 1's completeness gap (doesn't inspect the five docs' content).
-- "Audit implicit text-based contracts in the DocOps protocol" (P1,
-  `docs/BACKLOG.md`).
-- `docs/ARCHITECTURE.md`'s stale DocOps rows.
+- [ ] Add `"README.md"` to `TIER2_DOCS` (not `GATED_DOCS`)
+- [ ] Confirm `TIER2_DOCS`'s load-bearing processing order (direct-writes
+      before gated confirmations) still holds correctly with a
+      second direct-write file present
+- [ ] Update `CONTRIBUTING.md` to state README.md updates flow through
+      the same contributor-supplied-content model as ARCHITECTURE.md
+      (ADR-0034), for contributor PRs
+- verify: Tier 2's existing scratch-repo test scenarios (snapshot, diff,
+      apply, CLI validation) re-run against the 4-file `TIER2_DOCS`
+- done-when: all pre-existing Tier 2 scenarios still pass with README.md
+      included; a synthetic README.md edit round-trips through
+      snapshot → diff → apply correctly
+- status: not-started
+
+### M2 — Tier 1 gains content-level doc-update checking
+
+Extends the existing pre-push pairing check (currently ARCHITECTURE.md-
+only, warning-only) to cover content-presence checking across all four
+Tier-2-tracked docs, per owner decision to close this gap rather than
+formalize it as a permanent boundary.
+
+- [ ] **Dependency, not re-decided here:** whether the existing pairing
+      check's warning-only design becomes hard-fail is still an open
+      `docs/BACKLOG.md` "Owner decisions needed" item — this milestone
+      extends the check's *coverage*, not its warning-vs-block severity;
+      that stays whatever it's separately decided to be
+- [ ] Extend the pairing-check pattern from ARCHITECTURE.md-only to also
+      cover BACKLOG.md, ROADMAP.md, and README.md
+- [ ] Design the actual signal checked: a commit touching a component
+      directory without a corresponding doc change in the same commit —
+      same detection shape as the existing check, generalized
+- verify: a synthetic mutation test (same method already used for the
+      gitleaks/ADR-citation gates) — a component-directory-only commit
+      should trigger the extended check
+- done-when: mutation test confirms the check fires for all four docs,
+      not just ARCHITECTURE.md
+- status: not-started
+
+### M3 — ADR-0033 point 5: close and harden
+
+- [x] Point 5 (close-and-reopen) confirmed moot — no reconciliation PR
+      exists anywhere in the ADR-0035-narrowed design. Investigated this
+      session (see Investigation Findings above).
+- [x] A different concurrent-push race in `reconcile.py` confirmed real —
+      investigated this session (see Investigation Findings above).
+- [ ] Harden `reconcile.py`'s push step: retry with fetch+rebase on
+      non-fast-forward rejection, or at minimum fail with a captured,
+      logged error instead of an uncaught traceback that silently drops
+      the evidence record
+- [ ] Record point 5 as closed/moot in `docs/BACKLOG.md` — this is an
+      assessment closing, not a changed decision, so no new ADR is needed
+      (nothing is being chosen differently than ADR-0035 already chose)
+- verify: a simulated concurrent-run test (two `reconcile.py` invocations
+      against the same stale local checkout, same method as the existing
+      `index.lock`-contention finding's reproduction approach)
+- done-when: a rejected push no longer crashes uncaught; the evidence
+      record for the retried/failed run is not silently lost
+- status: not-started
+
+### M4 — Audit implicit text-based contracts
+
+Executes the action item already scoped in `docs/BACKLOG.md`'s
+"P1 — Audit implicit text-based contracts" entry.
+
+- [ ] Run the targeted grep audit across `scripts/doc_sync.py` and
+      related hook scripts for text-matching-instead-of-structured-signal
+      patterns (the same class as the two already-closed findings:
+      staged-conflict git-flow inference, `verify_stderr` substring match)
+- [ ] List findings read-only first — do not fix during the audit pass
+- [ ] Weigh each finding individually (cost/likelihood of silent
+      failure), same treatment as the already-closed finding #2 precedent
+- [ ] Fix selectively per that weighing, not in bulk
+- verify: the audit's own findings list, reviewed
+- done-when: every text-matching site in scope is classified (fix now /
+      defer / accept as-is) with a stated reason
+- status: not-started
+
+### M5 — ADR lifecycle validation
+
+Two pieces per `docs/BACKLOG.md`'s own split: the lightweight check needs
+no prior ADR and is included directly; the full state-machine design is
+explicitly gated behind its own ADR per that entry's constraint. This
+milestone's shape: implement the lightweight piece now, and scope the
+full-design piece as *writing the proposing ADR only* — not prejudging
+its content, not implementing ahead of its acceptance, but not skipping
+the item either. Reasoning: this is the only shape that respects
+"needs its own ADR before implementation" literally (no implementation
+work is scoped here) while still giving the item real, boundable content.
+
+- [ ] Implement the lightweight CI check: a new ADR's number doesn't
+      collide with an existing one, and its header number matches its
+      filename
+- [ ] Write a new ADR (next free number at implementation time) proposing
+      the full lifecycle state machine (Proposed → Accepted →
+      Deprecated/Superseded), an explicit Supersedes/Superseded-by field
+      pair, and a generated `ADR-INDEX.md` — proposal only
+- verify: the lightweight check, mutation-tested against a synthetic
+      number collision and a synthetic filename/header mismatch
+- done-when: both synthetic cases are caught; the proposing ADR exists
+      and is Accepted or Rejected (implementation of its design is a
+      separate, later task either way)
+- status: not-started
+
+### M6 — CHECKPOINT.md phase-out
+
+Per owner decision: deprecate CHECKPOINT.md as a separate file. The
+now-doubly-confirmed orphaning risk (this session's finding #2, plus the
+priority-bug in Investigation Finding 2 above) is eliminated structurally
+rather than managed with another lifecycle rule.
+
+- [x] Investigated this session: confirmed `classify()`'s
+      checkpoint-first priority means `CHECKPOINT.md`'s mere presence
+      silently overrides any SPEC.md's own inline Milestones section
+      (Investigation Finding 2 above)
+- [ ] Delete root `CHECKPOINT.md` (the only one in the repo, confirmed
+      by repo-wide search this session) once this SPEC.md's own
+      Milestones section is the authoritative tracking artifact
+- [ ] Modify `scripts/verify.py`'s `classify()` to drop the
+      checkpoint-priority branch, so future SPEC.md files are validated
+      on their own inline content, not redirected to a stale paired file
+- [ ] Record this as a new ADR (article-pipeline; deprecates the
+      CHECKPOINT.md pattern `scripts/verify.py`'s own docstring
+      currently documents as one of two valid mechanisms) — architectural
+      change with sufficient basis (this interview's decision), per
+      `docs/CONSTITUTION.md`'s autonomous-decision rule
+- verify: re-run `scripts/verify.py` after `CHECKPOINT.md`'s deletion —
+      this SPEC.md's own Milestones section must be discovered as
+      pattern `"inline_spec"`, not `"UNKNOWN"`
+- done-when: `scripts/verify.py`'s own re-run confirms `"inline_spec"`
+      discovery against this file, structurally OK
+- status: not-started
+
+## Verification (Claim-Accuracy Checklist)
+
+- [x] `TIER2_DOCS` is exactly the three pre-existing files; `README.md`
+      is in neither `TIER2_DOCS` nor `CODEOWNERS`. Re-confirmed this
+      session (see Investigation Finding 1).
+- [x] `scripts/verify.py`'s `classify()` returns pattern `"checkpoint"`
+      whenever a `CHECKPOINT.md` file exists next to a SPEC.md,
+      unconditionally — read directly this session (Investigation
+      Finding 2).
+- [x] Exactly one `CHECKPOINT.md` exists in the repository (root).
+      Verified: repo-wide filename search, this session.
+- [x] `reconcile.py`'s `git commit`/`git push` calls have no
+      surrounding `try`/`except` — only the `apply_tier2_sync()` call
+      is guarded. Verified by reading the file directly, this session
+      (Investigation Finding 3).
+
+## Deferred / Not This SPEC
+
+- The warning-vs-hard-fail decision for the pre-push pairing check
+  (M2's stated dependency) — still an owner-only `docs/BACKLOG.md` item.
+- Implementation of ADR lifecycle's full state-machine design — gated
+  behind M5's proposing ADR being accepted first.
+- Everything the retrospective `dcb84e4` spec already covers (the
+  mechanism as built) — this SPEC only covers what's still open.
 
 ## Source
 
-Architect-delegated task, this session, 2026-08-20. Pre-spec routing
-(phrase-decomposer + finding-unknowns) ran once before this SPEC's
-interview began, surfacing one BLOCKING finding (audit-only vs.
-design-new-gaps scope), resolved by the owner before the interview
-started. All factual claims in this SPEC were independently verified
-by direct file reads/greps this session, not inherited from prior-session
-summaries.
+Architect-delegated task, this session, 2026-08-20, following a scope
+correction after `dcb84e4` (single-item passes replaced with one
+consolidated pass, per owner's reconsidered reading of the
+independent-decisions rule). Pre-spec routing (phrase-decomposer +
+finding-unknowns) ran fresh on this six-item consolidated scope before
+the interview began: no BLOCKING cross-item conflicts found; two
+glossary-scope notes (CHECKPOINT.md, ADR lifecycle) and one
+design-constraint carryover (ADR-0035's anti-post-hoc-gate precedent)
+were surfaced and incorporated into Scope above rather than blocking.
+All investigation findings independently verified by direct file
+reads/greps this session, not inherited from prior-session summaries.
