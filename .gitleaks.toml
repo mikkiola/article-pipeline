@@ -6,3 +6,34 @@ id = "anthropic-api-key"
 description = "Anthropic API Key"
 regex = '''sk-ant-api\d{2}-[A-Za-z0-9_-]{20,}'''
 tags = ["key", "anthropic"]
+
+# ADR-0038 (extends ADR-0018's territory, doesn't edit it): blocks local
+# machine filesystem paths from being committed -- these reveal local
+# machine structure, not anything intended to be public. Deliberately
+# does NOT match GitHub/GitLab usernames, profile links, or repo URLs
+# (e.g. lyolich777ka, mikkiola) -- those are the owner's intentional,
+# public portfolio identity and must keep showing up freely. The
+# allowlist below excludes: a URL that merely contains "/home/" as an
+# ordinary path segment; two gitignored local-config files whose raw
+# filesystem content this rule would otherwise see (gitleaks' --no-git
+# scan mode reads the filesystem directly, not git's index, so it
+# doesn't respect .gitignore) even though neither is ever committed;
+# and this rule's own regression test script
+# (scripts/test-local-fs-path-rule.sh), whose fixtures are deliberately
+# shaped like real local paths for testing purposes.
+[[rules]]
+id = "local-fs-path"
+description = "Local machine filesystem path (macOS /Users or Linux /home)"
+regex = '''(?:^|[\s"'(])(?:/Users/[A-Za-z0-9_.\-]+/|/home/[A-Za-z0-9_.\-]+/)'''
+tags = ["path", "privacy"]
+
+[rules.allowlist]
+regexTarget = "match"
+regexes = [
+  '''://.*'''
+]
+paths = [
+  '''^claim_extraction/local_paths\.json$''',
+  '''^evidence_package/output/_m4_staging.*\.json$''',
+  '''^scripts/test-local-fs-path-rule\.sh$'''
+]
