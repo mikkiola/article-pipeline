@@ -559,10 +559,31 @@ Validation sections, do not re-derive):
       needs a permissions block now). Done: top-level `permissions: {}`
       plus `permissions: {contents: write}` on the single `reconcile`
       job only — no `pull-requests` scope anywhere in the workflow.
-- [ ] Close-and-reopen handling for concurrent `docs/`-touching merges
-      (point 5) — status re: ADR-0035 not yet assessed; point 5 was
-      written for the now-superseded reconciliation-PR flow, may need
-      re-scoping once point 2/3 work is dropped.
+- [x] Close-and-reopen handling for concurrent `docs/`-touching merges
+      (point 5) — assessed and closed, 2026-08-20 (DocOps SPEC.md M3).
+      Point 5 as originally written is moot: it existed to handle a
+      reconciliation PR going stale while open, and no reconciliation PR
+      exists anywhere in the ADR-0035-narrowed design (removed for
+      BACKLOG.md/ROADMAP.md by the pre-merge gate; never existed for
+      ARCHITECTURE.md's direct-write). This is an assessment closing, not
+      a changed decision — nothing here contradicts or supersedes
+      ADR-0035 — so no new ADR was written for it. A related but
+      different gap was found and fixed in the same pass:
+      `.github/scripts/reconcile.py`'s `git push` had no retry/rejection
+      handling, so two contributor PRs merging close together could
+      crash one reconciliation run uncaught on a non-fast-forward
+      rejection, silently losing that run's evidence record. Fixed via
+      `push_with_retry()` (fetch+rebase retry, max 3 attempts, clean
+      controlled failure if still rejected) — TDD per
+      `docs/CONSTITUTION.md`'s TDD rule (a confirmation/retry mechanism
+      whose entire job is triggering correctly under a race condition):
+      a scratch-repo race test written and confirmed RED (uncaught
+      `CalledProcessError`, raw traceback) against the pre-fix script,
+      then GREEN after the fix (retry succeeds, both runs' evidence
+      records land on `origin`), plus a separate permanent-failure
+      scratch test confirming a still-broken remote fails cleanly
+      (`[reconcile] FAIL: ...`, exit 1, no traceback) rather than merely
+      succeeding once.
 - [x] Evidence logging matching Tier 1's existing record format
       (point 6). Done, adapted: `reconcile.py` writes one JSON record
       per run to `.tempest/runs/`, reusing Tier 1's naming

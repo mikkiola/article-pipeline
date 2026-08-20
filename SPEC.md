@@ -123,19 +123,32 @@ dependency noted originally still applies unchanged).
       session (see Investigation Findings above).
 - [x] A different concurrent-push race in `reconcile.py` confirmed real —
       investigated this session (see Investigation Findings above).
-- [ ] Harden `reconcile.py`'s push step: retry with fetch+rebase on
-      non-fast-forward rejection, or at minimum fail with a captured,
-      logged error instead of an uncaught traceback that silently drops
-      the evidence record
-- [ ] Record point 5 as closed/moot in `docs/BACKLOG.md` — this is an
-      assessment closing, not a changed decision, so no new ADR is needed
-      (nothing is being chosen differently than ADR-0035 already chose)
+- [x] Hardened `reconcile.py`'s push step: `push_with_retry()` retries
+      with fetch+rebase on non-fast-forward rejection (max 3 attempts),
+      fails with a captured, logged error instead of an uncaught
+      traceback if still rejected. TDD: scratch-repo race test written
+      first, confirmed RED against the pre-fix script (uncaught
+      `CalledProcessError`), then GREEN after the fix.
+- [x] Recorded point 5 as closed/moot in `docs/BACKLOG.md` — an
+      assessment closing, not a changed decision, so no new ADR was
+      needed (nothing is being chosen differently than ADR-0035 already
+      chose)
 - verify: a simulated concurrent-run test (two `reconcile.py` invocations
       against the same stale local checkout, same method as the existing
-      `index.lock`-contention finding's reproduction approach)
+      `index.lock`-contention finding's reproduction approach). Done: a
+      scratch bare-repo setup with two clones, one pre-pushing a
+      competing commit before the other's `reconcile.py` runs — RED
+      (uncaught traceback) against the pre-fix script, GREEN (retry
+      succeeds, both commits land on origin) after the fix, plus a
+      separate permanent-failure case (broken remote) confirming a clean
+      controlled exit 1, not a repeated crash.
 - done-when: a rejected push no longer crashes uncaught; the evidence
-      record for the retried/failed run is not silently lost
-- status: not-started
+      record for the retried/failed run is not silently lost in the
+      common transient-race case (recovers via retry). A persistent
+      failure (remote genuinely unreachable) still can't reach `origin`
+      by definition — that case now fails loudly and cleanly instead of
+      with a bare traceback, which is the achievable guarantee.
+- status: done
 
 ### M4 — Audit implicit text-based contracts
 

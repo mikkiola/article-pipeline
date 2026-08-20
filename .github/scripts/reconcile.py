@@ -44,6 +44,35 @@ def run_git(*args: str) -> str:
     ).stdout.strip()
 
 
+MAX_PUSH_ATTEMPTS = 3
+
+
+def push_with_retry(max_attempts: int = MAX_PUSH_ATTEMPTS) -> str | None:
+    """Pushes HEAD to origin/main. A concurrent reconciliation run (a
+    second contributor PR merging close in time) can land its own push
+    first, rejecting this one as non-fast-forward -- retries by
+    fetching and rebasing onto the fresh tip before pushing again.
+    Returns None on success, or a short error string once attempts are
+    exhausted or a rebase itself fails; never lets a git subprocess
+    failure propagate as an uncaught exception."""
+    for attempt in range(1, max_attempts + 1):
+        try:
+            run_git("push", "origin", "HEAD:main")
+            return None
+        except subprocess.CalledProcessError as push_exc:
+            if attempt == max_attempts:
+                return f"push rejected after {max_attempts} attempts: {push_exc}"
+            try:
+                run_git("fetch", "origin", "main")
+            except subprocess.CalledProcessError as fetch_exc:
+                return f"fetch-before-retry failed on attempt {attempt}: {fetch_exc}"
+            try:
+                run_git("rebase", "origin/main")
+            except subprocess.CalledProcessError as rebase_exc:
+                return f"rebase-before-retry failed on attempt {attempt}: {rebase_exc}"
+    return None  # unreachable
+
+
 def write_evidence_record(pr_number: str, merged_sha: str, result: dict, error: str | None) -> Path:
     """Writes one JSON record per run to .tempest/runs/, reusing Tier 1's
     naming/retention convention (make_run_id(), prune_run_records()) --
@@ -122,7 +151,10 @@ def main() -> int:
         "commit", "-m",
         f"chore(docops): post-merge reconciliation for PR #{pr_number} ({status_for_commit(result, error)})",
     )
-    run_git("push", "origin", "HEAD:main")
+    push_error = push_with_retry()
+    if push_error is not None:
+        print(f"[reconcile] FAIL: {push_error}")
+        return 1
 
     print(f"[reconcile] status={result.get('status')} written={result.get('written')} error={error}")
     return 1 if error else 0
