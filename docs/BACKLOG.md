@@ -683,10 +683,88 @@ Validation sections, do not re-derive):
       above) that the record is written, correctly shaped, and
       committed alongside (or in place of) the `ARCHITECTURE.md`
       write.
-- [ ] Testing per ADR-0033's Validation section — GitHub-event-adapted
+- [x] Testing per ADR-0033's Validation section — GitHub-event-adapted
       equivalents of Tier 2 Stage 3's scenarios, plus the
       close-and-reopen path under a simulated concurrent merge. Scope
-      narrows with points 2/3's removal; not re-derived here.
+      narrows with points 2/3's removal; not re-derived here. Done,
+      2026-08-21: `.github/scripts/test-reconcile.sh` +
+      `.github/scripts/test_reconcile_error_path.py` (both permanent,
+      committed). Same method as the existing `push_with_retry()`
+      precedent — isolated scratch repo(s), fake local `origin`, no
+      contact with real origin or the GitHub API. Six-scenario source:
+      ToolTempest commit `dca412e` ("Verified against six scenarios:
+      accept-all, atomic rollback, dirty pre-invocation state,
+      constrained non-interactive mode, invalid input as rejection,
+      exception mid-flow"), read directly from the ToolTempest checkout
+      since Tier 2's own Stage 3 test was never committed to either
+      repo. Mapping, adapted to reconcile.py's ADR-0035-narrowed scope
+      (ARCHITECTURE.md only, always non-interactive, no reconciliation
+      PR, no rollback):
+      - accept-all → clean apply via a merge (script Case 1):
+        docs/ARCHITECTURE.md present, `status=no_changes` (by
+        construction — see docs/BACKLOG.md's existing "`status:
+        \"applied\"` is structurally unreachable" finding), evidence
+        record committed and pushed.
+      - dirty pre-invocation state → docs/ARCHITECTURE.md absent at
+        reconciliation time (Case 2): `proposed` stays empty, no crash,
+        no file created, still committed and pushed.
+      - constrained non-interactive mode → static check (Case 3):
+        `proposed[...]` is assigned exactly once in reconcile.py, only
+        under `ARCHITECTURE_MD` — no code path exists that could ever
+        populate a `GATED_DOCS` key. `doc_sync_tier2.py`'s own runtime
+        `RuntimeError` enforcement of this is ToolTempest's, already
+        covered by its Stage 3 suite, not re-tested here.
+      - atomic rollback → N/A. ADR-0035 removed the only mutation
+        (BACKLOG.md/ROADMAP.md) this rolled back; reconcile.py's own
+        ARCHITECTURE.md write has no rollback path — a failure just
+        logs an "error" evidence record and exits 1 (see exception
+        mid-flow below). Nothing exists to roll back.
+      - invalid input as rejection → N/A. reconcile.py always calls
+        `apply_tier2_sync(interactive=False)`; no `input()` prompt
+        exists in this workflow to reject.
+      - exception mid-flow → `test_reconcile_error_path.py`, Case 6,
+        separate from the shell script. Finding: reconcile.py's own
+        `proposed` content is always read back from the exact file
+        already on disk (ADR-0034), so `apply_tier2_sync()`'s diff
+        against that same content is always empty — its
+        `write_text()` call is never actually reached, so no real
+        OS-level fault can be injected through content differences. A
+        git-scratch scenario cannot exercise reconcile.py's
+        try/except around `apply_tier2_sync()` at all for this reason.
+        Tested instead via `unittest.mock.patch.object` forcing
+        `apply_tier2_sync()` to raise: confirmed a clean "error"
+        evidence record (status, error message captured), still
+        committed and pushed, exit 1 — not a crash or a silently lost
+        record.
+      Close-and-reopen path (point 5 / Validation section): confirmed
+      moot as originally specified — already recorded in this same
+      file's "Implement ADR-0033's GitHub Actions workflow" history (no
+      reconciliation PR exists anywhere in the ADR-0035-narrowed
+      design). Reformalized as a permanent regression test (Case 4) of
+      the concurrency hazard found in its place — a git push race
+      between two reconciliation runs — whose fix (`push_with_retry()`)
+      was previously verified only by an uncommitted scratch test
+      (SPEC.md M3); Case 5 covers the corresponding permanent-failure
+      path (origin genuinely unreachable: clean exit 1, no traceback).
+      Mutation-tested, same discipline as this repo's other regression
+      scripts: Case 4 confirmed RED (exit 1, retry not attempted)
+      against a temporarily un-hardened `reconcile.py` (`push_with_retry()`
+      swapped for a single non-retrying push), GREEN after reverting;
+      Case 6 confirmed RED (uncaught `RuntimeError` traceback) against
+      a temporarily unguarded `apply_tier2_sync()` call (try/except
+      removed), GREEN after reverting. Both reverts confirmed clean via
+      `git status`/`git checkout --`, no commit ever made with the
+      mutated code.
+
+      NOT covered: the `pull_request.closed`/`merged != true` guard
+      that keeps the `reconcile` job from running at all on a
+      closed-without-merge PR. That guard is
+      `adr-0033-reconciliation.yml`'s job-level `if:` condition, not
+      application logic in reconcile.py — it cannot be exercised by
+      invoking the script directly, only by GitHub's own Actions
+      runtime. Verified by reading the workflow file instead (the
+      condition is present and correctly gated); not independently
+      re-executable outside GitHub Actions.
 - [ ] Manual follow-up, not a code task: configure GitHub branch
       protection on `main` to require code-owner review on
       `docs/BACKLOG.md`/`docs/ROADMAP.md` (the `.github/CODEOWNERS`
