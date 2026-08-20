@@ -524,21 +524,38 @@ document — it wasn't; this entry corrects that gap.
 Scope of the implementation task (per ADR-0033's own Decision and
 Validation sections, do not re-derive):
 
-- [ ] GitHub Actions workflow calling `apply_tier2_sync()` exactly
-      once per contributor PR merge (ADR-0033 point 1).
-- [ ] Reconciliation PR opened for `BACKLOG.md`/`ROADMAP.md` changes;
-      merge = accept, close-without-merge = reject (point 2).
-- [ ] Rollback on PR close triggers `restore_snapshots()` via a
-      GitHub event handler (point 3).
+- [ ] GitHub Actions workflow calling `apply_tier2_sync()` for
+      `ARCHITECTURE.md` (ADR-0033 point 1, narrowed — see ADR-0035
+      below: no gated-doc diff-capture half of this step remains,
+      since there is no longer a reconciliation PR to feed it).
+- ~~Reconciliation PR opened for `BACKLOG.md`/`ROADMAP.md` changes;
+      merge = accept, close-without-merge = reject (point 2).~~
+      **Superseded by ADR-0035** — see decision note below. Not
+      implemented; will not be, under the current design.
+- ~~Rollback on PR close triggers `restore_snapshots()` via a
+      GitHub event handler (point 3).~~ **Superseded by ADR-0035** —
+      no post-merge gated-doc mutation exists to roll back. Not
+      implemented; will not be, under the current design.
 - [ ] Scope-zeroed, least-privilege token permissions per job — no job
-      scoped to merge authority (point 4).
+      scoped to merge authority (point 4, simplified per ADR-0035's
+      Consequences: no reconciliation-PR-opening job, no PR-close
+      rollback job — only the point-1 `ARCHITECTURE.md`-write job
+      needs a permissions block now).
 - [ ] Close-and-reopen handling for concurrent `docs/`-touching merges
-      (point 5).
+      (point 5) — status re: ADR-0035 not yet assessed; point 5 was
+      written for the now-superseded reconciliation-PR flow, may need
+      re-scoping once point 2/3 work is dropped.
 - [ ] Evidence logging matching Tier 1's existing record format
       (point 6).
 - [ ] Testing per ADR-0033's Validation section — GitHub-event-adapted
       equivalents of Tier 2 Stage 3's scenarios, plus the
-      close-and-reopen path under a simulated concurrent merge.
+      close-and-reopen path under a simulated concurrent merge. Scope
+      narrows with points 2/3's removal; not re-derived here.
+- [ ] Manual follow-up, not a code task: configure GitHub branch
+      protection on `main` to require code-owner review on
+      `docs/BACKLOG.md`/`docs/ROADMAP.md` (the `.github/CODEOWNERS`
+      file alone has no enforcement effect until this is turned on —
+      per ADR-0035's Validation section).
 
 **Status correction (2026-08-19).** No `.github/workflows/` file
 exists yet — confirmed via `find .github`, `git log --all -- .github/`,
@@ -625,6 +642,31 @@ in this file's "Owner decisions needed" section — not resolved here.
 ADR-0034's Consequences section correctly flagged this as an open,
 unverified dependency. This confirms it as a real gap; no fix is
 proposed here — a future task scopes one.
+
+**Decision (owner, 2026-08-19).** ADR-0033 points 2 and 3 (the
+post-merge reconciliation PR as confirmation gate for
+`BACKLOG.md`/`ROADMAP.md`, and rollback on its rejection) are
+superseded by ADR-0035
+(`docs/adr/0035-pre-merge-gate-for-gated-docs.md`). Found this
+session, Part B second slice: building the workflow revealed that
+under ADR-0034 (contributor supplies gated-doc content in their own
+PR, which merges normally before any post-merge automation runs), a
+reconciliation PR computed against current `main` always has an empty
+diff — the content it would propose already matches what's on `main`,
+since the contributor's ordinary merge already wrote it. This makes
+points 2/3 a structural no-op, not a fixable implementation detail —
+a finding-unknowns BLOCKING result, reported and stopped on before
+any workflow code was written. Three independent external
+architectural reviews this session converged on the same diagnosis
+(gate-after-mutation / post-hoc gate / TOCTOU-adjacent pipeline
+conflict) and the same fix: a pre-merge gate via GitHub CODEOWNERS +
+branch protection on the two gated paths, replacing the post-merge
+reconciliation-PR mechanism entirely for those files. ADR-0033 itself
+is unedited (Immutable Lineage); points 1, 4, 5, 6 remain in effect,
+point 4 simplified per ADR-0035's Consequences. `.github/CODEOWNERS`
+is added as part of this decision; branch protection configuration
+itself is a manual GitHub repo-settings step, not done as part of
+this decision — see the checkbox above.
 
 ### P2 — Email notification on vendoring drift (depends on [TOOLTEMPEST] CI)
 

@@ -1,0 +1,8 @@
+# docs/BACKLOG.md and docs/ROADMAP.md encode owner judgment (priority,
+# sequencing) and require owner review before merge, per ADR-0035
+# (pre-merge gate, replacing ADR-0033 points 2/3's post-merge
+# reconciliation PR). This file has no effect until branch protection
+# on main is configured to require code-owner review on these paths
+# -- see docs/BACKLOG.md for that open follow-up step.
+/docs/BACKLOG.md @mikkiola
+/docs/ROADMAP.md @mikkiola
