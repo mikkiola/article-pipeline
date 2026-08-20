@@ -51,28 +51,7 @@ if [ -f .tooltempest.lock ]; then
   fi
 fi
 
-echo "[pre-push] Checking whether component-directory changes are paired with an ARCHITECTURE.md update..."
-component_dirs="claim_extraction evidence_package strategy_layer author quality_gate platform_adapter experiment_log"
-range="$(git rev-parse @{u} 2>/dev/null || echo "")..HEAD"
-if [ -n "$range" ] && git rev-parse @{u} >/dev/null 2>&1; then
-  changed_files="$(git diff --name-only "$range" 2>/dev/null || echo "")"
-  changed_components=""
-  for d in $component_dirs; do
-    if echo "$changed_files" | grep -q "^${d}/"; then
-      changed_components="$changed_components $d"
-    fi
-  done
-  if [ -n "$changed_components" ]; then
-    if ! echo "$changed_files" | grep -q "^docs/ARCHITECTURE.md$"; then
-      echo "[pre-push] WARNING: these component directories changed in this push:$changed_components"
-      echo "[pre-push] docs/ARCHITECTURE.md was NOT updated in the same push."
-      echo "[pre-push] If a component's Status/Validation/Commit changed, update docs/ARCHITECTURE.md before pushing."
-      echo "[pre-push] If nothing status-relevant changed (e.g. a bugfix), this warning is safe to ignore."
-    fi
-  fi
-else
-  echo "[pre-push] No upstream branch to diff against yet, skipping the component/ARCHITECTURE.md check."
-fi
+bash scripts/check-doc-pairing.sh
 
 if [ "$fail" -eq 1 ]; then
   echo "[pre-push] Push blocked. Fix the FAIL items above and try again."

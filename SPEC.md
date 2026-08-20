@@ -103,16 +103,57 @@ implementation location changed).
 
 - status: re-scoped, not implemented — see BACKLOG.md pointer
 
-### M2 — Tier 1 gains content-level doc-update checking
+### M2 — Component-directory/doc pairing check extended to all four Tier 2 docs
 
-**Re-scoped during implementation (2026-08-20).** Same cross-repo issue as
-M1: Tier 1's validation logic lives in `scripts/doc_sync.py`, vendored
-from `mikkiola/tooltempest`, not owned here. Not implemented in this
-session per owner decision. See `docs/BACKLOG.md`'s
-"[TOOLTEMPEST] Tier 1 content-level doc-update checking" pointer entry for
-the deferred design (extend the existing ARCHITECTURE.md-only pairing
-check to all four Tier-2-tracked docs; the open warning-vs-hard-fail
-dependency noted originally still applies unchanged).
+**Correction (2026-08-21): the earlier re-scope to ToolTempest was
+wrong, now reversed.** M2 was originally bundled with M1 under the same
+"cross-repo, defer to ToolTempest" re-scope. That was incorrect: the
+pairing check this milestone extends lives entirely in
+`scripts/hooks/pre-push` (now `scripts/check-doc-pairing.sh`), an
+article-pipeline-owned file, not `scripts/doc_sync.py`. Its
+`component_dirs` list (`claim_extraction`, `evidence_package`,
+`strategy_layer`, `author`, `quality_gate`, `platform_adapter`,
+`experiment_log`) is article-pipeline's own project-specific knowledge
+— ToolTempest's own README explicitly documents this as a deliberate
+per-consumer boundary: "each consumer that wants it has to replicate
+the pattern into its own pre-push hook independently." M1 (README.md →
+`TIER2_DOCS`, genuinely generic) was correctly implemented in
+ToolTempest (ADR-0004, commit `aaff388`); M2 should never have followed
+it there.
+
+Implemented here, in article-pipeline, extracted into its own script
+(`scripts/check-doc-pairing.sh`) rather than left inline, so it's
+independently testable: the existing ARCHITECTURE.md-only pairing check
+now runs independently against all four Tier-2-tracked docs
+(`docs/ARCHITECTURE.md`, `docs/BACKLOG.md`, `docs/ROADMAP.md`,
+`README.md`), warning separately for each one a component-directory
+change wasn't paired with — not a single combined "you missed one of
+four" message.
+
+- [x] Extended the pairing-check pattern from ARCHITECTURE.md-only to
+      also cover BACKLOG.md, ROADMAP.md, and README.md
+- [x] **Dependency, not re-decided here:** whether the pairing check
+      stays warning-only or becomes hard-fail is still a separate, open
+      `docs/BACKLOG.md` "Owner decisions needed" item — this milestone
+      extends the check's *coverage* only; confirmed unchanged (still
+      warning-only, exit 0 in every tested case, including all-four-
+      missing)
+- [x] Extracted into `scripts/check-doc-pairing.sh` (was inline in
+      `scripts/hooks/pre-push`) — makes the check independently
+      testable without needing gitleaks/doc_sync.py's own setup
+- verify: a synthetic mutation test, same method as the gitleaks/ADR-
+      citation gates. Done:
+      `scripts/test-doc-pairing-check.sh` (permanent, committed) — four
+      cases: no docs updated (all four warn), one doc updated (the
+      other three warn, the updated one doesn't), all four updated (no
+      warnings), no component change at all (no warnings). RED
+      confirmed first against the pre-fix inline logic (a component
+      change + ARCHITECTURE.md update produced zero warnings about the
+      three missing docs — the exact gap this milestone closes); GREEN
+      after the fix.
+- done-when: mutation test confirms the check fires independently for
+      all four docs, not just ARCHITECTURE.md. Met.
+- status: done
 
 - status: re-scoped, not implemented — see BACKLOG.md pointer
 

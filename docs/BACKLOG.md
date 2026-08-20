@@ -921,7 +921,7 @@ else. A future task or `/spec` pass resolves this, not this entry.
 **Source.** Architect chat session, 2026-08-20, DocOps SPEC.md session.
 Closed 2026-08-20, DocOps SPEC.md M6.
 
-### P1 — [TOOLTEMPEST] README.md → TIER2_DOCS; Tier 1 content-level doc-update checking
+### P1 — [TOOLTEMPEST] README.md → TIER2_DOCS
 
 <!--
   FILED HERE, NOT IN TOOLTEMPEST: same convention as the existing
@@ -932,43 +932,41 @@ Closed 2026-08-20, DocOps SPEC.md M6.
 -->
 
 Found: 2026-08-20, during SPEC.md M1/M2 implementation (this session).
-`SPEC.md`'s M1 and M2 milestones were designed assuming `TIER2_DOCS`
-(`scripts/doc_sync_tier2.py`) and Tier 1's validation logic
-(`scripts/doc_sync.py`) were article-pipeline-owned files. Both are
+`SPEC.md`'s M1 milestone was designed assuming `TIER2_DOCS`
+(`scripts/doc_sync_tier2.py`) was an article-pipeline-owned file. It is
 `.gitignore`'d, vendored from `mikkiola/tooltempest` — a local edit here
-wouldn't persist (invisible to git, overwritten on next
-`scripts/sync-tooling.sh` resync) and isn't the right place to make the
-change regardless. Confirmed via `git check-ignore -v` and a clean local
-ToolTempest checkout at `~/Dev/github.com/mikkiola/tooltempest`
-(`9b25be1`, ahead of article-pipeline's `.tooltempest.lock` pin at
-`5fb62a9` — owner decision, this session: leave the pin as-is, resyncing
-is a separate task from this one).
+wouldn't persist and isn't the right place to make the change regardless.
 
-Design content (decided, not re-litigated when this is picked up):
+Design content: add `"README.md"` to `TIER2_DOCS` (not `GATED_DOCS`) —
+direct-write, same treatment as `ARCHITECTURE.md`, not CODEOWNERS-gated,
+since README.md doesn't encode owner judgment the way
+`BACKLOG.md`/`ROADMAP.md` do. Consistent with ADR-0035's
+anti-post-hoc-gate precedent.
 
-- **M1 — README.md joins Tier 2 as a direct-write file.** Add
-  `"README.md"` to `TIER2_DOCS` (not `GATED_DOCS`) — direct-write, same
-  treatment as `ARCHITECTURE.md`, not CODEOWNERS-gated, since README.md
-  doesn't encode owner judgment the way `BACKLOG.md`/`ROADMAP.md` do.
-  Consistent with ADR-0035's anti-post-hoc-gate precedent — no new
-  reconciliation-PR-style mechanism introduced. Confirm `TIER2_DOCS`'s
-  load-bearing processing order (direct-writes before gated
-  confirmations) still holds with a second direct-write file present.
-  Update `CONTRIBUTING.md` (article-pipeline-side) once this lands, to
-  state README.md updates flow through the same contributor-supplied-
-  content model as `ARCHITECTURE.md` (ADR-0034).
-- **M2 — Tier 1 gains content-level doc-update checking.** Extend the
-  existing pre-push pairing check (currently `ARCHITECTURE.md`-only,
-  warning-only) to also cover `BACKLOG.md`, `ROADMAP.md`, and
-  `README.md` — same detection shape (component-directory change without
-  a corresponding doc change in the same commit), generalized to all
-  four Tier-2-tracked docs. **Dependency, not resolved by this entry:**
-  whether the pairing check stays warning-only or becomes hard-fail is
-  still a separate, open `docs/BACKLOG.md` "Owner decisions needed" item
-  — this item extends the check's *coverage* only, not its severity.
+**M2 correction (2026-08-21): closed here, was never a ToolTempest
+item.** This entry originally also carried M2 (Tier 1 content-level
+doc-update checking), bundled with M1 under the same cross-repo
+re-scope. That was wrong: M2's actual target, the component-directory/
+doc pairing check, lives entirely in article-pipeline's own
+`scripts/hooks/pre-push` (now `scripts/check-doc-pairing.sh`) — its
+`component_dirs` list is article-pipeline-specific project knowledge,
+not a generic ToolTempest mechanism. ToolTempest's own README confirms
+this boundary explicitly: "each consumer that wants it has to replicate
+the pattern into its own pre-push hook independently." M2 is now
+implemented directly in article-pipeline (`scripts/check-doc-pairing.sh`
++ `scripts/test-doc-pairing-check.sh`, DocOps SPEC.md M2) — see
+`SPEC.md`'s M2 section, not this entry.
 
-- [ ] Not started. When picked up: make both changes in the ToolTempest
-      repo, commit and push there, then resync article-pipeline
-      (`scripts/sync-tooling.sh`) and repin `.tooltempest.lock`.
+- [x] M1 done in ToolTempest: ADR-0004, commit `aaff388` ("feat(docops):
+      add ADR-0004, README.md as 4th Tier 2 direct-write doc").
+- [ ] Not yet resynced into article-pipeline — `.tooltempest.lock` is
+      still pinned at `5fb62a9`; `aaff388` is on ToolTempest's `main` but
+      not yet pulled in here. Separate step, tracked in this same
+      session.
+- [ ] Follow-up, article-pipeline-side, not yet done: update
+      `CONTRIBUTING.md` to state README.md updates flow through the same
+      contributor-supplied-content model as `ARCHITECTURE.md` (ADR-0034),
+      once resynced.
 
-**Source.** DocOps SPEC.md implementation session, 2026-08-20.
+**Source.** DocOps SPEC.md implementation session, 2026-08-20. M2
+correction, 2026-08-21.
