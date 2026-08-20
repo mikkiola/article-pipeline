@@ -466,21 +466,31 @@ ADRs.
 
 Two separable pieces, do not conflate:
 
-- [ ] Lightweight: a CI check that a new ADR's number doesn't collide
+- [x] Lightweight: a CI check that a new ADR's number doesn't collide
       with an existing one and that the file's header number matches
-      its filename.
-- [ ] Full design (explicitly deferred — needs its own ADR before
-      implementation, per the external review discussed this session):
-      Proposed → Accepted → Deprecated/Superseded as an enforced state
-      machine, an explicit "Supersedes"/"Superseded by" field pair
-      checked by CI, and a generated `ADR-INDEX.md` as a derived
-      artifact (not hand-maintained). Do not implement this piece
-      without a preceding ADR describing the lifecycle contract itself
-      — decided this session, per the discussion of Log4brains/
-      MADR-style tooling as prior art.
+      its filename. Done, 2026-08-20 (DocOps SPEC.md M5):
+      `scripts/check_adr_numbering.py` +
+      `.github/workflows/adr-numbering-check.yml`. TDD-verified against
+      a synthetic collision and a synthetic filename/header mismatch
+      (RED before implementation, GREEN after). Along the way, found
+      that ADRs 0001–0031 use a `# NNNN — Title` header format (no
+      "ADR-" prefix) distinct from 0032+'s `# ADR-NNNN: Title` — a real,
+      previously-undocumented format difference, not a numbering bug;
+      the check accepts both, since `docs/CONSTITUTION.md` mandates the
+      field set, not one exact header string.
+- [x] Full design's blocking gate resolved, 2026-08-20: ADR-0036
+      (`docs/adr/0036-adr-lifecycle-state-machine-contract.md`) is the
+      preceding ADR this piece required — Accepted, describing the
+      Proposed → Accepted → Deprecated/Superseded state machine, the
+      Supersedes/Superseded-by field pair, and the generated
+      `ADR-INDEX.md` contract. Implementation of that contract (CI
+      enforcement, index generator) is still separate, later work — not
+      done by ADR-0036 or this checkbox, per the entry's own sequencing
+      rule.
 
 **Source.** Tier 2 /doc-sync implementation session, 2026-08-19,
-ADR-0033 discussion.
+ADR-0033 discussion. Both pieces closed/unblocked 2026-08-20, DocOps
+SPEC.md M5.
 
 ### P1 — sync-tooling.sh completeness testing (Phase 5)
 

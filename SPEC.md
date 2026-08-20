@@ -190,19 +190,37 @@ the item either. Reasoning: this is the only shape that respects
 "needs its own ADR before implementation" literally (no implementation
 work is scoped here) while still giving the item real, boundable content.
 
-- [ ] Implement the lightweight CI check: a new ADR's number doesn't
-      collide with an existing one, and its header number matches its
-      filename
-- [ ] Write a new ADR (next free number at implementation time) proposing
-      the full lifecycle state machine (Proposed → Accepted →
-      Deprecated/Superseded), an explicit Supersedes/Superseded-by field
-      pair, and a generated `ADR-INDEX.md` — proposal only
+- [x] Implemented the lightweight CI check
+      (`scripts/check_adr_numbering.py` +
+      `.github/workflows/adr-numbering-check.yml`): a new ADR's number
+      doesn't collide with an existing one, and its header number
+      matches its filename. TDD: RED against a synthetic scratch fixture
+      (two files both claiming 0099, one file with a 0100/0101
+      filename/header mismatch) confirmed nothing today catches this;
+      implemented, then GREEN. First real-corpus run surfaced a genuine
+      finding along the way: ADRs 0001–0031 use `# NNNN — Title` (no
+      "ADR-" prefix) while 0032+ use `# ADR-NNNN: Title` — a real header-
+      format difference, not a numbering bug; the check's regex was
+      fixed to accept both without loosening the actual number-match
+      invariant it enforces.
+- [x] Wrote ADR-0036 (`docs/adr/0036-adr-lifecycle-state-machine-
+      contract.md`) proposing the full lifecycle state machine
+      (Proposed → Accepted → Deprecated/Superseded), an explicit
+      Supersedes/Superseded-by field pair, and a generated
+      `ADR-INDEX.md` — Accepted (the contract is decided), but
+      explicitly scoped to the contract only: no CI enforcement, index
+      generator, or field-pair check is implemented in this ADR or this
+      milestone. Also records, as a Constraint, that the field pair
+      doesn't model ADR-0035's point-level supersession case — flagged,
+      not solved.
 - verify: the lightweight check, mutation-tested against a synthetic
-      number collision and a synthetic filename/header mismatch
+      number collision and a synthetic filename/header mismatch. Done:
+      both violation types correctly detected and reported by message;
+      real `docs/adr/` (36 files after ADR-0036) passes cleanly.
 - done-when: both synthetic cases are caught; the proposing ADR exists
       and is Accepted or Rejected (implementation of its design is a
-      separate, later task either way)
-- status: not-started
+      separate, later task either way). Met: ADR-0036 is Accepted.
+- status: done
 
 ### M6 — CHECKPOINT.md phase-out
 

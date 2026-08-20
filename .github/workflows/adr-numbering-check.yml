@@ -1,0 +1,37 @@
+name: ADR Numbering Check
+
+# Lightweight piece of docs/BACKLOG.md's "ADR lifecycle state machine +
+# structural validation" P2 item -- confirms a new ADR's number doesn't
+# collide with an existing one, and its header number matches its
+# filename. Does not implement the full Proposed -> Accepted ->
+# Deprecated/Superseded state machine or a generated ADR-INDEX.md --
+# that piece is gated behind its own ADR (see DocOps SPEC.md M5).
+
+on:
+  pull_request:
+    paths:
+      - "docs/adr/**"
+  push:
+    branches: [main]
+    paths:
+      - "docs/adr/**"
+
+permissions: {}
+
+jobs:
+  check:
+    name: Check ADR numbering
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Check ADR numbering
+        run: python3 scripts/check_adr_numbering.py
