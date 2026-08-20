@@ -27,7 +27,9 @@ test-reconcile.sh -- no contact with real origin or the GitHub API.
 """
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import shutil
@@ -95,14 +97,19 @@ def main() -> int:
             sys.modules["reconcile"] = reconcile
             spec.loader.exec_module(reconcile)  # REPO_ROOT resolves via cwd=work
 
+            captured_stdout = io.StringIO()
             with mock.patch.object(
                 reconcile, "apply_tier2_sync",
                 side_effect=RuntimeError("simulated mid-flow failure"),
             ), mock.patch.dict(os.environ, {"PR_NUMBER": "401", "MERGED_SHA": merged_sha}):
-                exit_code = reconcile.main()
+                with contextlib.redirect_stdout(captured_stdout):
+                    exit_code = reconcile.main()
         finally:
             os.chdir(old_cwd)
             sys.path[:] = old_sys_path
+
+        stdout_text = captured_stdout.getvalue()
+        print(stdout_text, end="")  # keep reconcile.py's own output visible
 
         if exit_code != 1:
             return fail(f"exit code was {exit_code}, expected 1 (error path)")
@@ -131,6 +138,13 @@ def main() -> int:
         arch_text = (work / "docs" / "ARCHITECTURE.md").read_text(encoding="utf-8")
         if arch_text != SEED_ARCHITECTURE:
             return fail("docs/ARCHITECTURE.md was modified despite the simulated failure")
+
+        if "[reconcile] status=error written=" not in stdout_text:
+            return fail(
+                "printed status line did not say status=error on a genuine "
+                f"failure (result.get('status') stayed at its no_changes "
+                f"placeholder instead): {stdout_text!r}"
+            )
 
         print("OK: case 6 (exception mid-flow) -- clean 'error' evidence record, committed and pushed, exit 1.")
         return 0

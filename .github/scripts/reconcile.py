@@ -156,7 +156,7 @@ def main() -> int:
         print(f"[reconcile] FAIL: {push_error}")
         return 1
 
-    print(f"[reconcile] status={result.get('status')} written={result.get('written')} error={error}")
+    print(f"[reconcile] status={status_for_commit(result, error)} written={result.get('written')} error={error}")
     return 1 if error else 0
 
 
