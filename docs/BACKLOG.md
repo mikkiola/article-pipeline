@@ -227,7 +227,7 @@ answer has architectural consequences.
   bugfix to a component directory that doesn't change its
   Status/Validation/Commit).
 
-### P1 — Audit implicit text-based contracts in the DocOps protocol
+### P1 — Audit implicit text-based contracts in the DocOps protocol (closed)
 
 Pattern, not a one-off finding. Twice in the DocOps Protocol, one
 component has inferred another component's state from an unstructured
@@ -256,14 +256,44 @@ heuristics, string comparison) rather than a structured signal (exit
 code, JSON field, explicit API) is a candidate for a future silent
 failure. Both findings above belong to this same class.
 
-- [ ] Action item: before ToolTempest gains a second consumer
-      (deliberately out of scope for now — this is not readiness for
-      replication), run a targeted grep audit of scripts/doc_sync.py
-      and related hook scripts for any other place where parsing
-      depends on text matching instead of a structured signal. Do not
-      fix everything at once — list findings read-only first, weigh
-      each one individually (as was done for finding #2 above), and
-      fix selectively, not in bulk. Not started.
+- [x] Action item: audit run 2026-08-20 (DocOps SPEC.md M4). Read
+      directly: `scripts/doc_sync.py`, `scripts/doc_sync_tier2.py`,
+      `.git/hooks/pre-commit`, `.git/hooks/pre-push`. Findings, each
+      classified with a stated reason (none required a fix):
+      - `pre-push`'s ADR-citation `grep` validates a doc's own textual
+        content directly, not another component's state inferred from
+        incidental text — not this failure class.
+      - `pre-push`'s gitleaks and `doc_sync.py pre-push` calls, and its
+        ToolTempest-drift SHA comparison, are all exit-code/structured-
+        value based — not this failure class.
+      - `pre-push`'s component-directory/ARCHITECTURE.md pairing check
+        uses `git diff --name-only`'s stable, documented one-path-per-
+        line plumbing output — a sanctioned scripting interface, not
+        inference from incidental prose. Same pattern doc_sync.py's own
+        `staged_files()`/`unstaged_modified_files()` use correctly.
+      - `doc_sync.py`'s `verify_stderr`/`validate_stderr`/`stderr_text`
+        are used only for truthiness (`if verify_stderr:`) and human
+        display; the real branching signal throughout is `exit_code`/
+        `proc.returncode` — confirms finding #2's fix (exit codes
+        0/1/2) is solid, no lingering substring-match instance found
+        anywhere else in the file.
+      - `doc_sync.py`'s `staged_files()`/`unstaged_modified_files()`/
+        `staged_blob_text()` all use git's structured plumbing output
+        or `returncode`; `unstaged_modified_files()`'s own docstring
+        confirms it's finding #1's fix (comparing staged vs. unstaged
+        sets for actual divergence) — confirmed solid on direct read.
+      - `doc_sync_tier2.py` contains zero git subprocess calls — its
+        snapshot/diff/apply/CLI flow operates on file content directly.
+        Clean by construction; no text-based-contract surface exists.
+      - Cross-reference, not a new finding, not resolved here:
+        `scripts/verify.py`'s `resolve_component_name()` (a different
+        script, not `doc_sync.py`) infers a root SPEC.md's component
+        from prose-text pattern counts — same root-cause class, but
+        already independently tracked as its own P1 item above
+        ("`resolve_component_name()` has a checkout-name dependency...").
+      Conclusion: no new unfixed instance found in the audited scope;
+      both previously-known instances remain fixed on direct read.
+      Nothing required "fix selectively" action this pass.
 
 Out of scope for this item: re-testing the already-fixed staged-
 conflict and substring-match cases — both are closed separately.

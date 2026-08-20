@@ -155,18 +155,28 @@ dependency noted originally still applies unchanged).
 Executes the action item already scoped in `docs/BACKLOG.md`'s
 "P1 — Audit implicit text-based contracts" entry.
 
-- [ ] Run the targeted grep audit across `scripts/doc_sync.py` and
-      related hook scripts for text-matching-instead-of-structured-signal
-      patterns (the same class as the two already-closed findings:
-      staged-conflict git-flow inference, `verify_stderr` substring match)
-- [ ] List findings read-only first — do not fix during the audit pass
-- [ ] Weigh each finding individually (cost/likelihood of silent
-      failure), same treatment as the already-closed finding #2 precedent
-- [ ] Fix selectively per that weighing, not in bulk
-- verify: the audit's own findings list, reviewed
+- [x] Ran the targeted grep audit across `scripts/doc_sync.py`,
+      `scripts/doc_sync_tier2.py`, `.git/hooks/pre-commit`,
+      `.git/hooks/pre-push` for text-matching-instead-of-structured-signal
+      patterns. Full findings list recorded in `docs/BACKLOG.md`'s entry
+      (now marked closed).
+- [x] Listed findings read-only first — no fixes applied during the audit
+- [x] Weighed each finding individually — every site classified as
+      "not this failure class" (validates own doc content directly,
+      exit-code/SHA/returncode-based, or git's own stable plumbing
+      output) or "confirms an already-closed fix is solid on direct
+      read"; one cross-reference noted (`verify.py`'s
+      `resolve_component_name()`, a different script, already tracked
+      as its own separate P1 item, not duplicated here)
+- [x] Nothing required a fix this pass — no new unfixed instance found
+- verify: the audit's own findings list, reviewed. Done: see
+      `docs/BACKLOG.md`'s entry for the full classification.
 - done-when: every text-matching site in scope is classified (fix now /
-      defer / accept as-is) with a stated reason
-- status: not-started
+      defer / accept as-is) with a stated reason. Met: all sites
+      classified "accept as-is" (not this failure class, or already
+      fixed), with reasons stated per site.
+- status: done (no TDD applicable — read-only audit, no new mechanism
+      built, nothing whose triggering behavior needs a test)
 
 ### M5 — ADR lifecycle validation
 
