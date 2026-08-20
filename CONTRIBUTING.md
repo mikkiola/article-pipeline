@@ -3,7 +3,7 @@
 ## Documentation updates
 
 If your pull request changes something that affects one of this
-project's three tracked documents, include that document update in
+project's four tracked documents, include that document update in
 the same PR:
 
 - **`docs/ARCHITECTURE.md`** — if your change affects a component's
@@ -12,6 +12,10 @@ the same PR:
   should add a new one.
 - **`docs/ROADMAP.md`** — if your change affects sequencing or the
   current phase plan.
+- **`README.md`** — if your change affects what the project does or
+  how to use it. Flows through the same contributor-supplied-content
+  model as `docs/ARCHITECTURE.md` (ADR-0034), since it joined
+  `TIER2_DOCS` as a direct-write doc (ToolTempest ADR-0004).
 
 Write the update in the format the project's existing entries already
 use in each file — match the surrounding style rather than inventing

@@ -969,10 +969,10 @@ implemented directly in article-pipeline (`scripts/check-doc-pairing.sh`
       vendored files byte-identical to ToolTempest at `aaff388`,
       `scripts/test-sync-tooling-manifest.sh` passes, pre-push's drift
       warning gone.
-- [ ] Follow-up, article-pipeline-side, not yet done: update
-      `CONTRIBUTING.md` to state README.md updates flow through the same
-      contributor-supplied-content model as `ARCHITECTURE.md` (ADR-0034),
-      now that `TIER2_DOCS` includes it.
+- [x] Follow-up done, 2026-08-21: `CONTRIBUTING.md` updated —
+      `README.md` added to the tracked-document list (now four, was
+      three), noting it flows through the same contributor-supplied-
+      content model as `ARCHITECTURE.md` (ADR-0034).
 
 **Source.** DocOps SPEC.md implementation session, 2026-08-20. M2
 correction and resync, 2026-08-21.
