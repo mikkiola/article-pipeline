@@ -859,7 +859,7 @@ e.g. `git show c480ab4:context_layer/SPEC.md`).
 
 **Source.** Architect chat session, 2026-08-20, SPEC.md audit.
 
-### P2 — CHECKPOINT.md orphaning recurs: same pattern as the SPEC.md finding above, no rule of its own
+### P2 — CHECKPOINT.md orphaning recurs: same pattern as the SPEC.md finding above, no rule of its own (closed)
 
 Found: 2026-08-20, while writing the DocOps SPEC.md (this session). Root
 `CHECKPOINT.md` is entirely about the closed Evidence Package component
@@ -884,10 +884,19 @@ its own single-location/overwrite rule (mirroring SPEC.md's), should be
 deleted outright now that its paired SPEC.md changed topic, or something
 else. A future task or `/spec` pass resolves this, not this entry.
 
-- [ ] Decide CHECKPOINT.md's own location/lifecycle rule (or confirm none
-      is needed) — not started.
+- [x] Decided, 2026-08-20 (DocOps SPEC.md M6): not a lifecycle rule —
+      the pattern itself is deprecated. ADR-0037
+      (`docs/adr/0037-checkpoint-md-pattern-deprecated.md`) removes
+      CHECKPOINT.md as a VC-source pattern entirely rather than giving
+      it a parallel single-location/overwrite rule, because a
+      lifecycle rule alone wouldn't have fixed the actual defect: a
+      correctly-managed CHECKPOINT.md could still silently outrank a
+      SPEC.md's own inline content the moment the two drifted briefly
+      out of sync. Root `CHECKPOINT.md` deleted; `scripts/verify.py`'s
+      `classify()` no longer checks for it.
 
 **Source.** Architect chat session, 2026-08-20, DocOps SPEC.md session.
+Closed 2026-08-20, DocOps SPEC.md M6.
 
 ### P1 — [TOOLTEMPEST] README.md → TIER2_DOCS; Tier 1 content-level doc-update checking
 

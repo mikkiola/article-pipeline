@@ -5,16 +5,21 @@ Steps 1-2 of the SPEC -> checklist -> harness -> drift -> doc-sync
 automation track.
 
 Step 1: scans the repo for SPEC.md files and determines, for each,
-which mechanism currently tracks that component's milestone/
-verification state ("VC-source pattern"): a paired CHECKPOINT.md, or
-milestone checkboxes inline in SPEC.md itself.
+whether it carries a "## Milestones" section with checkbox lines --
+its VC-source pattern. A paired CHECKPOINT.md was a second valid
+pattern historically; deprecated 2026-08-20 (DocOps SPEC.md M6,
+ADR-0037) because a CHECKPOINT.md's mere presence silently overrode a
+SPEC.md's own inline Milestones section, even a well-formed one --
+confirmed live against this project's own DocOps SPEC.md, whose inline
+Milestones went unvalidated for two full commits while a stale,
+topically-unrelated CHECKPOINT.md sat next to it. SPEC.md's own inline
+content is now the only VC-source pattern.
 
 Step 2: for each discovered source_file, confirms it's structurally
-parseable into individual verification-criteria-like units (a
-CHECKPOINT.md "## <label>" block with verify:/done-when:/status:
-lines, or an inline Milestones checkbox line with description text) —
-and reports which units, if any, are malformed. Does not extract
-actual VC-IDs or build a checklist — that's a later step.
+parseable into individual verification-criteria-like units (an inline
+Milestones checkbox line with description text) — and reports which
+units, if any, are malformed. Does not extract actual VC-IDs or build
+a checklist — that's a later step.
 """
 import argparse
 import json
@@ -26,13 +31,6 @@ MILESTONES_HEADING_RE = re.compile(r"^##\s+Milestones\s*$", re.MULTILINE)
 NEXT_HEADING_RE = re.compile(r"^##\s+\S", re.MULTILINE)
 CHECKBOX_LINE_RE = re.compile(r"^\s*(?:-|\d+\.)\s*\[[ xX]\]", re.MULTILINE)
 CHECKBOX_FULL_LINE_RE = re.compile(r"^\s*(?:-|\d+\.)\s*\[[ xX]\](.*)$", re.MULTILINE)
-
-CHECKPOINT_BLOCK_HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
-CHECKPOINT_REQUIRED_FIELD_RES = {
-    "verify": re.compile(r"^\s*-\s*verify:", re.MULTILINE),
-    "done-when": re.compile(r"^\s*-\s*done-when:", re.MULTILINE),
-    "status": re.compile(r"^\s*-\s*status:", re.MULTILINE),
-}
 
 # Directories that hold project infrastructure, not a pipeline
 # component, and are therefore never SPEC.md/component candidates.
@@ -140,63 +138,15 @@ def has_milestones_checkboxes(spec_path: Path) -> bool:
 def classify(spec_path: Path):
     """Returns (pattern, source_file).
 
-    pattern is one of "checkpoint" / "inline_spec" / "UNKNOWN".
-    "UNKNOWN" means neither a paired CHECKPOINT.md nor an inline
-    Milestones checklist was found — the component has zero tracked
-    verification criteria, and this must never pass through silently.
+    pattern is one of "inline_spec" / "UNKNOWN". "UNKNOWN" means no
+    inline Milestones checklist was found — the component has zero
+    tracked verification criteria, and this must never pass through
+    silently. A paired CHECKPOINT.md is no longer consulted at all
+    (deprecated 2026-08-20, ADR-0037) — see this module's docstring.
     """
-    checkpoint_path = spec_path.parent / "CHECKPOINT.md"
-    if checkpoint_path.is_file():
-        return "checkpoint", str(checkpoint_path)
     if has_milestones_checkboxes(spec_path):
         return "inline_spec", str(spec_path)
     return "UNKNOWN", None
-
-
-def validate_checkpoint_structure(checkpoint_path: str) -> dict:
-    """A well-formed CHECKPOINT.md is a sequence of "## <label>"
-    blocks, each containing its own verify:/done-when:/status: lines.
-    Reports which blocks, if any, are missing which of the three."""
-    text = Path(checkpoint_path).read_text(encoding="utf-8")
-    headings = list(CHECKPOINT_BLOCK_HEADING_RE.finditer(text))
-
-    if not headings:
-        return {
-            "status": "MALFORMED",
-            "total_units": 0,
-            "well_formed": 0,
-            "malformed_details": [
-                {"heading": None, "missing_fields": ["no '## <label>' blocks found"]}
-            ],
-        }
-
-    total_units = len(headings)
-    well_formed = 0
-    malformed_details = []
-
-    for i, match in enumerate(headings):
-        heading = match.group(1).strip()
-        start = match.end()
-        end = headings[i + 1].start() if i + 1 < len(headings) else len(text)
-        content = text[start:end]
-
-        missing = [
-            name
-            for name, pattern in CHECKPOINT_REQUIRED_FIELD_RES.items()
-            if not pattern.search(content)
-        ]
-        if missing:
-            malformed_details.append({"heading": heading, "missing_fields": missing})
-        else:
-            well_formed += 1
-
-    status = "MALFORMED" if malformed_details else "OK"
-    return {
-        "status": status,
-        "total_units": total_units,
-        "well_formed": well_formed,
-        "malformed_details": malformed_details,
-    }
 
 
 def validate_inline_spec_structure(spec_path: str) -> dict:
@@ -251,8 +201,6 @@ def validate_inline_spec_structure(spec_path: str) -> dict:
 
 
 def validate_structure(pattern: str, source_file) -> dict:
-    if pattern == "checkpoint":
-        return validate_checkpoint_structure(source_file)
     if pattern == "inline_spec":
         return validate_inline_spec_structure(source_file)
     return {"status": "UNKNOWN", "total_units": 0, "well_formed": 0, "malformed_details": []}
@@ -287,8 +235,8 @@ def main() -> int:
 
         if pattern == "UNKNOWN":
             print(
-                f"discover: WARNING - {spec_path} has no CHECKPOINT.md and no "
-                f"'## Milestones' section with checkbox lines. VC-source "
+                f"discover: WARNING - {spec_path} has no '## Milestones' "
+                f"section with checkbox lines. VC-source "
                 f"pattern is UNKNOWN for this component; it carries zero "
                 f"tracked verification criteria until this is resolved.",
                 file=sys.stderr,

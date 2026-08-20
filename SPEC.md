@@ -233,23 +233,28 @@ rather than managed with another lifecycle rule.
       checkpoint-first priority means `CHECKPOINT.md`'s mere presence
       silently overrides any SPEC.md's own inline Milestones section
       (Investigation Finding 2 above)
-- [ ] Delete root `CHECKPOINT.md` (the only one in the repo, confirmed
-      by repo-wide search this session) once this SPEC.md's own
-      Milestones section is the authoritative tracking artifact
-- [ ] Modify `scripts/verify.py`'s `classify()` to drop the
-      checkpoint-priority branch, so future SPEC.md files are validated
-      on their own inline content, not redirected to a stale paired file
-- [ ] Record this as a new ADR (article-pipeline; deprecates the
-      CHECKPOINT.md pattern `scripts/verify.py`'s own docstring
-      currently documents as one of two valid mechanisms) — architectural
-      change with sufficient basis (this interview's decision), per
-      `docs/CONSTITUTION.md`'s autonomous-decision rule
-- verify: re-run `scripts/verify.py` after `CHECKPOINT.md`'s deletion —
-      this SPEC.md's own Milestones section must be discovered as
-      pattern `"inline_spec"`, not `"UNKNOWN"`
+- [x] Deleted root `CHECKPOINT.md` (`git rm`, the only one in the repo)
+- [x] Modified `scripts/verify.py`'s `classify()` to drop the
+      checkpoint-priority branch entirely (not just reorder it) — also
+      removed the now-dead `validate_checkpoint_structure()` function
+      and its two regex constants, and updated the module docstring and
+      the UNKNOWN-case warning message accordingly. TDD: `classify()`
+      tested in isolation against a scratch fixture (SPEC.md with
+      well-formed inline Milestones + a CHECKPOINT.md present) —
+      confirmed RED (`"checkpoint"`, silently ignoring the well-formed
+      inline content) before the fix, GREEN (`"inline_spec"`, even with
+      CHECKPOINT.md still present) after.
+- [x] Recorded this as ADR-0037
+      (`docs/adr/0037-checkpoint-md-pattern-deprecated.md`) — Accepted.
+      Also resolves `docs/BACKLOG.md`'s "CHECKPOINT.md orphaning
+      recurs" entry, whose own text left the decision open pending
+      this outcome.
+- verify: re-ran `scripts/verify.py` after `CHECKPOINT.md`'s deletion.
+      Done: `pattern: "inline_spec"`, `source_file` is this SPEC.md
+      itself, `structure.status: "OK"`, all units well-formed.
 - done-when: `scripts/verify.py`'s own re-run confirms `"inline_spec"`
-      discovery against this file, structurally OK
-- status: not-started
+      discovery against this file, structurally OK. Met.
+- status: done
 
 ## Verification (Claim-Accuracy Checklist)
 
