@@ -91,17 +91,36 @@ inline pattern once `CHECKPOINT.md` is removed).
 
 ### M1 — README.md joins Tier 2 as a direct-write file
 
-**Re-scoped during implementation (2026-08-20).** `TIER2_DOCS` lives in
+**Re-scoped during implementation (2026-08-20), then completed and
+resynced (2026-08-21).** `TIER2_DOCS` lives in
 `scripts/doc_sync_tier2.py`, `.gitignore`'d and vendored from the separate
-`mikkiola/tooltempest` repository — not owned or committable here. This
-milestone's actual work is ToolTempest-side; not implemented in this
-session per owner decision. See `docs/BACKLOG.md`'s
-"[TOOLTEMPEST] README.md → TIER2_DOCS" pointer entry for the deferred
-design (still: Tier 2 direct-write, not CODEOWNERS-gated, consistent with
-the ADR-0035 constraint above — that part of the design stands, only the
-implementation location changed).
+`mikkiola/tooltempest` repository — not owned or committable here. Correctly
+re-scoped as ToolTempest-side work; implemented there as ADR-0004,
+commit `aaff388` ("feat(docops): add ADR-0004, README.md as 4th Tier 2
+direct-write doc") — direct-write, not CODEOWNERS-gated, exactly the
+design recorded in the BACKLOG pointer entry.
 
-- status: re-scoped, not implemented — see BACKLOG.md pointer
+- [x] Landed in ToolTempest: `aaff388` (only reachable from ToolTempest's
+      local `main` at the time; pushed to `origin/main` as part of this
+      resync, since local and remote had one commit's worth of
+      difference — a clean fast-forward, verified before pushing)
+- [x] Resynced into article-pipeline: `.tooltempest.lock` repinned to
+      `aaff38834ff3936eb3c4cbd2911615cfb9b5b47f`, `scripts/sync-tooling.sh`
+      run. Verified, not just trusted: `TIER2_DOCS` now reads
+      `("docs/ARCHITECTURE.md", "README.md", "docs/BACKLOG.md",
+      "docs/ROADMAP.md")`; `GATED_DOCS` unaffected (still just
+      `BACKLOG.md`/`ROADMAP.md`); byte-diff confirms the vendored
+      `doc_sync.py`/`doc_sync_tier2.py`/`execution-record.schema.json`
+      are identical to ToolTempest at `aaff388`;
+      `scripts/test-sync-tooling-manifest.sh` passes (7/7 vendored
+      files found); the pre-push hook's own ToolTempest-drift warning
+      is now gone (pin matches `origin/main` exactly).
+- [ ] Follow-up, article-pipeline-side, not yet done: update
+      `CONTRIBUTING.md` to state README.md updates flow through the
+      same contributor-supplied-content model as `ARCHITECTURE.md`
+      (ADR-0034), now that `TIER2_DOCS` actually includes it.
+- status: done (resync complete; the CONTRIBUTING.md follow-up remains
+      open, tracked in `docs/BACKLOG.md`)
 
 ### M2 — Component-directory/doc pairing check extended to all four Tier 2 docs
 

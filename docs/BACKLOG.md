@@ -958,15 +958,21 @@ implemented directly in article-pipeline (`scripts/check-doc-pairing.sh`
 `SPEC.md`'s M2 section, not this entry.
 
 - [x] M1 done in ToolTempest: ADR-0004, commit `aaff388` ("feat(docops):
-      add ADR-0004, README.md as 4th Tier 2 direct-write doc").
-- [ ] Not yet resynced into article-pipeline — `.tooltempest.lock` is
-      still pinned at `5fb62a9`; `aaff388` is on ToolTempest's `main` but
-      not yet pulled in here. Separate step, tracked in this same
-      session.
+      add ADR-0004, README.md as 4th Tier 2 direct-write doc"). Found
+      only reachable from ToolTempest's local `main` at the time (not
+      yet on `origin/main`) — pushed as part of this resync (clean
+      fast-forward, one commit, verified before pushing to the shared
+      remote).
+- [x] Resynced into article-pipeline, 2026-08-21: `.tooltempest.lock`
+      repinned to `aaff38834ff3936eb3c4cbd2911615cfb9b5b47f`. Verified:
+      `TIER2_DOCS` includes `README.md`, `GATED_DOCS` unaffected,
+      vendored files byte-identical to ToolTempest at `aaff388`,
+      `scripts/test-sync-tooling-manifest.sh` passes, pre-push's drift
+      warning gone.
 - [ ] Follow-up, article-pipeline-side, not yet done: update
       `CONTRIBUTING.md` to state README.md updates flow through the same
       contributor-supplied-content model as `ARCHITECTURE.md` (ADR-0034),
-      once resynced.
+      now that `TIER2_DOCS` includes it.
 
 **Source.** DocOps SPEC.md implementation session, 2026-08-20. M2
-correction, 2026-08-21.
+correction and resync, 2026-08-21.
