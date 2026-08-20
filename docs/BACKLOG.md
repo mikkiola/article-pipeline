@@ -524,10 +524,26 @@ document — it wasn't; this entry corrects that gap.
 Scope of the implementation task (per ADR-0033's own Decision and
 Validation sections, do not re-derive):
 
-- [ ] GitHub Actions workflow calling `apply_tier2_sync()` for
+- [x] GitHub Actions workflow calling `apply_tier2_sync()` for
       `ARCHITECTURE.md` (ADR-0033 point 1, narrowed — see ADR-0035
       below: no gated-doc diff-capture half of this step remains,
-      since there is no longer a reconciliation PR to feed it).
+      since there is no longer a reconciliation PR to feed it). Done:
+      `.github/workflows/adr-0033-reconciliation.yml` +
+      `.github/scripts/reconcile.py`, 2026-08-20. Verified by dry-run
+      against an isolated scratch repo (fake local origin, no real
+      GitHub/network side effects) — `no_changes` path (content
+      already matches, the common case), the file-absent edge case,
+      and a real `git commit`+push-to-fake-origin all confirmed
+      working end-to-end. NOT tested against a real GitHub
+      `pull_request: closed` event — that's the separate testing
+      checkbox below. One finding from the dry-run: `status: "applied"`
+      is structurally unreachable in this design, not just untested —
+      `proposed` is always read from the same on-disk content
+      `apply_tier2_sync()`'s own internal snapshot also reads, so the
+      diff is always empty by construction. Only `no_changes`/`error`
+      are reachable outcomes; noted, not fixed here (would require
+      diffing against pre-merge git history, deliberately kept out of
+      this narrowed slice's scope).
 - ~~Reconciliation PR opened for `BACKLOG.md`/`ROADMAP.md` changes;
       merge = accept, close-without-merge = reject (point 2).~~
       **Superseded by ADR-0035** — see decision note below. Not
@@ -536,17 +552,36 @@ Validation sections, do not re-derive):
       GitHub event handler (point 3).~~ **Superseded by ADR-0035** —
       no post-merge gated-doc mutation exists to roll back. Not
       implemented; will not be, under the current design.
-- [ ] Scope-zeroed, least-privilege token permissions per job — no job
+- [x] Scope-zeroed, least-privilege token permissions per job — no job
       scoped to merge authority (point 4, simplified per ADR-0035's
       Consequences: no reconciliation-PR-opening job, no PR-close
       rollback job — only the point-1 `ARCHITECTURE.md`-write job
-      needs a permissions block now).
+      needs a permissions block now). Done: top-level `permissions: {}`
+      plus `permissions: {contents: write}` on the single `reconcile`
+      job only — no `pull-requests` scope anywhere in the workflow.
 - [ ] Close-and-reopen handling for concurrent `docs/`-touching merges
       (point 5) — status re: ADR-0035 not yet assessed; point 5 was
       written for the now-superseded reconciliation-PR flow, may need
       re-scoping once point 2/3 work is dropped.
-- [ ] Evidence logging matching Tier 1's existing record format
-      (point 6).
+- [x] Evidence logging matching Tier 1's existing record format
+      (point 6). Done, adapted: `reconcile.py` writes one JSON record
+      per run to `.tempest/runs/`, reusing Tier 1's naming
+      (`make_run_id()`) and retention (`prune_run_records()`)
+      convention — but NOT `schemas/execution-record.schema.json`
+      itself, which was found (by reading it) to be pre-commit-only
+      (`hook` enum literally `["pre-commit"]`, `additionalProperties:
+      false`, fields specific to CHECKPOINT.md/SPEC.md structural
+      counters). Reusing that schema verbatim for a reconciliation run
+      isn't possible without violating its own constraints. The
+      record instead carries `pr_number`, `merged_commit_sha`,
+      `written`, `status` (`applied`/`no_changes`/`error` — narrowed
+      from ADR-0033 point 6's original `applied`/
+      `rejected-and-rolled-back`/`superseded-by-reopen`, since the
+      latter two belonged to the now-superseded reconciliation-PR
+      flow), and `error`. Verified by dry-run (see point 1's note
+      above) that the record is written, correctly shaped, and
+      committed alongside (or in place of) the `ARCHITECTURE.md`
+      write.
 - [ ] Testing per ADR-0033's Validation section — GitHub-event-adapted
       equivalents of Tier 2 Stage 3's scenarios, plus the
       close-and-reopen path under a simulated concurrent merge. Scope

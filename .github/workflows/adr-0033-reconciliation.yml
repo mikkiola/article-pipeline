@@ -1,0 +1,47 @@
+name: ADR-0033 Post-Merge Reconciliation
+
+# Narrowed scope per ADR-0034 (contributor-supplied doc content) and
+# ADR-0035 (pre-merge gate for docs/BACKLOG.md/docs/ROADMAP.md via
+# CODEOWNERS + branch protection, replacing ADR-0033 points 2/3). This
+# workflow implements only point 1 (docs/ARCHITECTURE.md, direct
+# write) and point 6 (evidence logging). No reconciliation PR, no
+# rollback job, no pull-requests permission anywhere -- there is no
+# post-merge mutation of a gated document left to confirm or roll
+# back.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions: {}
+
+jobs:
+  reconcile:
+    name: Reconcile ARCHITECTURE.md
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Vendor ToolTempest DocOps primitives
+        # scripts/doc_sync.py and scripts/doc_sync_tier2.py are
+        # .gitignore'd (vendored locally per ADR-0027/0028, not
+        # committed) -- a fresh checkout doesn't have them without
+        # this step.
+        run: scripts/sync-tooling.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Reconcile ARCHITECTURE.md and log evidence
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGED_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: python3 .github/scripts/reconcile.py
