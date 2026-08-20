@@ -70,59 +70,51 @@ design choices:
    stale, not a git push race) — point 5 itself is confirmed moot (no
    reconciliation PR exists anywhere in the current, ADR-0035-narrowed
    design), but this is a live gap point 5's closure shouldn't paper over.
+4. **`scripts/doc_sync_tier2.py` and `scripts/doc_sync.py` — M1 and M2's
+   respective targets — are both `.gitignore`'d and vendored from the
+   separate `mikkiola/tooltempest` repository**, confirmed via
+   `git check-ignore -v` and a local ToolTempest checkout at
+   `~/Dev/github.com/mikkiola/tooltempest`. Not caught when M1/M2 were
+   originally scoped. Consequence: M1/M2 are re-scoped as ToolTempest-side
+   work, filed as pointers in `docs/BACKLOG.md`, not implemented in this
+   session — see M1/M2 below.
 
 ## Milestones
 
-Six items below, ~19 checklist entries total. Each states verify/done-when
+Six items below. M1/M2 re-scoped to `docs/BACKLOG.md` pointers during
+implementation (Investigation Finding 4) — their design content stays
+here, their checklist items don't, since there's nothing implementable
+locally. M3–M6 carry ~13 checklist entries. Each states verify/done-when
 per this project's CHECKPOINT.md field convention, now inline (see M6 —
 this SPEC.md's own Milestones section is the first real exercise of the
 inline pattern once `CHECKPOINT.md` is removed).
 
 ### M1 — README.md joins Tier 2 as a direct-write file
 
-Per owner decision: Tier 2 direct-write, not CODEOWNERS-gated — README.md
-doesn't encode owner judgment the way BACKLOG.md/ROADMAP.md do, so it
-takes the same treatment as ARCHITECTURE.md, not the gated treatment.
-Consistent with the ADR-0035 constraint above: no new post-hoc-gate
-pattern introduced.
+**Re-scoped during implementation (2026-08-20).** `TIER2_DOCS` lives in
+`scripts/doc_sync_tier2.py`, `.gitignore`'d and vendored from the separate
+`mikkiola/tooltempest` repository — not owned or committable here. This
+milestone's actual work is ToolTempest-side; not implemented in this
+session per owner decision. See `docs/BACKLOG.md`'s
+"[TOOLTEMPEST] README.md → TIER2_DOCS" pointer entry for the deferred
+design (still: Tier 2 direct-write, not CODEOWNERS-gated, consistent with
+the ADR-0035 constraint above — that part of the design stands, only the
+implementation location changed).
 
-- [ ] Add `"README.md"` to `TIER2_DOCS` (not `GATED_DOCS`)
-- [ ] Confirm `TIER2_DOCS`'s load-bearing processing order (direct-writes
-      before gated confirmations) still holds correctly with a
-      second direct-write file present
-- [ ] Update `CONTRIBUTING.md` to state README.md updates flow through
-      the same contributor-supplied-content model as ARCHITECTURE.md
-      (ADR-0034), for contributor PRs
-- verify: Tier 2's existing scratch-repo test scenarios (snapshot, diff,
-      apply, CLI validation) re-run against the 4-file `TIER2_DOCS`
-- done-when: all pre-existing Tier 2 scenarios still pass with README.md
-      included; a synthetic README.md edit round-trips through
-      snapshot → diff → apply correctly
-- status: not-started
+- status: re-scoped, not implemented — see BACKLOG.md pointer
 
 ### M2 — Tier 1 gains content-level doc-update checking
 
-Extends the existing pre-push pairing check (currently ARCHITECTURE.md-
-only, warning-only) to cover content-presence checking across all four
-Tier-2-tracked docs, per owner decision to close this gap rather than
-formalize it as a permanent boundary.
+**Re-scoped during implementation (2026-08-20).** Same cross-repo issue as
+M1: Tier 1's validation logic lives in `scripts/doc_sync.py`, vendored
+from `mikkiola/tooltempest`, not owned here. Not implemented in this
+session per owner decision. See `docs/BACKLOG.md`'s
+"[TOOLTEMPEST] Tier 1 content-level doc-update checking" pointer entry for
+the deferred design (extend the existing ARCHITECTURE.md-only pairing
+check to all four Tier-2-tracked docs; the open warning-vs-hard-fail
+dependency noted originally still applies unchanged).
 
-- [ ] **Dependency, not re-decided here:** whether the existing pairing
-      check's warning-only design becomes hard-fail is still an open
-      `docs/BACKLOG.md` "Owner decisions needed" item — this milestone
-      extends the check's *coverage*, not its warning-vs-block severity;
-      that stays whatever it's separately decided to be
-- [ ] Extend the pairing-check pattern from ARCHITECTURE.md-only to also
-      cover BACKLOG.md, ROADMAP.md, and README.md
-- [ ] Design the actual signal checked: a commit touching a component
-      directory without a corresponding doc change in the same commit —
-      same detection shape as the existing check, generalized
-- verify: a synthetic mutation test (same method already used for the
-      gitleaks/ADR-citation gates) — a component-directory-only commit
-      should trigger the extended check
-- done-when: mutation test confirms the check fires for all four docs,
-      not just ARCHITECTURE.md
-- status: not-started
+- status: re-scoped, not implemented — see BACKLOG.md pointer
 
 ### M3 — ADR-0033 point 5: close and harden
 
