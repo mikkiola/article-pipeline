@@ -166,11 +166,34 @@ No open items remain — the isolated D-025 causal-question experiment
       Linkup — interface already supports swapping backends, nothing
       built. Value depends on how stable Evidence Package's interface
       is after the P0 context-layer fix — low priority until then.
-- [ ] Fix one immutable pilot log line that contains a personal
-      filesystem path — do this only when the repo goes public, not
-      before. This is not a same-artifact edit (that would break the
-      append-only guarantee) — it needs either a superseding
-      append-only record or a separate mechanism, decided at the time.
+- [x] Fix one immutable pilot log line that contains a personal
+      filesystem path — closed 2026-08-21, ahead of the repo going
+      public. File:
+      `claim_extraction/output/pilot_log_20260811T115831.json`,
+      `skip_events[0].detail`. Not a same-artifact edit (would break
+      Immutable Lineage, ADR-0011): the original was `git rm`'d from
+      the tree — recoverable via `git log --follow -- claim_extraction/
+      output/pilot_log_20260811T115831.json`, same precedent as this
+      session's `CHECKPOINT.md`/`context_layer/SPEC.md` deletions, not
+      an in-place content edit. A superseding record,
+      `pilot_log_20260811T115831_redacted.json`, keeps the diagnostic
+      content (which vault file was skipped) and strips only the
+      personal machine-specific path prefix, with an explicit
+      `redacted_from`/`redaction_note` pointer back to the original
+      filename.
+
+      Owner decision (2026-08-21): tree-level fix only, no git-history
+      rewrite. Investigated first: commit `46d1a41` (which introduced
+      the file) is the repo's second commit, ~110 of 111 total commits
+      sit on top of it, already pushed to `origin/main` — rewriting
+      history to purge the string would mean rewriting nearly the
+      entire repo and force-pushing. Weighed against that: the same
+      username (`lyolich777ka`) is already, deliberately, permanently
+      public via `docs/ARCHITECTURE.md` line 29
+      (`lyolich777ka/brain.git`), so the marginal privacy gain from a
+      history rewrite is small relative to its cost. The raw path
+      remains recoverable via git history by anyone who digs; it is no
+      longer visible in the live tree.
 - [ ] Add an explicit schema check (or a test) confirming Evidence
       records always carry `source_url` and `license`, even when
       null — the invariant `docs/adr/0023` states. A mutation test

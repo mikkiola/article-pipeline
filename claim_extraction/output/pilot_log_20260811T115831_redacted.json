@@ -1,0 +1,28 @@
+{
+  "run_id": "20260811T115831",
+  "run_timestamp": "2026-08-11T11:58:31.277592",
+  "total_atoms": 8,
+  "skip_events": [
+    {
+      "type": "duplicate",
+      "detail": "[select_pilot_atoms] Пропуск дубликата: 02_Cards/Интеллект без сомнения превращается в фабрику правдоподобных ошибок.md"
+    }
+  ],
+  "category_counts": {
+    "no_claim": 2,
+    "wrong_framing": 0,
+    "bad_evidence": 0,
+    "technical_failure": 0
+  },
+  "d013_reversal_check": {
+    "threshold": 0.4,
+    "context_insufficiency_count": 1,
+    "context_insufficiency_fraction": 0.125,
+    "context_insufficiency_atoms": [
+      "02_Cards/Лучший читатель графа агент, который ничего не ищет в интернете.md"
+    ],
+    "reversal_condition_triggered": false
+  },
+  "redacted_from": "pilot_log_20260811T115831.json",
+  "redaction_note": "Supersedes pilot_log_20260811T115831.json (deleted from the tree; recoverable via `git log --follow -- claim_extraction/output/pilot_log_20260811T115831.json`, per Immutable Lineage ADR-0011 -- this is a tree-level removal, not an in-place content edit). The original skip_events[0].detail field contained a personal filesystem path (local username and directory convention) ahead of the repo going public; this record keeps the diagnostic content (which vault file was skipped) and strips only the personal machine-specific path prefix. See docs/BACKLOG.md."
+}
