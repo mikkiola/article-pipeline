@@ -1016,7 +1016,7 @@ else. A future task or `/spec` pass resolves this, not this entry.
 **Source.** Architect chat session, 2026-08-20, DocOps SPEC.md session.
 Closed 2026-08-20, DocOps SPEC.md M6.
 
-### P1 — [TOOLTEMPEST] README.md → TIER2_DOCS
+### Resolved — [TOOLTEMPEST] README.md → TIER2_DOCS (closed)
 
 <!--
   FILED HERE, NOT IN TOOLTEMPEST: same convention as the existing
