@@ -126,6 +126,33 @@ plainly, and ask one specific question. This is the only "ask" rule in
 this document. Every other place in this file that mentions stopping
 or asking is a pointer back to this rule, not a separate rule.
 
+## Test-Driven Development
+
+Not a default requirement for every task. Required whenever the
+task's own risk profile justifies it: when a mechanism's correctness
+can't be cheaply verified by inspection alone, when a wrong
+implementation would be expensive to discover after the fact, or when
+the task involves a confirmation/gating mechanism whose entire purpose
+is to trigger under specific conditions — where "does this actually
+trigger" is the central risk, not an incidental one.
+
+When it applies: write a test defining the expected behavior before
+writing the implementation, confirm the test fails for the right
+reason (no implementation exists yet), then implement.
+
+Judging whether a given task meets this bar is an ordinary technical
+decision per rule 1 of "The one stop-and-ask rule" above — Claude Code
+decides and states the reasoning in its report, it does not ask the
+owner every time.
+
+This session found architectural gaps — a confirmation gate that could
+never trigger, a reconciliation call that could never produce a
+non-trivial diff — only after implementation was built and dry-run
+tested. A test written first, defining the expected trigger/
+non-trivial-diff case, would have surfaced the same gap before the
+implementation effort was spent. This is the class of risk this rule
+targets, not test coverage as a blanket requirement.
+
 ## Unconditional rules (no exceptions)
 
 - Sensitive operations — `git push`, token revocation, and deleting
@@ -226,7 +253,11 @@ a component directory. History of what a prior SPEC.md contained is
 retrieved via `git log -- SPEC.md`, not preserved as a separate file.
 This rule exists because two orphaned, unlinked SPEC.md files were
 once found coexisting with no governing rule — see `docs/BACKLOG.md`
-for the specific finding.
+for the specific finding. This matches GitHub Spec Kit's documented
+Living Spec persistence model — the spec is the contract, other
+artifacts are derived and disposable
+(https://github.github.com/spec-kit/concepts/spec-persistence.html) —
+cited here for precedent only, not as an adopted tool or dependency.
 
 ## ADR discipline
 
