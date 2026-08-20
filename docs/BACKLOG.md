@@ -239,16 +239,33 @@ answer has architectural consequences.
   pilot — possibly the same mechanism described twice, or two
   separate layers. Not technically verified either way; needs a
   decision on whether this is worth resolving now or deferring.
-- Is the pre-push hook's component-directory/ARCHITECTURE.md pairing
-  check meant to stay warning-only (never blocking a push)
-  permanently, or was that a gap left from initial implementation that
-  should eventually become a hard fail? No rationale for the current
-  design is on record anywhere (checked: the hook itself, `docs/adr/`,
-  `docs/BACKLOG.md`, commit messages). A hard fail would also need to
-  handle the false-positive risk on legitimate non-architectural
-  changes the hook's own inline comment already acknowledges (e.g. a
-  bugfix to a component directory that doesn't change its
-  Status/Validation/Commit).
+
+### Resolved — pre-push component/doc pairing check stays warning-only permanently (closed)
+
+Was an open "Owner decisions needed" item: is the pre-push hook's
+component-directory/doc pairing check (`scripts/check-doc-pairing.sh`
+as of DocOps SPEC.md M2, 2026-08-21 — originally ARCHITECTURE.md-only,
+now covers all four Tier 2 docs) meant to stay warning-only
+permanently, or was that a gap left from initial implementation that
+should eventually become a hard fail? No rationale for the original
+design was on record anywhere.
+
+Owner decision (2026-08-21): warning-only, permanently — a soft nudge
+is the right long-term design for this check, not an interim state
+waiting for a future hard-fail upgrade. Reasoning: the check has no way
+to distinguish a status-relevant component change (one that genuinely
+needs a doc update) from a non-architectural one (e.g. a bugfix) — its
+own message already acknowledges this ("If nothing status-relevant
+changed... this warning is safe to ignore"). A hard fail on a signal
+this coarse would block legitimate pushes on false positives, not
+just catch real omissions; a human noticing and judging the warning is
+the correct mechanism for a check this imprecise, not a defect to
+eventually correct.
+
+No code change — this formalizes the existing, unchanged behavior.
+
+**Source.** Architect-delegated task, 2026-08-21, following DocOps
+SPEC.md M2's extension of the check to all four Tier 2 docs.
 
 ### P1 — Audit implicit text-based contracts in the DocOps protocol (closed)
 
