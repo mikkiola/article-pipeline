@@ -212,12 +212,21 @@ interview is in progress or complete without that report.
 
 ## `SPEC.md`'s status
 
-`SPEC.md` (and any component-specific spec file, e.g.
-`context_layer/SPEC.md`) is not a fifth top-level canonical document.
-It's a `/spec` skill output, scoped to one component or task, and it
-follows the skill's own template, not this Constitution's document
-list. `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/BACKLOG.md`,
-and this file remain the only four top-level documents.
+`SPEC.md` is not a fifth top-level canonical document. It's a `/spec`
+skill output, scoped to one component or task, and it follows the
+skill's own template, not this Constitution's document list.
+`docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/BACKLOG.md`, and this
+file remain the only four top-level documents.
+
+SPEC.md has exactly one location: the repository root (`./SPEC.md`),
+for whichever task is currently the active focus. Starting a new
+`/spec` session for a different task overwrites the existing root
+SPEC.md; it does not create a second SPEC.md elsewhere, such as inside
+a component directory. History of what a prior SPEC.md contained is
+retrieved via `git log -- SPEC.md`, not preserved as a separate file.
+This rule exists because two orphaned, unlinked SPEC.md files were
+once found coexisting with no governing rule — see `docs/BACKLOG.md`
+for the specific finding.
 
 ## ADR discipline
 

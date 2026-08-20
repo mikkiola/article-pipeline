@@ -749,3 +749,51 @@ prioritized; not blocking Part B or ADR-0033's implementation.
 
 **Source.** Architect chat session, 2026-08-19, ADR-0033 workflow
 implementation session (Part B blocker resolution discussion).
+
+### P2 — SPEC.md had no location/lifecycle rule — found two orphaned copies, one deleted
+
+Found: 2026-08-20. `docs/CONSTITUTION.md`'s "SPEC.md's status" section
+states SPEC.md "is scoped to one component or task" but never
+specifies WHERE it must live, what it must be named, or what happens
+to a prior SPEC.md when a new one starts. `~/.claude/skills/spec/
+SKILL.md` writes SPEC.md to whatever directory is the invoking
+session's cwd at invocation time — no naming/location logic tied to
+component name.
+
+Result: two independent, unlinked SPEC.md files existed simultaneously
+— root SPEC.md (about Evidence Package, first commit `46d1a41`
+2026-08-11, last commit `e98a119` 2026-08-16) and
+`context_layer/SPEC.md` (about the Context Layer component, first
+commit `c480ab4` 2026-08-15, last commit `109eeb0` 2026-08-16). Both
+components are fully implemented and closed (Evidence Package: M1-M5
+done, commits `2fe0aac..29f716f`; Context Layer: all 6 milestones
+done, ADR-0029). Neither SPEC.md was ever cleaned up, archived, or
+consolidated once its component's work finished.
+
+Owner decision (2026-08-20): going forward, SPEC.md has exactly ONE
+location — repo root (`./SPEC.md`), for whichever task is currently
+active. A new `/spec` session overwrites the existing root SPEC.md
+directly rather than creating a new file elsewhere; history of what a
+prior SPEC.md said lives in `git log -- SPEC.md`, not in a separate
+archived copy or a CHANGELOG.md (this project deliberately does not
+maintain one — see this entry's own existence as the precedent for
+where such findings go instead: `docs/BACKLOG.md`, `docs/adr/`, and
+git commit history).
+
+To find what a since-overwritten SPEC.md said for a past component:
+`git log --follow -- SPEC.md` for anything written to the root path,
+or, for this specific historical case, `git log --follow --
+context_layer/SPEC.md` (file deleted in this session — history still
+recoverable via `git log`/`git show` on any commit SHA in that range,
+e.g. `git show c480ab4:context_layer/SPEC.md`).
+
+- [ ] `docs/CONSTITUTION.md`'s "SPEC.md's status" section updated to
+      state this location/lifecycle rule explicitly. Done as part of
+      this same session — see the section itself.
+- [ ] Confirm `~/.claude/skills/spec/SKILL.md`'s actual write-location
+      behavior matches the new rule (root only, not cwd-dependent) —
+      NOT in scope for this task to fix (that skill lives outside
+      this repo, in ToolTempest's eventual portable-tool design, still
+      being scoped) — flag as a follow-on dependency only.
+
+**Source.** Architect chat session, 2026-08-20, SPEC.md audit.
