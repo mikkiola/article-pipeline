@@ -396,7 +396,7 @@ invocation per real `git commit`).
 Source. DocOps Protocol V2.0 hardening session, 2026-08-19 edge-case
 audit (Scenario 4b) in the architect chat.
 
-### P1 — [TOOLTEMPEST] CI for ToolTempest, before the second consumer connects
+### P1 — [TOOLTEMPEST] CI for ToolTempest, before the second consumer connects (closed)
 
 <!--
   FILED HERE, NOT IN TOOLTEMPEST: this task is about ToolTempest's own
@@ -473,6 +473,37 @@ in the architect chat regarding solo-developer risk tolerance for
 propagating a shared-tooling fix (e.g., a Python version bump breaking
 the recipe for every connected project).
 
+**Closed (2026-08-21).** Implemented as ADR-0005
+(`docs/adr/0005-ci-pipeline.md`, tooltempest repo) — tooltempest
+commits `e9d700d` (ADR text, landed together with ADR-0006) and
+`71f53d8` (the actual CI workflow, test harness, and fixtures).
+Delivers exactly the "What's needed, concretely" scenario suite above
+(no-op, ordinary RECONCILE, genuine staged/unstaged conflict HARD
+BLOCK, detached HEAD, no upstream, UNKNOWN-pattern touched/untouched,
+verify.py missing/broken) as a GitHub Actions workflow triggered on
+`pull_request` targeting `main`.
+
+One deliberate divergence from a literal reading of "before it's
+mergeable," stated plainly rather than closed over silently: ADR-0005
+chose **informational-only** enforcement, not a required/blocking
+status check — reasoned explicitly in the ADR's own Why section
+("informational-first is the lower-risk sequencing" for a suite that
+hasn't yet run for real or proven it doesn't false-positive).
+Promoting it to a required check is named in the ADR as a distinct,
+later decision, not bundled into this closure.
+
+Not addressed by ADR-0005, and not part of this closure: the "Drift
+Warning... scoping happens alongside CI" note above (ADR-0005's own
+Scope/Invariants section explicitly excludes Drift Warning as a prior,
+fixed decision, out of scope for it) and the optional
+semi-automatic-resync-bot idea (still undecided — this entry itself
+already flagged it as optional, "not assumed either way here"). Note:
+Drift Warning itself already runs today, in this repo's own pre-push
+hook — via a separate, prior mechanism, `docs/adr/0032-drift-warning.md`
+(observed directly in this session's own pushes: "[pre-push] Checking
+ToolTempest drift (.tooltempest.lock vs origin/main)..."). It predates
+this entry and was never something ADR-0005 needed to newly deliver.
+
 ### P2 — doc_sync_tier2.py CLI exit-code semantics for no-op runs
 
 Found during Tier 2 Stage 4 (CLI entry point) implementation,
@@ -532,7 +563,7 @@ Two separable pieces, do not conflate:
 ADR-0033 discussion. Both pieces closed/unblocked 2026-08-20, DocOps
 SPEC.md M5.
 
-### P1 — sync-tooling.sh completeness testing (Phase 5)
+### P1 — sync-tooling.sh completeness testing (Phase 5) (closed)
 
 Found during the Tier 2 implementation session, 2026-08-19.
 `.tooltempest.lock` was repinned to a new ToolTempest commit that
@@ -559,14 +590,15 @@ Two separable pieces, do not conflate:
       cat-file -e`. Passes against current state (7/7 files found);
       failure path confirmed with a synthetic missing-file case
       (non-zero exit, names the missing file).
-- [ ] Completeness design (architectural, needs its own decision —
+- [x] Completeness design (architectural, needs its own decision —
       likely its own ADR, ToolTempest-side, since it changes what
       ToolTempest commits to exposing to consumers): how a consumer
       discovers that a new ToolTempest file should be vendored,
       without hand-maintaining a list. Candidate direction discussed: a
       manifest file living in ToolTempest itself, with
       `sync-tooling.sh` reading from it instead of hardcoding paths.
-      Decided — see below.
+      Decided — see below. Implemented 2026-08-21 — see the closing
+      note below.
 
 **Decision (owner, 2026-08-19).** Option A — a manifest file living in
 ToolTempest, which `sync-tooling.sh` reads instead of hardcoding
@@ -588,6 +620,29 @@ Sequencing: after current Tier 2 work closes (Tier 1 regression check
 + final doc-sync marking Tier 2 as implemented).
 
 **Source.** Tier 2 /doc-sync implementation session, 2026-08-19.
+
+**Closed (2026-08-21).** Option A implemented in full. ToolTempest
+gained `MANIFEST.txt` at its repo root (ADR-0006,
+`docs/adr/0006-vendor-manifest.md` — tooltempest commit `e9d700d`)
+plus its own completeness-check script (`scripts/check_manifest.py`,
+same commit) verifying `MANIFEST.txt` against `git ls-files` on
+ToolTempest's own side. In this repo: `sync-tooling.sh` now reads the
+vendored-file list from `MANIFEST.txt` at the pinned commit instead of
+a hardcoded list (commit `6c90436`); `.tooltempest.lock` repinned to
+`71f53d88a316370f164a0b1ea728f012f28c2b99` to pick up both ADR-0005
+and ADR-0006 (commit `7556b56`); the regression test above
+(`scripts/test-sync-tooling-manifest.sh`) rewritten to check
+`MANIFEST.txt` entries against ToolTempest at the pinned commit
+instead of parsing `sync-tooling.sh`'s old `cp` lines — superseding
+bullet 1's original description above, which described the
+now-replaced mechanism (commit `f8d65c6`); and `docs/CONSTITUTION.md`
+gained a "ToolTempest consumer obligation" section requiring any
+session that changes ToolTempest's vendored directories to run
+`scripts/check_manifest.py` and update `MANIFEST.txt` in the same
+commit (commit `6d3b9e5`). Verified end-to-end: `sync-tooling.sh` run
+against the new pin picked up `scripts/doc_sync_tier2.py` and the new
+`scripts/check_manifest.py` automatically, with neither file named
+anywhere in this repo's own scripts.
 
 ### P1 — Implement ADR-0033's GitHub Actions workflow
 
