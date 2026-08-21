@@ -182,6 +182,26 @@ targets, not test coverage as a blanket requirement.
   sure, this is a hypothesis" in plain language — not just a tag
   buried in the text.
 
+## ToolTempest consumer obligation
+
+Applies to any project that consumes ToolTempest (`mikkiola/tooltempest`),
+not only this repository — expected to be copied, verbatim or
+near-verbatim, into any other ToolTempest consumer's own Constitution.
+ToolTempest has no Constitution of its own to hold this rule.
+
+Whenever a session works on ToolTempest itself (not this consumer
+project) and adds, removes, or renames a file under `scripts/`,
+`schemas/`, `skills/`, or `rules/` — the four directories ToolTempest's
+own `MANIFEST.txt` tracks — that session must run ToolTempest's
+completeness-check script (`scripts/check_manifest.py`) before
+considering the change done, and update `MANIFEST.txt` in the same
+commit if it reports a mismatch, not as a separate later task.
+
+This is also the natural trigger point for the owner to consider
+repinning `.tooltempest.lock` in this repo (or any other consumer) to
+pick up the new file — that repin remains a deliberate, separate
+action, not automatic.
+
 ## Conditional rules
 
 - When Claude Code needs to make a scoped decision mid-task and the
