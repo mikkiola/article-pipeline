@@ -1183,3 +1183,41 @@ separately unexamined — not assumed either way.
 **Source.** P1-P5 DocOps fact-check, this session, 2026-08-21 (read-only
 verification against `scripts/doc_sync_tier2.py`,
 `.github/scripts/reconcile.py`, live `gh api`/`gh run list` checks).
+
+### P2 — resolve_component_name() has no explicit component-tagging alternative to guessing
+
+Found: 2026-08-21, during this session's P1-P5 DocOps fact-check
+follow-up. No explicit component-tagging mechanism (e.g. YAML
+frontmatter) exists anywhere in `scripts/verify.py`,
+`scripts/doc_sync.py`, or `scripts/doc_sync_tier2.py` as an alternative
+to `resolve_component_name()`'s text-heuristic guessing for a
+root-level `SPEC.md`. Confirmed by direct read of
+`resolve_component_name()` (`verify.py:72-113`) and a repo-wide grep
+for frontmatter/YAML/component-tag parsing (zero hits) — the function
+counts `<repo-dir-name>/<component>/` and bare `<component>/`
+occurrences in the SPEC.md's own prose text; there is no structured
+signal (e.g. a `---\ncomponent: <name>\n---` block) it could read
+instead.
+
+Additive to, not a duplicate of, the existing tracked item above (lines
+123-148, the checkout-name-dependency finding): that entry is about the
+guess being wrong under certain conditions (a differently-named clone,
+or a tied count); this entry is about there being no non-guessing
+alternative available at all, regardless of whether the guess itself is
+later hardened.
+
+- [ ] Not fixed now — tracking only, per owner instruction. Implementing
+      a frontmatter field (or any other explicit-tagging mechanism) is
+      its own scoped design task: field name, mandatory vs. optional,
+      and how older SPEC.md revisions in git history are treated are
+      all open design questions, not something to decide inside a
+      fact-check pass.
+- [ ] Revisit alongside the checkout-name-dependency item above (lines
+      123-148) if `resolve_component_name()` is ever picked up for
+      rework — an explicit-tagging fix would likely obsolete both
+      findings at once, so they should be considered together, not
+      fixed separately.
+
+**Source.** P1-P5 DocOps fact-check follow-up, this session, 2026-08-21
+(read-only verification against `scripts/verify.py`,
+`scripts/doc_sync.py`, `scripts/doc_sync_tier2.py`).
