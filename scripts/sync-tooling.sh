@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 # Manual sync helper: installs the ToolTempest primitives pinned in
-# .tooltempest.lock into ~/.claude/. Human-triggered only — no
-# discovery, no auto-update. See D-026/D-027/D-028.
+# .tooltempest.lock into ~/.claude/ (and, for scripts/ and schemas/,
+# into this repo). Human-triggered only — no discovery, no
+# auto-update. See D-026/D-027/D-028.
+#
+# The vendored-file list is read from ToolTempest's own MANIFEST.txt
+# at the pinned commit (ADR-0006, mikkiola/tooltempest) rather than
+# hardcoded here — see docs/BACKLOG.md, "P1 — sync-tooling.sh
+# completeness testing (Phase 5)". Destination is derived from each
+# entry's top-level directory: skills/ and rules/ are Claude Code
+# client config, copied into ~/.claude/; scripts/ and schemas/ are
+# consumed directly by this repo's own tooling, copied into this repo.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -9,6 +18,7 @@ LOCK_FILE="${REPO_ROOT}/.tooltempest.lock"
 CACHE_DIR="${HOME}/.cache/tooltempest/repo"
 REMOTE_URL="https://github.com/mikkiola/tooltempest.git"
 CLAUDE_DIR="${HOME}/.claude"
+MANIFEST_NAME="MANIFEST.txt"
 
 fail() {
   echo "FAIL: $1" >&2
@@ -37,29 +47,32 @@ git -C "${CACHE_DIR}" checkout --quiet --detach "$PINNED_SHA" || fail "checkout 
 ACTUAL_SHA="$(git -C "${CACHE_DIR}" rev-parse HEAD)"
 [ "$ACTUAL_SHA" = "$PINNED_SHA" ] || fail "checked-out SHA (${ACTUAL_SHA}) does not match lock file (${PINNED_SHA})"
 
-mkdir -p "${CLAUDE_DIR}/skills/spec" "${CLAUDE_DIR}/skills/verify" "${CLAUDE_DIR}/rules"
+MANIFEST_FILE="${CACHE_DIR}/${MANIFEST_NAME}"
+[ -f "$MANIFEST_FILE" ] || fail "${MANIFEST_NAME} not found in ToolTempest at ${PINNED_SHA} (expected at repo root)"
 
-cp "${CACHE_DIR}/skills/spec/SKILL.md" "${CLAUDE_DIR}/skills/spec/SKILL.md" || fail "failed to copy skills/spec/SKILL.md"
-cp "${CACHE_DIR}/skills/verify/SKILL.md" "${CLAUDE_DIR}/skills/verify/SKILL.md" || fail "failed to copy skills/verify/SKILL.md"
-cp "${CACHE_DIR}/rules/drift-control.md" "${CLAUDE_DIR}/rules/drift-control.md" || fail "failed to copy rules/drift-control.md"
+# Portable array read, not `mapfile` -- macOS ships bash 3.2, which
+# lacks it (see the same pattern in test-sync-tooling-manifest.sh).
+VENDORED_FILES=()
+while IFS= read -r line; do
+  [ -n "$line" ] && VENDORED_FILES+=("$line")
+done < "$MANIFEST_FILE"
+[ "${#VENDORED_FILES[@]}" -gt 0 ] || fail "${MANIFEST_NAME} at ${PINNED_SHA} lists no files"
 
-echo "OK: installed ToolTempest V1 primitives (commit ${ACTUAL_SHA}) into ${CLAUDE_DIR}"
+for rel in "${VENDORED_FILES[@]}"; do
+  case "$rel" in
+    skills/*|rules/*)
+      dest="${CLAUDE_DIR}/${rel}"
+      ;;
+    scripts/*|schemas/*)
+      dest="${REPO_ROOT}/${rel}"
+      ;;
+    *)
+      fail "MANIFEST.txt entry \"${rel}\" is outside the known skills/rules/scripts/schemas destinations -- update sync-tooling.sh's mapping before proceeding"
+      ;;
+  esac
+  mkdir -p "$(dirname "$dest")"
+  cp "${CACHE_DIR}/${rel}" "$dest" || fail "failed to copy ${rel}"
+done
 
-# DocOps Protocol (ADR-0001, ToolTempest V2; Tier 2 per ADR-0002).
-# scripts/doc_sync.py and schemas/execution-record.schema.json are
-# executable/reference material consumed by this project's own git
-# hooks. scripts/doc_sync_tier2.py is invoked directly by the agent's
-# own judgment (ADR-0002c), not by a git hook, but is vendored here for
-# the same reason: it needs to exist inside this repo, not only in
-# ~/.claude/.
-# skills/doc-sync/SKILL.md is Claude Code client config, like the V1
-# skills above, so it follows the same ~/.claude/ path.
-mkdir -p "${REPO_ROOT}/scripts" "${REPO_ROOT}/schemas" "${CLAUDE_DIR}/skills/doc-sync"
-
-cp "${CACHE_DIR}/scripts/doc_sync.py" "${REPO_ROOT}/scripts/doc_sync.py" || fail "failed to copy scripts/doc_sync.py"
-cp "${CACHE_DIR}/scripts/doc_sync_tier2.py" "${REPO_ROOT}/scripts/doc_sync_tier2.py" || fail "failed to copy scripts/doc_sync_tier2.py"
-cp "${CACHE_DIR}/schemas/execution-record.schema.json" "${REPO_ROOT}/schemas/execution-record.schema.json" || fail "failed to copy schemas/execution-record.schema.json"
-cp "${CACHE_DIR}/skills/doc-sync/SKILL.md" "${CLAUDE_DIR}/skills/doc-sync/SKILL.md" || fail "failed to copy skills/doc-sync/SKILL.md"
-
-echo "OK: installed ToolTempest DocOps Protocol (commit ${ACTUAL_SHA}) into ${REPO_ROOT} and ${CLAUDE_DIR}"
+echo "OK: installed ${#VENDORED_FILES[@]} ToolTempest file(s) (commit ${ACTUAL_SHA}) per ${MANIFEST_NAME} into ${REPO_ROOT} and ${CLAUDE_DIR}"
 exit 0
