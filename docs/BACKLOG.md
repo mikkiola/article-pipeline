@@ -1141,3 +1141,45 @@ implemented directly in article-pipeline (`scripts/check-doc-pairing.sh`
 
 **Source.** DocOps SPEC.md implementation session, 2026-08-20. M2
 correction and resync, 2026-08-21.
+
+### P2 — README.md has no automated sync path today (reconcile.py hardcodes ARCHITECTURE.md only)
+
+Found: 2026-08-21, during this session's P1-P5 DocOps fact-check
+(read-only verification of the session-end doc-sync `SPEC.md`, commit
+`24c5571`, against real code/config/logs, not against what any prior
+session claimed about itself). `docs/README.md` is formally listed in
+`TIER2_DOCS` (ADR-0004, same direct-write treatment as
+`docs/ARCHITECTURE.md`), and the underlying `apply_tier2_sync()` library
+function (`scripts/doc_sync_tier2.py`) correctly supports writing it.
+But `.github/scripts/reconcile.py` — the only script that currently
+calls `apply_tier2_sync()` automatically — hardcodes its `proposed`
+dict to `docs/ARCHITECTURE.md` only (`ARCHITECTURE_MD =
+"docs/ARCHITECTURE.md"`; `README.md` is never read into `proposed`).
+In practice, `README.md` has no automated sync path anywhere today,
+despite ADR-0004's intent and despite the closed "[TOOLTEMPEST]
+README.md → TIER2_DOCS" entry above describing it as getting the same
+treatment as `ARCHITECTURE.md`.
+
+Owner decision (2026-08-21): explicitly not an immediate fix.
+`reconcile.py` only runs at P5 (post-merge PR reconciliation), and this
+is a solo-developer repo where PRs are rare — realistically once every
+few months, if ever, only if an external contributor appears (confirmed
+this session: exactly one merged PR exists in this repo's entire
+history, and the reconciliation workflow has zero real runs —
+`gh run list --workflow=adr-0033-reconciliation.yml` returns empty).
+The owner's actual day-to-day doc-sync path is direct commits to `main`
+(ADR-0039 admin bypass), not the PR flow. Fixing `reconcile.py` now
+would close a gap in a path that's barely used, while whether an
+equivalent gap exists in the actually-used direct-push path remains
+separately unexamined — not assumed either way.
+
+- [ ] Not fixed now — see owner decision above.
+- [ ] Revisit if/when the PR path becomes more active (a contributor
+      joins), or when the session-end doc-sync `SPEC.md` (commit
+      `24c5571`) reaches its own implementation phase — that
+      implementation may be a more natural place to fix README.md's
+      sync path than a standalone patch to `reconcile.py` today.
+
+**Source.** P1-P5 DocOps fact-check, this session, 2026-08-21 (read-only
+verification against `scripts/doc_sync_tier2.py`,
+`.github/scripts/reconcile.py`, live `gh api`/`gh run list` checks).
