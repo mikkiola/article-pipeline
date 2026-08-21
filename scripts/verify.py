@@ -27,7 +27,7 @@ import re
 import sys
 from pathlib import Path
 
-MILESTONES_HEADING_RE = re.compile(r"^##\s+Milestones\s*$", re.MULTILINE)
+MILESTONES_HEADING_RE = re.compile(r"^##\s+Milestones\b", re.MULTILINE)
 NEXT_HEADING_RE = re.compile(r"^##\s+\S", re.MULTILINE)
 CHECKBOX_LINE_RE = re.compile(r"^\s*(?:-|\d+\.)\s*\[[ xX]\]", re.MULTILINE)
 CHECKBOX_FULL_LINE_RE = re.compile(r"^\s*(?:-|\d+\.)\s*\[[ xX]\](.*)$", re.MULTILINE)
