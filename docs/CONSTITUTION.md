@@ -297,9 +297,10 @@ all three files — not just a prose expectation.
 
 `docs/BACKLOG.md` is explicitly exempted from this rule (Metadata/ID
 Layer `/spec` interview, 2026-08-22). It's a task log/history journal,
-not an architectural description — citing "Closed via ADR-0037" there
-is legitimate traceability, the normal way a closure note points at
-the decision that resolved it. The exemption applies only to
+not an architectural description — citing the ADR that resolved a
+closed item there is legitimate traceability, the normal way a
+closure note points at the decision that resolved it. The exemption
+applies only to
 `docs/BACKLOG.md`'s own prose; it does not extend to
 `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/this file, including content
 that later migrates from a BACKLOG.md entry into one of those three —
@@ -310,8 +311,9 @@ citation arrived.
 `docs/ROADMAP.md` "was checked against this rule... and found
 compliant — zero citations." That claim was stale and false at the
 time it was checked this session: `docs/ROADMAP.md` had 2 citations
-(both `ADR-0031`), and `docs/BACKLOG.md` had 63 — neither previously
-caught, because the pre-push check that was supposed to enforce this
+(both citing the same superseded decision), and `docs/BACKLOG.md` had
+63 — neither previously caught, because the pre-push check that was
+supposed to enforce this
 matched the wrong pattern (a bare backtick-wrapped number, not the
 `ADR-NNNN` format actually used throughout this project). Both fixed
 this session; the check's pattern and scope are fixed too — see
