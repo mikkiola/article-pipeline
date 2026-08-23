@@ -1299,3 +1299,74 @@ implementation session, Step 7 (`SPEC.md`'s M1 resumption, the
 ROADMAP.md mechanism-design correction that surfaced this gap, and the
 M7 attempt that confirmed it as a hard blocker rather than an assumed
 one).
+
+### [B-036] P2 — "Machine-Verifiable SPEC Format" needed, verify:/done-when: per-milestone fields missing from inline_spec pattern
+
+Found: 2026-08-18, still applies to every current `SPEC.md` including
+today's session-end doc-sync one. Two SPEC file patterns exist in this
+project's history: the old checkpoint pattern (`CHECKPOINT.md`,
+deprecated ADR-0037) had explicit per-milestone `verify:`/`done-when:`/
+`status:` fields, mechanically extractable into a checklist. The
+current `inline_spec` pattern (used by every `SPEC.md` today) has only
+`- [ ]` checkboxes with no per-milestone verify/done-when fields —
+verification lives in prose in a general Test Plan section, not
+attached 1:1 to each milestone. No automated "does the code actually
+satisfy what `SPEC.md`'s prose describes" check exists today; only
+`scripts/verify.py`'s structural well-formedness check plus the
+owner's manual Evidence review.
+
+- [ ] Needs its own `/spec` interview — do not fold into any other
+      spec. Should also cover a related, separately-found gap:
+      `docs/CONSTITUTION.md` has no existing "mechanically-verifiable
+      prose rules must be script-enforced" principle (confirmed absent
+      by full read, 2026-08-22) — the owner may want to adopt one as
+      part of the same interview, since both are about the same
+      underlying gap (prose isn't enough, needs code enforcement).
+
+**Source.** Architect chat session, 2026-08-18. Cross-referenced with
+the `docs/CONSTITUTION.md` gap found 2026-08-22 during the Metadata/ID
+Layer `/spec` interview's Topic 2 (no mechanical-verification
+principle exists in that file).
+
+### [B-037] P3 — Remaining "Neutron Star Protocol" claims not covered by today's Metadata/ID Layer work
+
+Found: 2026-08-22, Metadata/ID Layer `/spec` interview's closing
+independence check. Two things the external "Neutron Star Protocol"
+proposal raised aren't covered by that interview at all: converting
+`docs/ARCHITECTURE.md` and `docs/ROADMAP.md` to table-only format
+(removing all prose), plus its other proposed `docs/CONSTITUTION.md`
+rules beyond what today's session already resolved (`docs/BACKLOG.md`'s
+ADR-citation exemption, the destination-invariant check). Confirmed
+independent of today's metadata/ID work (2026-08-22, owner's explicit
+closing check) — no dependency either direction.
+
+- [ ] Needs its own `/spec` interview if the owner wants to pursue it —
+      a significant, separate architectural change, not a sub-step of
+      anything already built. Do NOT bundle with `[B-036]` — different
+      scope, different risk profile (this one touches the actual shape
+      of `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`'s content, not just
+      spec-file format).
+
+**Source.** Metadata/ID Layer `/spec` interview, 2026-08-22, closing
+independence check.
+
+### [B-038] P3 — Whether docs/BACKLOG.md's bare [B-NNN] token needs its own structured field for ODS-KG compatibility
+
+Found: 2026-08-22, Metadata/ID Layer `/spec` interview. Whether
+`docs/BACKLOG.md`'s bare `[B-NNN]` token needs its own lightweight
+structured field (`source_type`/`confidence`) for future compatibility
+with ODS-KG's Document Fact schema. Deliberately left open during that
+interview — consistent with not over-interrogating ODS-KG alignment
+beyond its current draft/hypothesis status (ODS-KG itself is
+scaffolding only, no ontology/MCP-server/graph-store built yet as of
+2026-07-30). Not actionable until archi-kg's actual Document Fact
+schema and ontology mapping rules (C1/C2) are finalized on the ODS
+side.
+
+- [ ] Verify-later checkpoint, not a task to schedule now — revisit
+      once ODS-KG's C1 (canonical type list) and C2 (mapping rules) are
+      actually finalized, not before.
+
+**Source.** Metadata/ID Layer `/spec` interview, 2026-08-22 (deferred
+during the interview itself, per the task's own instruction not to ask
+for more ODS-KG precision than exists).
