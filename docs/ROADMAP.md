@@ -12,15 +12,15 @@ see `docs/adr/`.
 | 0 — Scaffold + `graph_reader.py` | Closed |
 | 1 — Claim Extraction pilot | Closed |
 | 2 — Evidence Package | Closed |
-| 2.5 — Context/causal-structure layer | Closed — M1-M5 implemented; causal question resolved (ADR-0031, partially confirmed: enrichment helps on-domain, harms via polysemous-tag collision, tracked as a non-blocking P1 fix). Phase 3 no longer blocked on this. |
+| 2.5 — Context/causal-structure layer | Closed — M1-M5 implemented; causal question resolved, partially confirmed: enrichment helps on-domain, harms via polysemous-tag collision, tracked as a non-blocking P1 fix. Phase 3 no longer blocked on this. |
 | 3 — Strategy Layer + Author + Quality Gate | Blocked on 2.5 |
 | 4 — Platform Adapter (Habr → LinkedIn) + Circuit Breaker | Not started |
 | 5+ — Experiment Log, remaining platforms | Not started |
 
 ## Current pointer
 
-Phase 2.5's causal question is resolved (ADR-0031, partially
-confirmed) — the P0 item that tracked it is done and removed from
+Phase 2.5's causal question is resolved, partially confirmed — the
+P0 item that tracked it is done and removed from
 `docs/BACKLOG.md`'s P0 section, which is now empty. Phase 3 is no
 longer blocked on this question. The atom-tag-disambiguation P1 item
 (found via the same experiment) is a targeted, non-blocking follow-up
