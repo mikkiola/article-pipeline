@@ -56,7 +56,19 @@ of update, handled differently:
   `docs/BACKLOG.md` is done): update the relevant document directly,
   as part of finishing the task that caused the change. No separate
   confirmation needed — the commit that makes the fact true and the
-  commit that records it can be the same task. This applies to
+  commit that records it can be the same task. **Narrower exception,
+  `docs/BACKLOG.md` task closure specifically** (found and confirmed
+  2026-08-22, Metadata/ID Layer `/spec` interview's Step 7): whether a
+  task is fully vs. partially done, or which of several plausible
+  `docs/BACKLOG.md` entries a commit actually closes, is a genuine
+  judgment call in a way "a dependency changed" or "a component broke"
+  usually isn't — not the same kind of unambiguous fact this default
+  rule was written for. `docs/BACKLOG.md` task closure at session-end
+  goes through the confirmation-gated mechanism `SPEC.md` (this
+  session, or whichever session's SPEC.md currently implements it)
+  designs instead — tag the commit, hold the trailer, ask before
+  writing — a deliberate, stated exception to this default, not an
+  unnoticed contradiction of it. This applies to
   `README.md` too, same principle as `docs/ARCHITECTURE.md`/
   `docs/ROADMAP.md`/`docs/BACKLOG.md` — whenever a task's outcome
   makes `README.md`'s content stale, update it directly as part of
