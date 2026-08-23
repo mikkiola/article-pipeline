@@ -315,13 +315,8 @@ Design only — none implemented this session.
       question — see the "M2/M5" section below, right after this list).
 - [x] M3 — Resolved 2026-08-22 — see the "M3" section below, right
       after "M2/M5".
-- [ ] M4 — Integration point in Claude Code's existing session/commit
-      flow where steps 0, 2–6 hook in. Step 6's direct-commit path (the
-      BACKLOG.md closure write) must reuse `reconcile.py`'s existing,
-      already-hardened `push_with_retry()` rather than an unguarded
-      `git push` — same concurrent-push race class it was built to catch
-      (this session's `finding-unknowns` Finding 3), same reuse-not-
-      reinvent requirement as M7's `apply_tier2_sync()` reuse below.
+- [x] M4 — Resolved 2026-08-22 — see the "M4" section below, right
+      after "M3".
 - [x] M5 — Resolved 2026-08-22, together with M2 — see the "M2/M5"
       section below. Not an executable test: the mechanism this
       milestone governs is Claude Code's own live-session judgment
@@ -446,9 +441,75 @@ Which one(s) should I mark done, if any?
   single consistent format rather than a special case for "exactly
   two").
 
+## M4 — Integration point in Claude Code's session/commit flow
+
+Resolved 2026-08-22 (implementation session). Checked
+`.github/scripts/reconcile.py`'s actual `push_with_retry()` (lines
+50–73) before writing this: it's self-contained — takes only
+`max_attempts` (default 3), uses `run_git()` against
+`git rev-parse --show-toplevel`, and has **no dependency on
+`PR_NUMBER`/`MERGED_SHA`** (those env vars are read elsewhere in the
+file, in the GitHub-Actions-specific `main()`, not inside
+`push_with_retry()` itself). Cleanly reusable from a local Claude Code
+session without faking any CI-only environment.
+
+**Steps 0/2–6, anchored to Claude Code's actual behavior, not a new
+mechanism:**
+
+- **Step 0** (session-start recovery grep) runs as part of
+  `docs/CONSTITUTION.md`'s existing Session protocol — after reading
+  the four canonical docs, *before* stating the session's plan (the
+  protocol already ends that sequence with "Then state the session's
+  plan before starting work"; step 0 slots in immediately before that
+  sentence, since orphaned trailers found there might change what the
+  stated plan should even say — e.g. "close these two leftover items
+  first, then start on X").
+- **Step 2** (commit-time trailer tagging) is not a separate action —
+  it's Claude Code including a `Closes: B-NNN` line in a commit message
+  it was already about to write, exactly like any other commit-message
+  content decision. No new tooling, no hook.
+- **Step 3** (holding trailers) needs no integration at all — this is
+  Claude Code's own conversational context for the running session, not
+  a persisted data structure. Discoverable via `git log` if ever needed
+  mid-session, consistent with decision 6/step 0's "git history is the
+  only store" principle.
+- **Step 4** (natural-completion prompt) anchors to the same
+  `docs/CONSTITUTION.md` "Review report format" checkpoint M2/M5
+  already define — one integration point, not a separate one for M2
+  and M4.
+- **Steps 5/6** (continue-holding vs. write-now) are a plain
+  conditional on the owner's reply to step 4 — no new mechanism beyond
+  branching on that answer, using M3's candidate format when step 6
+  finds more than one plausible closure.
+
+**Step 6's push, reusing `push_with_retry()` (not reimplementing it):**
+literal reuse — import and call the function from its actual source,
+not a re-derived copy of its retry/rebase logic:
+
+```bash
+python3 -c "
+import sys
+sys.path.insert(0, '.github/scripts')
+from reconcile import push_with_retry
+err = push_with_retry()
+if err:
+    print(f'FAIL: {err}')
+    sys.exit(1)
+print('OK: pushed')
+"
+```
+
+Run after the `docs/BACKLOG.md` edit is committed locally (ordinary
+`git commit`, same as every other commit this session already makes) —
+this replaces only the final `git push`, not the commit itself. Matches
+the concurrent-push race class `push_with_retry()` was built to catch
+(a second session/process pushing to `main` between this session's
+commit and its push) — the exact risk an unguarded `git push` in the
+original design would have reintroduced.
+
 **Remaining Milestones checklist** (continuation of the list under
-"## Milestones" above — M4/M6/M7 don't have their own resolved-detail
-section yet, unlike M1/M2/M3/M5):
+"## Milestones" above — M6/M7 don't have their own resolved-detail
+section yet, unlike M1/M2/M3/M4/M5):
 
 - [ ] M6 — Define the structural fact-sync trigger for ARCHITECTURE.md/
       ROADMAP.md/README.md: exactly which facts are checked (component
