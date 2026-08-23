@@ -311,9 +311,8 @@ Design only — none implemented this session.
       below, unchanged from the original interview. M1 is not fully
       closed until that's answered; the ID-format blocker specifically
       is.
-- [ ] M2 — Define the "work appears to satisfy the stated plan"
-      matching heuristic operationally — what Claude Code actually
-      checks before triggering the step-4 prompt.
+- [x] M2 — Resolved 2026-08-22, together with M5 (same underlying
+      question — see the "M2/M5" section below, right after this list).
 - [ ] M3 — Plain-language candidate-presentation format for the
       ambiguous-match case (decision 4), reviewed against a
       non-technical-reader bar.
@@ -324,12 +323,84 @@ Design only — none implemented this session.
       `git push` — same concurrent-push race class it was built to catch
       (this session's `finding-unknowns` Finding 3), same reuse-not-
       reinvent requirement as M7's `apply_tier2_sync()` reuse below.
-- [ ] M5 — Test plan for the confirmation gate itself. Per
-      `docs/CONSTITUTION.md`'s TDD section, this qualifies: "a
-      confirmation/gating mechanism whose entire purpose is to trigger
-      under specific conditions... 'does this actually trigger' is the
-      central risk." Write a test defining the expected trigger/no-
-      trigger cases before implementing, per that rule.
+- [x] M5 — Resolved 2026-08-22, together with M2 — see the "M2/M5"
+      section below. Not an executable test: the mechanism this
+      milestone governs is Claude Code's own live-session judgment
+      (decision 2 already rejected building a deterministic
+      text-matching function), so "the test" is a written scenario
+      checklist a session or reviewer checks behavior against, not a
+      script. M4's `push_with_retry()` reuse and M7's
+      `apply_tier2_sync()` integration below remain genuinely
+      automatable and keep their own, separate TDD treatment when
+      implemented.
+
+## M2/M5 — Plan-completion trigger, operationally defined
+
+Resolved together, 2026-08-22 (implementation session) — one question,
+not two. M2 asks what Claude Code actually checks before the step-4
+prompt; M5 asks for a test defining trigger/no-trigger cases for that
+same check. Decision 2 already rejected a text-matching heuristic ("no
+text-matching heuristic infers plan completion... it asks directly
+rather than guessing") — so there is no deterministic function for M2
+to define beyond Claude Code's own contextual judgment, applied at a
+specific trigger *moment*. M5's "test" is a written scenario checklist,
+not code — there's no `matches_plan()` function to unit-test, unlike
+M4/M7's genuinely automatable pieces.
+
+**Trigger moment (M2).** The check runs at the same point Claude Code
+would already naturally produce a "Review report format"-style report
+per `docs/CONSTITUTION.md` (i.e., whenever it's about to say "here's
+what changed and what's next") — not a new timer, not a check after
+every single commit. Reuses an existing behavioral checkpoint instead
+of inventing one, matching this SPEC's own established pattern (decision
+2's "no separate `/session-end` command," decision 6's "no new
+log/document").
+
+**What gets compared.** Claude Code's own understanding of the
+session's opening stated plan (per `docs/CONSTITUTION.md`'s Session
+protocol) against the human-readable titles of the `docs/BACKLOG.md`
+entries covered by trailers accumulated so far this session. Ordinary
+reading comprehension, not string matching — decision 2 already
+forecloses an NLP heuristic here.
+
+**Re-ask cadence after "continue"** (the actual operational gap M2
+needed to close — decision 5 didn't fully specify this). "Next natural
+completion point" means the next point where *new* trailer-tagged work
+changes the completion picture, not literally the very next end-of-turn
+report. Re-asking at every report after being told to hold off would be
+a nagging repeat with no new information, not a natural checkpoint —
+Claude Code holds silently through subsequent reports until either (a)
+a new `Closes:` trailer lands, or (b) the owner raises it again.
+
+**Scenario checklist (M5).**
+
+TRIGGER (Claude Code should proactively ask):
+1. Stated plan named specific `docs/BACKLOG.md` items (e.g. "fix
+   B-012, close out B-019"); this session's accumulated trailers cover
+   all of them; next natural report → ask "close now, or keep
+   accumulating?"
+2. Stated plan was open-ended ("investigate and fix whatever's
+   broken"), no items named up front; one trailer accumulated; next
+   natural report → Claude Code is *not* confident one trailer
+   represents the whole open-ended plan → ask directly "Is the
+   session's stated plan done, or not yet?" (decision 2's fallback),
+   not assume yes from a single closure alone.
+
+NO-TRIGGER (Claude Code should not prompt):
+3. Stated plan named 3 items; only 1 trailer accumulated so far; next
+   natural report → no prompt, plan clearly not done, keep working.
+4. Owner already said "continue" earlier this session; no new trailer
+   has landed since; next natural report → no re-prompt (re-ask
+   cadence rule above).
+5. Zero trailers accumulated this session (no `docs/BACKLOG.md` work
+   happened) → no prompt; nothing to potentially close.
+
+AMBIGUOUS MATCH (feeds decision 4 / M3, not a trigger/no-trigger case
+on its own):
+6. Stated plan named one item, but this session's work also
+   incidentally closed a second, unstated one → present both
+   candidates in plain language (M3's format), wait for the owner's
+   pick — never silently guess which one(s) were meant.
 - [ ] M6 — Define the structural fact-sync trigger for ARCHITECTURE.md/
       ROADMAP.md/README.md: exactly which facts are checked (component
       directory list, dependency list, file paths, ROADMAP.md's
