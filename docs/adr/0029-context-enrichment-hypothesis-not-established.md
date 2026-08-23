@@ -1,32 +1,21 @@
+---
+id: ADR-0029
+status: Accepted
+supersedes: null
+superseded_by: null
+source_type: verbatim
+---
+
 # 0029 — D-025's context-enrichment hypothesis: not established by the Milestone 4 experiment (confound found)
 
 ## Status
+
 ACTIVE (diagnosis). Corrects the causal framing in commit `2b7c8a6`
 (context_layer Milestone 4). Milestone 4's commit itself is not edited
 or amended — Immutable Lineage; this record is where the correction
 lives.
 
-## Decision
-The Milestone 4 experiment does not establish that context_layer's
-query enrichment caused Claim `20260811T165911_04`'s status to change
-from `unverifiable` to `verified`. A direct audit of the original
-2026-08-13 run's raw search results found the responsible source
-already present in that run, before context_layer existed. D-025's
-original context-loss hypothesis remains neither confirmed nor refuted.
-
-## Options
-A — accept Milestone 4's commit message as written: context-enriched
-query caused the one status change, treat D-025 as partially validated.
-B — audit the raw result sets from both runs before accepting any
-causal claim, and record the finding precisely, including if it
-contradicts the commit message (chosen). C — discard the Milestone 4
-experiment entirely as inconclusive and re-run before recording
-anything.
-
-## Chosen
-B.
-
-## Why
+## Context & Constraints
 
 **What was observed**: 1 of 5 re-run Claims (`20260811T165911_04`)
 changed from `unverifiable` (2026-08-13 original run, evidence_run
@@ -88,13 +77,32 @@ the test, as run, cannot answer that question for the one Claim where
 anything changed — it does not confirm D-025's hypothesis, and it does
 not refute it either.
 
-## Constraints
 No claim that context_layer's enrichment caused Claim `_04`'s status
 change should be repeated elsewhere in this project (ARCHITECTURE.md,
 ROADMAP.md, future ADRs) until a properly isolated experiment is run
 per the reversal condition below.
 
-## Rejected
+## Decision
+
+The Milestone 4 experiment does not establish that context_layer's
+query enrichment caused Claim `20260811T165911_04`'s status to change
+from `unverifiable` to `verified`. A direct audit of the original
+2026-08-13 run's raw search results found the responsible source
+already present in that run, before context_layer existed. D-025's
+original context-loss hypothesis remains neither confirmed nor refuted.
+
+## Alternatives & Rationale
+
+A — accept Milestone 4's commit message as written: context-enriched
+query caused the one status change, treat D-025 as partially validated.
+B — audit the raw result sets from both runs before accepting any
+causal claim, and record the finding precisely, including if it
+contradicts the commit message (chosen). C — discard the Milestone 4
+experiment entirely as inconclusive and re-run before recording
+anything.
+
+B.
+
 A — rejected because it repeats a causal claim the raw data directly
 contradicts; recording it as accepted history would misrepresent the
 experiment's actual evidentiary weight to any future reader, including
@@ -105,6 +113,7 @@ result-survival finding); the problem is the causal framing, not the
 underlying data collected.
 
 ## Consequences
+
 (a) D-025's original hypothesis — context loss as a contributing cause
 of Evidence Package's poor pilot results — remains neither confirmed
 nor refuted by this experiment. A properly isolated test would need to
@@ -118,7 +127,8 @@ project: first-pass interactive-assessment quality is itself a variable
 that has not been isolated from the variable actually under test in any
 experiment run so far.
 
-## Validation
+## Confirmation & Revisit
+
 Confirmed by direct inspection of
 `evidence_package/output/_m4_staging_20260813T114717.json` (recovered
 raw result list from the original run) against
@@ -130,15 +140,13 @@ runs by `git log`; the only code difference between the two runs is
 Milestone 3's additive `build_search_query()` change (commit `bb549ee`),
 already committed before Milestone 4 ran.
 
-## Reversal condition
 Resolved once a future experiment holds the assessment methodology
 constant — the same evaluation pass reused across old/new queries, or a
 fixed scoring rubric applied identically — while varying only the query
 text, and reports a result under that controlled design. Redesigning
 that experiment is out of scope for this record.
 
-## Source
-`context_layer/experiment_20260815_context_fix.json` (Milestone 4's
+**Source.** `context_layer/experiment_20260815_context_fix.json` (Milestone 4's
 experiment artifact); `evidence_package/output/_m4_staging_20260813T114717.json`
 (the recovered raw result set that made this audit possible); commit
 `2b7c8a6` (Milestone 4, whose commit message's causal framing this ADR

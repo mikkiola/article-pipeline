@@ -1,6 +1,13 @@
+---
+id: ADR-0039
+status: Accepted
+supersedes: null
+superseded_by: null
+source_type: verbatim
+---
+
 # ADR-0039: Branch Protection on `main` — Admin Bypass Enabled, Permanently
 
-Status: Accepted
 Relates to: ADR-0035 (article-pipeline, pre-merge gate for gated docs)
 — ADR-0035 decided that `docs/BACKLOG.md`/`docs/ROADMAP.md` become
 CODEOWNERS-protected paths requiring branch-protection-enforced review,
@@ -23,7 +30,11 @@ closes that documentation gap; it is not re-deciding or re-litigating
 anything. The decision itself, and its rationale, are recorded here for
 the first time, but the decision predates this ADR's own writing.
 
-## Context
+## Status
+
+Accepted
+
+## Context & Constraints
 
 ADR-0035 introduced GitHub branch protection on `main`, requiring a
 code-owner-approved pull request before `docs/BACKLOG.md` or
@@ -49,6 +60,12 @@ no bypass, would impose real process overhead — opening and
 self-merging a PR for routine changes — with no corresponding safety
 benefit, since there is no second contributor whose changes the gate
 would meaningfully review.
+
+Does not change ADR-0035's CODEOWNERS/required-review configuration
+for `docs/BACKLOG.md`/`docs/ROADMAP.md` — that remains exactly as
+ADR-0035 decided and as verified above. Does not grant bypass to any
+account other than the repository's `admin`-role holders. Does not
+edit ADR-0033, ADR-0034, or ADR-0035 (Immutable Lineage, ADR-0011).
 
 ## Decision
 
@@ -112,7 +129,7 @@ confirms admin bypass is enabled, exactly as described above. Both
 match this ADR's description of the configured state; no discrepancy
 found.
 
-## Rationale
+## Alternatives & Rationale
 
 **Why permanent, not provisional.** This mirrors the reasoning already
 recorded for a structurally similar permanent-by-design choice —
@@ -138,14 +155,6 @@ themself. A contributor's pull request, lacking admin permission,
 still cannot merge into a CODEOWNERS-protected path without the
 required review, regardless of this setting.
 
-## Constraints
-
-Does not change ADR-0035's CODEOWNERS/required-review configuration
-for `docs/BACKLOG.md`/`docs/ROADMAP.md` — that remains exactly as
-ADR-0035 decided and as verified above. Does not grant bypass to any
-account other than the repository's `admin`-role holders. Does not
-edit ADR-0033, ADR-0034, or ADR-0035 (Immutable Lineage, ADR-0011).
-
 ## Consequences
 
 - The owner continues pushing directly to `main` without opening a
@@ -162,7 +171,7 @@ edit ADR-0033, ADR-0034, or ADR-0035 (Immutable Lineage, ADR-0011).
   configuration is independently confirmed live); see that entry for
   the closure note.
 
-## Reversal condition
+## Confirmation & Revisit
 
 If a second collaborator is ever granted the `admin` role on this
 repository (not `maintain`, `push`, `triage`, or `pull` — GitHub scopes
@@ -173,9 +182,7 @@ revisit this decision — likely toward enabling `enforce_admins` (no
 bypass for anyone) or scoping bypass more narrowly than "any admin,"
 via a new, superseding ADR, not an edit to this one.
 
-## Source
-
-Decision made and configured in a prior article-pipeline session (not
+**Source.** Decision made and configured in a prior article-pipeline session (not
 this one) — exact session not separately logged, and not
 reconstructable beyond what this ADR itself now records; this is the
 documentation-gap closure, not the original decision-making session.

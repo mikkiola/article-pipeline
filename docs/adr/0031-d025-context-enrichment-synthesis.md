@@ -1,36 +1,21 @@
+---
+id: ADR-0031
+status: Accepted
+supersedes: null
+superseded_by: null
+source_type: verbatim
+---
+
 # 0031 — D-025 paired experiment: context-enrichment synthesis
 
 ## Status
+
 ACTIVE (diagnosis + synthesis). Corrects/extends ADR-0025's original
 hypothesis and ADR-0029's confound finding with a properly isolated
 paired experiment (per ADR-0029's reversal condition).
 
-## Decision
-D-025's context-loss hypothesis is PARTIALLY CONFIRMED, with an
-important qualification: query enrichment can help when the injected
-context correctly reflects the atom's intended domain (Russian run,
-Claims _01/_05: control found nothing relevant, treatment found
-relevant sources), but the current raw-tag-injection design actively
-harms results when a tag is polysemous/ambiguous (Claims _03/_04 in
-BOTH language runs: the tag "доверие"/"trust" pulled search into an
-unrelated domain — IT-security certification in Russian, finance/law/
-security in English, more severely). This is not a diffuse or
-unexplained risk — it is one specific, identified, repeatable failure
-mechanism, isolated to how tags are injected into the query, not a
-general flaw in the context-enrichment concept itself.
+## Context & Constraints
 
-## Options
-A — treat the mixed/negative mean Δ as refuting the context-loss
-hypothesis, discontinue context enrichment. B — treat the isolated
-tag-collision mechanism as the explanation for the negative results,
-and pursue tag disambiguation as a targeted fix rather than abandoning
-the approach (chosen). C — inconclusive, defer to a larger-sample
-follow-up before deciding anything.
-
-## Chosen
-B.
-
-## Why
 The paired experiment (context_layer/experiment_20260816_D025_paired
 .json), run per context_layer/D-025_experimental_brief_DRAFT.md's
 resolved design (paired per-Claim comparison, fixed 0/1/2 rubric, new
@@ -53,7 +38,6 @@ mixed result — it points to a scoped fix (tag disambiguation, already
 tracked in docs/BACKLOG.md), not a redesign or abandonment of the
 context-enrichment concept.
 
-## Constraints
 This finding does not change the Evidence Package `verified` criterion
 (inherited from ADR-0025/0029). It does not resolve the DRAFT's
 still-open calibration-approach question. It does not establish that
@@ -62,7 +46,32 @@ only that it targets the one concretely identified failure mechanism
 found so far; other undiscovered failure modes may still exist in a
 larger sample.
 
-## Rejected
+## Decision
+
+D-025's context-loss hypothesis is PARTIALLY CONFIRMED, with an
+important qualification: query enrichment can help when the injected
+context correctly reflects the atom's intended domain (Russian run,
+Claims _01/_05: control found nothing relevant, treatment found
+relevant sources), but the current raw-tag-injection design actively
+harms results when a tag is polysemous/ambiguous (Claims _03/_04 in
+BOTH language runs: the tag "доверие"/"trust" pulled search into an
+unrelated domain — IT-security certification in Russian, finance/law/
+security in English, more severely). This is not a diffuse or
+unexplained risk — it is one specific, identified, repeatable failure
+mechanism, isolated to how tags are injected into the query, not a
+general flaw in the context-enrichment concept itself.
+
+## Alternatives & Rationale
+
+A — treat the mixed/negative mean Δ as refuting the context-loss
+hypothesis, discontinue context enrichment. B — treat the isolated
+tag-collision mechanism as the explanation for the negative results,
+and pursue tag disambiguation as a targeted fix rather than abandoning
+the approach (chosen). C — inconclusive, defer to a larger-sample
+follow-up before deciding anything.
+
+B.
+
 A — rejected because it would discard a result that the data itself
 explains mechanistically; treating "context enrichment doesn't work"
 as the conclusion would misrepresent what was actually found (a
@@ -72,6 +81,7 @@ deferring to a larger sample before attempting the known fix wastes
 the diagnostic value already obtained.
 
 ## Consequences
+
 docs/BACKLOG.md's atom-tag-disambiguation P1 item is the direct
 follow-up action from this finding. Until that fix is implemented and
 re-tested, context-enriched queries should be treated as carrying a
@@ -83,21 +93,20 @@ decision is unaffected by this finding — it operates at the language-
 selection level, independent of whether context enrichment is used
 within either language's query.
 
-## Validation
+## Confirmation & Revisit
+
 Confirmed by direct experiment — context_layer/experiment_20260816_
 D025_paired.json, paired design per context_layer/D-025_experimental
 _brief_DRAFT.md (Sections 4, 5, 7), 20 total search requests across
 both language runs, full-page reads used for scoring where relevant
 (not just snippets).
 
-## Reversal condition
 Resolved once tag disambiguation is implemented and a follow-up paired
 experiment (same design) shows the _03/_04-type regression no longer
 occurs, and/or shows a clearly positive mean Δ once the identified
 failure mechanism is removed.
 
-## Source
-context_layer/experiment_20260816_D025_paired.json (this experiment);
+**Source.** context_layer/experiment_20260816_D025_paired.json (this experiment);
 context_layer/D-025_experimental_brief_DRAFT.md (the experimental
 design this ADR's finding is based on); ADR-0025 (original hypothesis);
 ADR-0029 (confound correction, reversal condition this experiment

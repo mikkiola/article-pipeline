@@ -1,6 +1,13 @@
+---
+id: ADR-0038
+status: Accepted
+supersedes: null
+superseded_by: null
+source_type: verbatim
+---
+
 # ADR-0038: Automated Detection Gate for Local Filesystem Path Leaks
 
-Status: Accepted
 Relates to: ADR-0018 (article-pipeline, personal path privacy in code)
 — extends its territory without editing it, per Immutable Lineage
 (ADR-0011): ADR-0018 decided the initial remediation (move existing
@@ -12,7 +19,11 @@ technical check"). Also relates to `docs/BACKLOG.md`'s now-closed
 "personal filesystem path" pilot-log entry (2026-08-21), whose fix this
 ADR follows up on with a preventive mechanism.
 
-## Context
+## Status
+
+Accepted
+
+## Context & Constraints
 
 A real instance of this class of leak was found and fixed: an immutable
 pilot log's `skip_events[0].detail` field contained an absolute macOS
@@ -32,6 +43,20 @@ opposite — the owner's intentional, public portfolio identity, already
 deliberately documented in `docs/ARCHITECTURE.md` and elsewhere, and
 must keep showing up freely. A naive "personal identifier" scanner
 would conflate the two; this decision does not.
+
+Option A reuses a tool this project already trusts and already extends
+for exactly this class of problem, with zero new moving parts. Option B
+would duplicate gitleaks' job with a new script for no functional gain
+once the allowlist mechanism was verified to work. Option C conflates
+two separate decisions — this rule's design, and gitleaks' hook
+placement in general — the owner deliberately kept apart.
+
+Does not change `docs/ARCHITECTURE.md`'s existing `lyolich777ka/brain.git`
+reference or any other intentional public-identity reference — those
+remain, unaffected, by design. Does not make gitleaks' `--no-git` scan
+mode respect `.gitignore` generally — the three path exclusions are
+scoped to this rule's allowlist only, not a project-wide fix. Does not
+add gitleaks to pre-commit. Does not edit ADR-0018.
 
 ## Decision
 
@@ -75,7 +100,7 @@ new hook-wiring, no new tool.
    gitleaks to pre-commit would be a separate, more disruptive change to
    that convention, unrelated to this decision.
 
-## Options considered
+## Alternatives & Rationale
 
 | Option | Pros | Cons | Risks |
 |---|---|---|---|
@@ -83,29 +108,7 @@ new hook-wiring, no new tool.
 | B. New standalone Python script (`scripts/check_local_paths.py`), invoked from a hook | Full control over matching logic (e.g. clean URL-exclusion via string checks instead of a content-regex allowlist) | New file, new hook-wiring, duplicates a tool (gitleaks) already doing exactly this class of check in this repo | Rejected: adds a second content-scanning mechanism alongside gitleaks for no capability gitleaks' allowlist mechanism doesn't already provide, once verified |
 | C. Add gitleaks (with this rule) to pre-commit as well as pre-push | Catches a leak before it's even locally committed | Changes an established convention (gitleaks pre-push-only) as a side effect of an unrelated decision; commit is local-only, no exposure risk yet, so the marginal benefit is smaller than the convention-change cost | Rejected: owner's explicit reasoning — push is the actual exposure point, this decision shouldn't also relitigate hook placement |
 
-## Chosen
-
 A.
-
-## Why
-
-Option A reuses a tool this project already trusts and already extends
-for exactly this class of problem, with zero new moving parts. Option B
-would duplicate gitleaks' job with a new script for no functional gain
-once the allowlist mechanism was verified to work. Option C conflates
-two separate decisions — this rule's design, and gitleaks' hook
-placement in general — the owner deliberately kept apart.
-
-## Constraints
-
-Does not change `docs/ARCHITECTURE.md`'s existing `lyolich777ka/brain.git`
-reference or any other intentional public-identity reference — those
-remain, unaffected, by design. Does not make gitleaks' `--no-git` scan
-mode respect `.gitignore` generally — the three path exclusions are
-scoped to this rule's allowlist only, not a project-wide fix. Does not
-add gitleaks to pre-commit. Does not edit ADR-0018.
-
-## Rejected
 
 B — rejected as a needless duplicate of a tool already doing this job
 once its allowlist mechanism was confirmed capable. C — rejected because
@@ -124,7 +127,7 @@ hook-placement decision.
   test for this rule, not a one-off verification — re-run it after any
   future edit to `.gitleaks.toml`'s `local-fs-path` rule or allowlist.
 
-## Validation
+## Confirmation & Revisit
 
 TDD per `docs/CONSTITUTION.md`'s TDD rule (a detection gate whose entire
 job is triggering under specific conditions): `scripts/test-local-fs-path-rule.sh`
@@ -141,17 +144,13 @@ relative-path regexes — a false test failure, not a real one — fixed by
 invoking gitleaks the same way the production hook actually does
 (relative `.` source, cwd = repo root).
 
-## Reversal condition
-
 If gitleaks' `--no-git`/`.gitignore` mismatch causes repeated false
 positives on gitignored local files beyond what a per-rule allowlist
 can reasonably keep up with, revisit this ADR — likely toward changing
 gitleaks' invocation to respect `.gitignore` project-wide, which is out
 of this ADR's scope as written.
 
-## Source
-
-Article-pipeline session, 2026-08-21, following the pilot-log path
+**Source.** Article-pipeline session, 2026-08-21, following the pilot-log path
 redaction. Design and allowlist entries verified empirically via
 `scripts/test-local-fs-path-rule.sh` and direct dry runs against the
 real repo before adoption, not assumed correct from gitleaks'

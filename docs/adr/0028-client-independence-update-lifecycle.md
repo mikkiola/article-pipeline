@@ -1,31 +1,22 @@
+---
+id: ADR-0028
+status: Accepted
+supersedes: null
+superseded_by: null
+source_type: verbatim
+---
+
 # 0028 — Client independence and update lifecycle for shared tooling
 
 ## Status
+
 ACTIVE. Manual lock+delivery path implemented and confirmed
 (`mikkiola/article-pipeline` commit `3d4ad09`). CLI adapter and
 discovery mechanism remain unbuilt — this record specifies their
 architectural contract only, not their implementation.
 
-## Decision
-The canonical repository stays entirely client-agnostic — it contains
-only `skills/spec/SKILL.md`, `skills/verify/SKILL.md`, and
-`rules/drift-control.md`, with no client-specific files or logic of any
-kind. Client-specific differences are isolated in a separate, lightweight
-CLI adapter layer, not built into the canonical repository. Detecting
-that a new version exists (discovery) may happen automatically;
-installing or activating that version never happens automatically — it
-always requires an explicit, human-triggered action. Silent auto-update
-is not permitted under any circumstance.
+## Context & Constraints
 
-## Options
-A — client-specific core. B — client-agnostic core plus a separate
-adapter layer (chosen). C — a separate, independent copy of the tooling
-per client.
-
-## Chosen
-B.
-
-## Why
 `mikkiola/tooltempest` (0026) needs a defined relationship with the
 tools that consume it — Claude Code today, potentially Cursor, Codex, or
 others later — that does not couple the canonical repository to any one
@@ -41,7 +32,6 @@ Option B keeps one canonical source client-agnostic while isolating
 per-client differences in the adapter layer, avoiding both failure
 modes.
 
-## Constraints
 Version identity: full 40-character Git commit SHA, per 0026. A tag is a
 mutable alias, never a source of truth. Each consumer records its pinned
 version in `.tooltempest.lock` — the lock file name specified by this
@@ -61,7 +51,26 @@ in the canonical core. This record does not itself build the CLI adapter
 activation; the canonical repository stays client-agnostic) is fixed
 here.
 
-## Rejected
+## Decision
+
+The canonical repository stays entirely client-agnostic — it contains
+only `skills/spec/SKILL.md`, `skills/verify/SKILL.md`, and
+`rules/drift-control.md`, with no client-specific files or logic of any
+kind. Client-specific differences are isolated in a separate, lightweight
+CLI adapter layer, not built into the canonical repository. Detecting
+that a new version exists (discovery) may happen automatically;
+installing or activating that version never happens automatically — it
+always requires an explicit, human-triggered action. Silent auto-update
+is not permitted under any circumstance.
+
+## Alternatives & Rationale
+
+A — client-specific core. B — client-agnostic core plus a separate
+adapter layer (chosen). C — a separate, independent copy of the tooling
+per client.
+
+B.
+
 A — creates coupling between the infrastructure layer and whichever tool
 happens to be running it; creates technical debt starting in version 1.
 C — produces multiple sources of truth and risks silent divergence
@@ -74,6 +83,7 @@ clean machine with no network and no local cache (this cannot honestly
 be promised).
 
 ## Consequences
+
 ToolTempest remains a plain open-source-style core repository — no paid
 infrastructure, no Organization account, no registry or backend. This
 does not architecturally foreclose a future hosted registry, fleet
@@ -96,7 +106,8 @@ Pipeline's project memory is never migrated into ToolTempest — ToolTempest
 does not become a second source of truth for Article Pipeline's
 architecture.
 
-## Validation
+## Confirmation & Revisit
+
 Confirmed for the manual path only: `mikkiola/article-pipeline` commit
 `3d4ad09` created `.tooltempest.lock` and `scripts/sync-tooling.sh` (a
 manual, zero-dependency sync helper — explicitly not the CLI adapter
@@ -108,7 +119,6 @@ Package`, or `Atom Selector` — the canonical repository stayed
 domain-agnostic as required. CLI adapter and discovery mechanism remain
 entirely unvalidated because they remain unbuilt.
 
-## Reversal condition
 Revisit if implementing a second AI client shows that the adapter layer
 cannot isolate client-specific differences without breaking the
 semantics of the canonical primitives, or does so only at
@@ -118,8 +128,7 @@ conditional client-specific branches, that is itself a sign this
 decision needs revisiting. Until such evidence exists, this decision
 stands — it does not quietly revert to option A or C in the meantime.
 
-## Source
-Continues 0026 (canonical source and version identity) and 0027 (lock
+**Source.** Continues 0026 (canonical source and version identity) and 0027 (lock
 and delivery contract). Originally formalized in an external review
 brought by the owner in an "external architectural reviewer" role;
 verified line-by-line against the architect's own prior record of this

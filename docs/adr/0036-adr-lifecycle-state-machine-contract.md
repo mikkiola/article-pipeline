@@ -1,12 +1,23 @@
+---
+id: ADR-0036
+status: Accepted
+supersedes: null
+superseded_by: null
+source_type: verbatim
+---
+
 # ADR-0036: ADR Lifecycle State Machine Contract
 
-Status: Accepted
 Relates to: `docs/BACKLOG.md`'s "P2 — ADR lifecycle state machine +
 structural validation + generated index" entry, which this ADR resolves
 the "needs its own ADR before implementation" gate for. Does not extend
 or edit any prior ADR.
 
-## Context
+## Status
+
+Accepted
+
+## Context & Constraints
 
 `docs/BACKLOG.md` flagged that ADR status is currently free-text and
 unenforced: no automated check confirms a new ADR's number is unique,
@@ -30,6 +41,23 @@ lightweight numbering/filename-match check (`scripts/
 check_adr_numbering.py`, DocOps SPEC.md M5's other half) — that piece
 needed no preceding ADR and is already implemented separately, in the
 same commit that adds this file.
+
+Option A is the only one that actually closes the gap `docs/BACKLOG.md`
+flagged while respecting that entry's own explicit sequencing
+requirement — a contract decided on its own, separately from
+implementation pressure, mirroring the prior art already discussed
+(Log4brains/MADR treat status and the index the same way). Option B
+leaves a known, already-diagnosed gap open with no path forward. Option
+C treats the sequencing rule as an obstacle to route around rather than
+the reason this ADR exists.
+
+Does not implement the state machine, the field pair, or the index
+generator — that is separate, later work, deliberately not bundled into
+the same commit that decides this contract. Does not retroactively
+rewrite any existing ADR's `Status` line. Does not resolve ADR-0035's
+point-level supersession case — noted as an open gap in the field pair's
+design, not solved here. Does not change `docs/CONSTITUTION.md`'s
+existing "never edited after acceptance" rule.
 
 ## Decision
 
@@ -63,7 +91,7 @@ Three elements, together forming the lifecycle contract:
    tooling's precedent of treating the index as a build artifact, not a
    source of truth.
 
-## Options considered
+## Alternatives & Rationale
 
 | Option | Pros | Cons | Risks |
 |---|---|---|---|
@@ -71,32 +99,7 @@ Three elements, together forming the lifecycle contract:
 | B. Status quo — free-text `Status`, no field pair, no generated index | No new implementation burden | The exact gap `docs/BACKLOG.md` flagged remains open indefinitely | Rejected: doesn't resolve the entry this ADR exists to unblock |
 | C. Full automation now (this ADR both decides and implements) | Closes the gap in one pass | Directly contradicts `docs/BACKLOG.md`'s own explicit sequencing rule ("do not implement... without a preceding ADR") — this ADR's entire purpose is to be that preceding step, not to skip it | Rejected: the sequencing rule exists specifically so the contract is decided independently of a rushed implementation pass |
 
-## Chosen
-
 A.
-
-## Why
-
-Option A is the only one that actually closes the gap `docs/BACKLOG.md`
-flagged while respecting that entry's own explicit sequencing
-requirement — a contract decided on its own, separately from
-implementation pressure, mirroring the prior art already discussed
-(Log4brains/MADR treat status and the index the same way). Option B
-leaves a known, already-diagnosed gap open with no path forward. Option
-C treats the sequencing rule as an obstacle to route around rather than
-the reason this ADR exists.
-
-## Constraints
-
-Does not implement the state machine, the field pair, or the index
-generator — that is separate, later work, deliberately not bundled into
-the same commit that decides this contract. Does not retroactively
-rewrite any existing ADR's `Status` line. Does not resolve ADR-0035's
-point-level supersession case — noted as an open gap in the field pair's
-design, not solved here. Does not change `docs/CONSTITUTION.md`'s
-existing "never edited after acceptance" rule.
-
-## Rejected
 
 B — rejected because it leaves the diagnosed gap open indefinitely, with
 no stated path to closing it. C — rejected because it contradicts the
@@ -119,23 +122,19 @@ contract in the same pass as implementing it would repeat exactly the
   supersession pattern, since this contract only models whole-file
   supersession.
 
-## Validation
+## Confirmation & Revisit
 
 Deferred to the future implementation task this ADR unblocks — no CI
 enforcement, index generator, or field-pair check is implemented or
 tested here. This ADR is validated by review/acceptance of the contract
 itself, not by running code.
 
-## Reversal condition
-
 If implementing the field pair or generated index surfaces a
 contract-level problem this ADR didn't anticipate (for example, the
 point-level supersession gap proving common rather than rare), revisit
 this ADR rather than patching around it silently in the implementation.
 
-## Source
-
-DocOps SPEC.md M5 (2026-08-20), resolving the "needs its own ADR before
+**Source.** DocOps SPEC.md M5 (2026-08-20), resolving the "needs its own ADR before
 implementation" gate `docs/BACKLOG.md`'s P2 entry set for this work,
 per that entry's own reference to the Log4brains/MADR-style tooling
 discussion.

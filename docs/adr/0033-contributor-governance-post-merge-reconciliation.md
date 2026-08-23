@@ -1,10 +1,21 @@
+---
+id: ADR-0033
+status: Accepted
+supersedes: null
+superseded_by: null
+source_type: verbatim
+---
+
 # ADR-0033: Contributor Governance — Post-Merge Reconciliation via Existing Tier 2 Primitives
 
-Status: Accepted
 Relates to: ADR-0002 (tooltempest, Tier 2 doc-sync), ADR-0003 (tooltempest,
 confirmation granularity)
 
-## Context
+## Status
+
+Accepted
+
+## Context & Constraints
 
 The project currently has one contributor: the owner, working through
 Claude Code sessions with direct access to `main`. The owner wants to
@@ -82,7 +93,7 @@ does not reimplement diff generation, file writes, or rollback logic.
    back / superseded-by-reopen). This preserves the audit trail
    without inventing a new record format.
 
-## Options considered
+## Alternatives & Rationale
 
 | Option | Pros | Cons | Risks |
 |---|---|---|---|
@@ -103,14 +114,12 @@ does not reimplement diff generation, file writes, or rollback logic.
   second `docs/`-touching merge while a reconciliation PR is still
   open) but must be tested, not assumed rare and left unhandled.
 
-## Validation
+## Confirmation & Revisit
 
 The workflow must be tested against scenarios equivalent to Stage 3's
 (clean apply via merge, rejection-rollback via PR close, invalid/
 missing confirmation) adapted to GitHub events, plus the close-and-
 reopen path under a simulated concurrent `docs/` merge.
-
-## Reversal condition
 
 If GitHub's event model proves unreliable for triggering rollback on
 PR close (a `closed`/`merged == false` event is missed or delayed), or
@@ -118,9 +127,7 @@ if branch protection cannot reliably enforce merge-only access to the
 gated documents, revisit this ADR — do not patch with a manual
 fallback that quietly reintroduces Option B's partial-success risk.
 
-## Source
-
-Architect chat session, 2026-08-19. Governance design discussed prior
+**Source.** Architect chat session, 2026-08-19. Governance design discussed prior
 to Tier 2 code implementation completion; informed by GitHub Actions
 least-privilege token practice (scope-zeroing permissions model) and
 this project's own `decision-analysis` skill applied to the

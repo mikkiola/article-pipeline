@@ -1,3 +1,11 @@
+---
+id: ADR-0032
+status: Accepted
+supersedes: null
+superseded_by: null
+source_type: verbatim
+---
+
 # ADR-0032: ToolTempest Drift Warning (pre-push check)
 
 <!--
@@ -25,7 +33,7 @@
 Accepted — implemented and regression-tested (2026-08-19), commit
 404c24c93a0edbc1a83d4e078a7bb6ec2ba99f79.
 
-## Context
+## Context & Constraints
 
 ToolTempest fixes reach article-pipeline only through a manual resync
 step (`scripts/sync-tooling.sh`, which updates `.tooltempest.lock` and
@@ -49,6 +57,23 @@ A. Check at `pre-commit` (runs on every local commit).
 B. A separate command run on demand (`sync-tooling.sh --check`).
 C. Check at `pre-push` (runs when pushing to a remote).
 
+- Never blocks a push. A failed drift check (network failure, bad URL)
+  and a successfully-detected real divergence are both non-fatal to
+  the push; only the latter prints anything.
+- Runs only at pre-push, not pre-commit or any other hook.
+- Reuses the repository URL already stored in `.tooltempest.lock` --
+  no second hardcoded copy of the URL.
+- Silent when the pinned commit matches `origin/main`'s current tip.
+
+- `git ls-remote <url> main` only -- no full fetch, no clone.
+- Failure of the `git ls-remote` call itself is absorbed (`|| true`
+  under `set -euo pipefail`) and produces no output and no error --
+  distinguishing "check couldn't run" from "no drift found" is
+  explicitly not surfaced to the author, since neither case should
+  interrupt or alarm them.
+- Short-SHA display (7 characters) in the warning, matching this
+  session's existing convention in commit messages and hook output.
+
 ## Decision
 
 Implemented **C: check at pre-push.**
@@ -63,7 +88,7 @@ gate. If the `git ls-remote` call itself fails (no network, host
 unreachable, anything), the check fails silently: no crash, no
 warning about the check itself, and the push proceeds normally.
 
-## Rationale
+## Alternatives & Rationale
 
 **Why pre-push, not pre-commit (rejected Option A):** `pre-commit`
 fires on every local commit -- the most frequent, most
@@ -113,29 +138,6 @@ to land; it can be iterated on directly. The file already contained an
 established warn-only pattern (the component/ARCHITECTURE.md pairing
 check) for this check to sit alongside.
 
-## Scope / Invariants
-
-- Never blocks a push. A failed drift check (network failure, bad URL)
-  and a successfully-detected real divergence are both non-fatal to
-  the push; only the latter prints anything.
-- Runs only at pre-push, not pre-commit or any other hook.
-- Reuses the repository URL already stored in `.tooltempest.lock` --
-  no second hardcoded copy of the URL.
-- Silent when the pinned commit matches `origin/main`'s current tip.
-
-## Implementation Constraints
-
-- `git ls-remote <url> main` only -- no full fetch, no clone.
-- Failure of the `git ls-remote` call itself is absorbed (`|| true`
-  under `set -euo pipefail`) and produces no output and no error --
-  distinguishing "check couldn't run" from "no drift found" is
-  explicitly not surfaced to the author, since neither case should
-  interrupt or alarm them.
-- Short-SHA display (7 characters) in the warning, matching this
-  session's existing convention in commit messages and hook output.
-
-## Rejected Options
-
 - **Option A (pre-commit):** rejected -- see Rationale. Network calls
   don't belong on the highest-frequency git operation.
 - **Option B (separate on-demand command):** rejected -- see
@@ -173,17 +175,7 @@ check) for this check to sit alongside.
   -- not decided here, flagged as a known limitation of this ADR's
   scope.
 
-## Reversal Condition
-
-If `git ls-remote` calls at pre-push time turn out to meaningfully
-slow down pushes in practice (e.g., on unreliable networks where the
-call hangs rather than failing fast), or if the warning is
-consistently ignored once several consumers exist (suggesting
-pre-push visibility isn't sufficient and a stronger mechanism, like
-semi-automatic PR-based resync, is needed), that is grounds to revisit
--- via a new, superseding ADR, not an edit to this one.
-
-## Validation
+## Confirmation & Revisit
 
 Regression-tested against real article-pipeline (not a scratch clone;
 `.tooltempest.lock` restored to its correct committed value after each
@@ -195,9 +187,15 @@ test):
 3. Unreachable repository URL -- check fails silently, no crash, no
    block, exit 0, no hang (full hook run completed in under 2 seconds).
 
-## Source
+If `git ls-remote` calls at pre-push time turn out to meaningfully
+slow down pushes in practice (e.g., on unreliable networks where the
+call hangs rather than failing fast), or if the warning is
+consistently ignored once several consumers exist (suggesting
+pre-push visibility isn't sufficient and a stronger mechanism, like
+semi-automatic PR-based resync, is needed), that is grounds to revisit
+-- via a new, superseding ADR, not an edit to this one.
 
-Session: DocOps Protocol V2.0 hardening + Tier 2 /doc-sync
+**Source.** Session: DocOps Protocol V2.0 hardening + Tier 2 /doc-sync
 architecture, 2026-08-19. Mechanism choice (pre-push over pre-commit
 or a separate command) decided in the architect chat, recorded in
 article-pipeline's docs/BACKLOG.md (`[TOOLTEMPEST]` CI entry, commit

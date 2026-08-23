@@ -1,12 +1,23 @@
+---
+id: ADR-0037
+status: Accepted
+supersedes: null
+superseded_by: null
+source_type: verbatim
+---
+
 # ADR-0037: CHECKPOINT.md Pattern Deprecated — Inline Milestones Only
 
-Status: Accepted
 Relates to: `docs/CONSTITUTION.md`'s SPEC.md location/lifecycle rule
 (2026-08-20), which this ADR extends to the pattern CHECKPOINT.md's
 absence of an equivalent rule left unresolved. Does not extend or edit
 any prior ADR.
 
-## Context
+## Status
+
+Accepted
+
+## Context & Constraints
 
 `scripts/verify.py`'s component discovery (`classify()`) treated a
 paired `CHECKPOINT.md` as a VC-source pattern with unconditional
@@ -30,6 +41,23 @@ rule for SPEC.md itself (single root location, overwritten by a new
 rule, and its priority-over-inline-content behavior made a stale copy
 actively harmful, not merely orphaned clutter.
 
+Option A is the only one that removes the actual defect — a stale file
+silently overriding correct, current content — rather than managing its
+symptom (orphaning) or its likelihood (priority order). A single VC-source
+pattern also matches this project's actual practice already: every
+`/spec`-produced SPEC.md in this repo (`dcb84e4`, this consolidated one)
+already uses inline Milestones; CHECKPOINT.md's only real content on
+disk was the pre-`/spec`-skill Evidence Package tracking, now historical.
+
+Does not retroactively rewrite the deleted `CHECKPOINT.md`'s content —
+recoverable via `git log --follow -- CHECKPOINT.md` per the same
+precedent already established for `SPEC.md`. Does not change
+`docs/CONSTITUTION.md`'s SPEC.md location/lifecycle rule itself — this
+ADR closes the parallel question for CHECKPOINT.md by removing the
+pattern rather than by mirroring that rule. Does not affect
+`~/.claude/skills/spec/SKILL.md`'s own template, which already produces
+inline Milestones sections, not CHECKPOINT.md files.
+
 ## Decision
 
 `CHECKPOINT.md` is deprecated as a VC-source pattern entirely, not
@@ -51,7 +79,7 @@ the whole class of bug structurally, rather than managing it with a
 second lifecycle rule that mirrors, and could still fail the same way
 as, the first.
 
-## Options considered
+## Alternatives & Rationale
 
 | Option | Pros | Cons | Risks |
 |---|---|---|---|
@@ -59,32 +87,7 @@ as, the first.
 | B. Give CHECKPOINT.md the same single-location/overwrite rule SPEC.md has | Symmetric with the already-established SPEC.md rule; keeps the richer per-block field format available | Doesn't fix the priority-override bug — a correctly-managed CHECKPOINT.md can still silently out-rank a SPEC.md's own inline content if the two drift, even briefly, out of sync | Rejected: manages a symptom (orphaning) while leaving the actual defect (silent override) in place |
 | C. Keep both patterns, reverse priority (inline_spec wins over checkpoint) | Preserves CHECKPOINT.md as an option for specs that want it | Two patterns to keep mentally distinct going forward, for a project of one active SPEC.md at a time; doesn't remove the orphaning risk, only its worst consequence | Rejected: keeps complexity two-pattern-discovery logic requires, for a benefit (an unused richer field format) nothing in this project currently exercises |
 
-## Chosen
-
 A.
-
-## Why
-
-Option A is the only one that removes the actual defect — a stale file
-silently overriding correct, current content — rather than managing its
-symptom (orphaning) or its likelihood (priority order). A single VC-source
-pattern also matches this project's actual practice already: every
-`/spec`-produced SPEC.md in this repo (`dcb84e4`, this consolidated one)
-already uses inline Milestones; CHECKPOINT.md's only real content on
-disk was the pre-`/spec`-skill Evidence Package tracking, now historical.
-
-## Constraints
-
-Does not retroactively rewrite the deleted `CHECKPOINT.md`'s content —
-recoverable via `git log --follow -- CHECKPOINT.md` per the same
-precedent already established for `SPEC.md`. Does not change
-`docs/CONSTITUTION.md`'s SPEC.md location/lifecycle rule itself — this
-ADR closes the parallel question for CHECKPOINT.md by removing the
-pattern rather than by mirroring that rule. Does not affect
-`~/.claude/skills/spec/SKILL.md`'s own template, which already produces
-inline Milestones sections, not CHECKPOINT.md files.
-
-## Rejected
 
 B — rejected because it fixes orphaning but not the silent-override
 defect that actually caused two commits' worth of validation to
@@ -107,7 +110,7 @@ in this project currently uses in practice.
   Milestones section (as this consolidated SPEC.md already does),
   rather than in a separate paired file.
 
-## Validation
+## Confirmation & Revisit
 
 TDD, per `docs/CONSTITUTION.md`'s TDD rule (a discovery mechanism whose
 entire job is choosing the right pattern under specific conditions):
@@ -120,15 +123,11 @@ against the real repo after deleting root `CHECKPOINT.md`: confirms
 `pattern: "inline_spec"`, `source_file` is this SPEC.md itself,
 structurally OK.
 
-## Reversal condition
-
 If a future need for CHECKPOINT.md's richer per-block field format
 becomes concrete (not hypothetical), revisit this ADR rather than
 silently reintroducing a paired-file pattern without deciding how to
 avoid the priority-override defect this ADR removed.
 
-## Source
-
-DocOps SPEC.md M6 (2026-08-20), resolving `docs/BACKLOG.md`'s
+**Source.** DocOps SPEC.md M6 (2026-08-20), resolving `docs/BACKLOG.md`'s
 "CHECKPOINT.md orphaning recurs" entry (2026-08-20), which itself traced
 back to the `dcb84e4` DocOps SPEC.md finding.
