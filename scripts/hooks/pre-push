@@ -8,13 +8,8 @@ cd "$REPO_ROOT"
 
 fail=0
 
-echo "[pre-push] Checking for ADR-number citations in top-level docs..."
-if grep -rn '`00[0-9][0-9]`' docs/ARCHITECTURE.md docs/ROADMAP.md docs/BACKLOG.md docs/CONSTITUTION.md 2>/dev/null; then
-  echo "[pre-push] FAIL: found ADR-number citation(s) above in a top-level doc."
-  echo "[pre-push] Top-level docs describe decisions in prose, never by ADR number — see docs/CONSTITUTION.md."
+if ! bash scripts/check-adr-citation.sh; then
   fail=1
-else
-  echo "[pre-push] OK: no ADR-number citations found."
 fi
 
 echo "[pre-push] Running gitleaks..."
