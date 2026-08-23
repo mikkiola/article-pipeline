@@ -15,6 +15,18 @@ Priority applies within each section separately — a P0 task and a P0
 owner-decision block different things and don't compete with each
 other for "which to do first."
 
+Every entry carries a stable `[B-NNN]` ID, assigned once in file order
+(top to bottom) and never reused or renumbered — it survives the
+entry's heading/text being reworded, not a reorder, split, or merge
+(those are treated as closing the old ID and opening new one(s)). One
+flat sequence covers both **Tasks** and **Owner decisions needed** —
+not two separate counters — since both live in this one file and a
+single namespace keeps `Closes: B-NNN` references unambiguous. IDs are
+inline: on the bullet itself for a plain task/decision line, on the
+`###` heading line for a titled entry. This scheme is exempt from the
+no-ADR-citation rule described in `docs/CONSTITUTION.md`'s "ADR
+discipline" section — see that section for why.
+
 Closed, not previously written here: the gitleaks false-negative on
 Anthropic-key-shaped secrets, found during pre-push hook mutation
 testing, tracked only verbally as a P1. Fixed in `cd796db`, confirmed
@@ -56,7 +68,7 @@ No open items remain — the isolated D-025 causal-question experiment
 
 ### P1
 
-- [ ] Implement the English-first cascading search decided in
+- [ ] [B-001] Implement the English-first cascading search decided in
       ADR-0030: extend evidence_package/driver.py's
       QUERY_TRANSLATIONS_RU_EN table to cover treatment-query text and
       all future Claims (not just this pilot's 5), and wire the
@@ -64,12 +76,12 @@ No open items remain — the isolated D-025 causal-question experiment
       2) into build_search_query()/run_searches(). Not started.
       Control-query translation table landed in commit 672a8d4 — cascade
       logic and treatment-query coverage still not implemented.
-- [ ] Migrate Atom Selector and `graph_reader.py` from vendored copies
+- [ ] [B-002] Migrate Atom Selector and `graph_reader.py` from vendored copies
       into this repo as the single source of truth (currently
       duplicated with `brain.git`). Confirm after migration that
       exactly one of the two repos owns each file — not just that a
       duplicate was deleted.
-- [ ] Rewrite `README.md` — it still describes an empty-scaffold state
+- [ ] [B-003] Rewrite `README.md` — it still describes an empty-scaffold state
       that hasn't been true since the first real component landed.
       This is the one-time catch-up fix for staleness that already
       exists; going forward, per `docs/CONSTITUTION.md`'s "Keeping
@@ -77,7 +89,7 @@ No open items remain — the isolated D-025 causal-question experiment
       whatever task next makes its content stale — no separate
       BACKLOG item needed for that kind of drift after this one is
       done.
-- [ ] Make the pre-push hook repo-tracked, not local-only. The hook
+- [ ] [B-004] Make the pre-push hook repo-tracked, not local-only. The hook
       just installed at `.git/hooks/pre-push` works, but `.git/hooks/`
       isn't tracked by git — it only exists on this machine. Tracking
       hooks via a committed `.githooks/` directory plus `git config
@@ -85,7 +97,7 @@ No open items remain — the isolated D-025 causal-question experiment
       Drift/`brain.git` project for a filename-length guard) would
       make the hook travel with the repo instead of disappearing on a
       fresh clone.
-- [ ] Investigate atom tag quality / disambiguation: the D-025 paired
+- [ ] [B-005] Investigate atom tag quality / disambiguation: the D-025 paired
       experiment (context_layer/experiment_20260816_D025_paired.json,
       Claim `20260811T165911_03`) found a concrete failure mechanism —
       a tag ("доверие") that means interpersonal/epistemic trust in
@@ -99,7 +111,7 @@ No open items remain — the isolated D-025 causal-question experiment
       on their own. Not started; explicitly deferred until the D-025
       paired experiment (both language runs) is fully synthesized and
       closed as an ADR — not to be worked in parallel with it.
-- [ ] Harness result classification currently conflates "verification
+- [ ] [B-006] Harness result classification currently conflates "verification
       failed" with "verification's prerequisite/environment was
       unavailable". Found in Step 4 of the automation track
       (scripts/harness.py, commit bd676b4): evidence_package-VC-001's
@@ -120,7 +132,7 @@ No open items remain — the isolated D-025 causal-question experiment
       anything Step 6+ builds on top of it) before deciding whether a
       new PREREQ_MISSING class is warranted or whether an existing
       class can be repurposed with clearer semantics.
-- [ ] `resolve_component_name()` (scripts/verify.py, Step 1 of the
+- [ ] [B-007] `resolve_component_name()` (scripts/verify.py, Step 1 of the
       automation track) has a checkout-name dependency that silently
       degrades to a coin-flip on any clone not literally named
       `article-pipeline`. Found via a Step 7 mutation test
@@ -149,24 +161,24 @@ No open items remain — the isolated D-025 causal-question experiment
 
 ### P2
 
-- [ ] Design a support-type classification for Evidence's `verified`
+- [ ] [B-008] Design a support-type classification for Evidence's `verified`
       status (mechanism-supported / outcome-supported /
       semantic-supported / unsupported) instead of the current binary
       criterion. Don't start until the P0 context-layer task above is
       done — changing both at once makes it impossible to tell which
       fix caused which effect.
-- [ ] Implement an Article Pipeline-side adapter against ToolTempest's
+- [ ] [B-009] Implement an Article Pipeline-side adapter against ToolTempest's
       existing CLI/discovery contract (see `docs/adr/`) — this project
       consumes that contract, it doesn't own or extend ToolTempest
       itself. Manual sync works today; this replaces it with
       automatic-detection + explicit-install.
-- [ ] Translate the three remaining Russian-language files in
+- [ ] [B-010] Translate the three remaining Russian-language files in
       `claim_extraction/` to English.
-- [ ] Add a second search API backend (Exa) as an alternative to
+- [ ] [B-011] Add a second search API backend (Exa) as an alternative to
       Linkup — interface already supports swapping backends, nothing
       built. Value depends on how stable Evidence Package's interface
       is after the P0 context-layer fix — low priority until then.
-- [x] Fix one immutable pilot log line that contains a personal
+- [x] [B-012] Fix one immutable pilot log line that contains a personal
       filesystem path — closed 2026-08-21, ahead of the repo going
       public. File:
       `claim_extraction/output/pilot_log_20260811T115831.json`,
@@ -194,7 +206,7 @@ No open items remain — the isolated D-025 causal-question experiment
       history rewrite is small relative to its cost. The raw path
       remains recoverable via git history by anyone who digs; it is no
       longer visible in the live tree.
-- [ ] Add an explicit schema check (or a test) confirming Evidence
+- [ ] [B-013] Add an explicit schema check (or a test) confirming Evidence
       records always carry `source_url` and `license`, even when
       null — the invariant `docs/adr/0023` states. A mutation test
       (2026-08-14) found no independent check: the invariant currently
@@ -207,13 +219,13 @@ No open items remain — the isolated D-025 causal-question experiment
       without going through this function, would silently break the
       invariant with nothing in the codebase to catch it — no test
       suite exists anywhere in this repo.
-- [ ] Add mechanical detection/prevention of modifications to accepted
+- [ ] [B-014] Add mechanical detection/prevention of modifications to accepted
       ADR files in docs/adr/ — the rule "an accepted ADR is never
       edited after acceptance" exists in docs/CONSTITUTION.md, but
       nothing currently checks for a violation of it. No design
       proposed yet — this item is registration of the gap, not a
       solution.
-- [ ] Evidence Package re-run comparisons (old run vs. new run) have
+- [ ] [B-015] Evidence Package re-run comparisons (old run vs. new run) have
       never isolated assessment-pass quality as a variable. A second
       interactive assessment pass can independently change a Claim's
       status regardless of whether the search query changed at all —
@@ -230,17 +242,17 @@ These are not tasks — no session should invent a value for these or
 proceed past one silently. Each becomes an ADR once answered, if the
 answer has architectural consequences.
 
-- Numeric red-flag thresholds for Phase 1 (minimum % of atoms with a
+- [B-016] Numeric red-flag thresholds for Phase 1 (minimum % of atoms with a
   usable Claim, etc.) — not yet set.
-- Minimum number of stable days on Habr+LinkedIn before adding a third
+- [B-017] Minimum number of stable days on Habr+LinkedIn before adding a third
   platform — not yet set.
-- Confidence-threshold mechanism (configurable numeric threshold) vs.
+- [B-018] Confidence-threshold mechanism (configurable numeric threshold) vs.
   the interactive assessment actually used in the Claim Extraction
   pilot — possibly the same mechanism described twice, or two
   separate layers. Not technically verified either way; needs a
   decision on whether this is worth resolving now or deferring.
 
-### Resolved — pre-push component/doc pairing check stays warning-only permanently (closed)
+### [B-019] Resolved — pre-push component/doc pairing check stays warning-only permanently (closed)
 
 Was an open "Owner decisions needed" item: is the pre-push hook's
 component-directory/doc pairing check (`scripts/check-doc-pairing.sh`
@@ -267,7 +279,7 @@ No code change — this formalizes the existing, unchanged behavior.
 **Source.** Architect-delegated task, 2026-08-21, following DocOps
 SPEC.md M2's extension of the check to all four Tier 2 docs.
 
-### P1 — Audit implicit text-based contracts in the DocOps protocol (closed)
+### [B-020] P1 — Audit implicit text-based contracts in the DocOps protocol (closed)
 
 Pattern, not a one-off finding. Twice in the DocOps Protocol, one
 component has inferred another component's state from an unstructured
@@ -338,7 +350,7 @@ failure. Both findings above belong to this same class.
 Out of scope for this item: re-testing the already-fixed staged-
 conflict and substring-match cases — both are closed separately.
 
-### Resolved — .tooltempest.lock resync (closed)
+### [B-021] Resolved — .tooltempest.lock resync (closed)
 
 article-pipeline/.tooltempest.lock was pinned at c25dd72 (pre-fix) when
 the substring-match fix above landed in ToolTempest. Resynced via
@@ -365,7 +377,7 @@ from Claude Code's read-only comparison of ADR-0001 against
 scripts/doc_sync.py, plus systems-loop analysis (O'Connor lens) in the
 architect chat.
 
-### P2 — doc_sync.py STAGE step can raise an unhandled exception on index.lock contention
+### [B-022] P2 — doc_sync.py STAGE step can raise an unhandled exception on index.lock contention
 
 Found during the 2026-08-19 edge-case audit (Scenario 4b, ToolTempest
 scripts/doc_sync.py). The STAGE step's `git add` call
@@ -396,7 +408,7 @@ invocation per real `git commit`).
 Source. DocOps Protocol V2.0 hardening session, 2026-08-19 edge-case
 audit (Scenario 4b) in the architect chat.
 
-### P1 — [TOOLTEMPEST] CI for ToolTempest, before the second consumer connects (closed)
+### [B-023] P1 — [TOOLTEMPEST] CI for ToolTempest, before the second consumer connects (closed)
 
 <!--
   FILED HERE, NOT IN TOOLTEMPEST: this task is about ToolTempest's own
@@ -504,7 +516,7 @@ hook — via a separate, prior mechanism, `docs/adr/0032-drift-warning.md`
 ToolTempest drift (.tooltempest.lock vs origin/main)..."). It predates
 this entry and was never something ADR-0005 needed to newly deliver.
 
-### P2 — doc_sync_tier2.py CLI exit-code semantics for no-op runs
+### [B-024] P2 — doc_sync_tier2.py CLI exit-code semantics for no-op runs
 
 Found during Tier 2 Stage 4 (CLI entry point) implementation,
 2026-08-19. `apply_tier2_sync()`'s CLI wrapper exits 0 only when
@@ -524,7 +536,7 @@ rejection, etc.).
 **Source.** Tier 2 /doc-sync implementation session, 2026-08-19,
 Stage 4.
 
-### P2 — ADR lifecycle state machine + structural validation + generated index
+### [B-025] P2 — ADR lifecycle state machine + structural validation + generated index
 
 Found during the ADR-0033 discussion (contributor governance),
 2026-08-19. Currently ADR status is free-text and unenforced: there is
@@ -563,7 +575,7 @@ Two separable pieces, do not conflate:
 ADR-0033 discussion. Both pieces closed/unblocked 2026-08-20, DocOps
 SPEC.md M5.
 
-### P1 — sync-tooling.sh completeness testing (Phase 5) (closed)
+### [B-026] P1 — sync-tooling.sh completeness testing (Phase 5) (closed)
 
 Found during the Tier 2 implementation session, 2026-08-19.
 `.tooltempest.lock` was repinned to a new ToolTempest commit that
@@ -644,7 +656,7 @@ against the new pin picked up `scripts/doc_sync_tier2.py` and the new
 `scripts/check_manifest.py` automatically, with neither file named
 anywhere in this repo's own scripts.
 
-### P1 — Implement ADR-0033's GitHub Actions workflow
+### [B-027] P1 — Implement ADR-0033's GitHub Actions workflow
 
 Found: 2026-08-19. ADR-0033
 (docs/adr/0033-contributor-governance-post-merge-reconciliation.md) is
@@ -952,7 +964,7 @@ is added as part of this decision; branch protection configuration
 itself is a manual GitHub repo-settings step, not done as part of
 this decision — see the checkbox above.
 
-### P2 — Email notification on vendoring drift (depends on [TOOLTEMPEST] CI)
+### [B-028] P2 — Email notification on vendoring drift (depends on [TOOLTEMPEST] CI)
 
 Found: 2026-08-19, during the sync-tooling.sh completeness (Phase 5)
 piece-2 decision. The owner wants to be notified by email if a
@@ -979,7 +991,7 @@ verified against this project's specific setup.
 **Source.** Architect chat session, 2026-08-19, sync-tooling.sh
 completeness (Phase 5) piece-2 decision discussion.
 
-### P3 — Contributor scoring/reputation for doc-compliant PRs
+### [B-029] P3 — Contributor scoring/reputation for doc-compliant PRs
 
 Found: 2026-08-19, during the ADR-0033 workflow implementation
 session, alongside the decision that contributors supply their own
@@ -999,7 +1011,7 @@ prioritized; not blocking Part B or ADR-0033's implementation.
 **Source.** Architect chat session, 2026-08-19, ADR-0033 workflow
 implementation session (Part B blocker resolution discussion).
 
-### P2 — SPEC.md had no location/lifecycle rule — found two orphaned copies, one deleted
+### [B-030] P2 — SPEC.md had no location/lifecycle rule — found two orphaned copies, one deleted
 
 Found: 2026-08-20. `docs/CONSTITUTION.md`'s "SPEC.md's status" section
 states SPEC.md "is scoped to one component or task" but never
@@ -1047,7 +1059,7 @@ e.g. `git show c480ab4:context_layer/SPEC.md`).
 
 **Source.** Architect chat session, 2026-08-20, SPEC.md audit.
 
-### P2 — CHECKPOINT.md orphaning recurs: same pattern as the SPEC.md finding above, no rule of its own (closed)
+### [B-031] P2 — CHECKPOINT.md orphaning recurs: same pattern as the SPEC.md finding above, no rule of its own (closed)
 
 Found: 2026-08-20, while writing the DocOps SPEC.md (this session). Root
 `CHECKPOINT.md` is entirely about the closed Evidence Package component
@@ -1086,7 +1098,7 @@ else. A future task or `/spec` pass resolves this, not this entry.
 **Source.** Architect chat session, 2026-08-20, DocOps SPEC.md session.
 Closed 2026-08-20, DocOps SPEC.md M6.
 
-### Resolved — [TOOLTEMPEST] README.md → TIER2_DOCS (closed)
+### [B-032] Resolved — [TOOLTEMPEST] README.md → TIER2_DOCS (closed)
 
 <!--
   FILED HERE, NOT IN TOOLTEMPEST: same convention as the existing
@@ -1142,7 +1154,7 @@ implemented directly in article-pipeline (`scripts/check-doc-pairing.sh`
 **Source.** DocOps SPEC.md implementation session, 2026-08-20. M2
 correction and resync, 2026-08-21.
 
-### P2 — README.md has no automated sync path today (reconcile.py hardcodes ARCHITECTURE.md only)
+### [B-033] P2 — README.md has no automated sync path today (reconcile.py hardcodes ARCHITECTURE.md only)
 
 Found: 2026-08-21, during this session's P1-P5 DocOps fact-check
 (read-only verification of the session-end doc-sync `SPEC.md`, commit
@@ -1184,7 +1196,7 @@ separately unexamined — not assumed either way.
 verification against `scripts/doc_sync_tier2.py`,
 `.github/scripts/reconcile.py`, live `gh api`/`gh run list` checks).
 
-### P2 — resolve_component_name() has no explicit component-tagging alternative to guessing
+### [B-034] P2 — resolve_component_name() has no explicit component-tagging alternative to guessing
 
 Found: 2026-08-21, during this session's P1-P5 DocOps fact-check
 follow-up. No explicit component-tagging mechanism (e.g. YAML
