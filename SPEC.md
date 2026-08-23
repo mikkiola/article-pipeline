@@ -313,9 +313,8 @@ Design only — none implemented this session.
       is.
 - [x] M2 — Resolved 2026-08-22, together with M5 (same underlying
       question — see the "M2/M5" section below, right after this list).
-- [ ] M3 — Plain-language candidate-presentation format for the
-      ambiguous-match case (decision 4), reviewed against a
-      non-technical-reader bar.
+- [x] M3 — Resolved 2026-08-22 — see the "M3" section below, right
+      after "M2/M5".
 - [ ] M4 — Integration point in Claude Code's existing session/commit
       flow where steps 0, 2–6 hook in. Step 6's direct-commit path (the
       BACKLOG.md closure write) must reuse `reconcile.py`'s existing,
@@ -401,6 +400,56 @@ on its own):
    incidentally closed a second, unstated one → present both
    candidates in plain language (M3's format), wait for the owner's
    pick — never silently guess which one(s) were meant.
+
+## M3 — Candidate-presentation format
+
+Resolved 2026-08-22 (implementation session). No TDD test needed here
+— unlike M2/M5, this isn't a trigger-condition mechanism, it's a
+phrasing/formatting convention, the same category as
+`docs/CONSTITUTION.md`'s own "Response format by task type" table,
+which has no automated test either.
+
+**Template**, scaling from 2 candidates to any number:
+
+```
+This session's work might close one or more of these tasks:
+
+1. [B-NNN] <entry's title, exactly as written in docs/BACKLOG.md>
+2. [B-MMM] <entry's title, exactly as written in docs/BACKLOG.md>
+...
+
+Which one(s) should I mark done, if any?
+```
+
+**Rules, reviewed against a non-technical-reader bar:**
+
+- The ID (`[B-NNN]`) is always shown paired with its title, never
+  alone — decision 4's own rule, unchanged. The ID exists so the owner
+  has a short token to reference back ("close #1" or "close B-012"
+  both work), not as the primary identifying text.
+- Titles are quoted exactly as `docs/BACKLOG.md` already writes them —
+  that file's own style is already plain-language prose (per its own
+  existing convention), not restated or summarized into new wording
+  that could drift from what the entry actually says.
+- No git/implementation jargon anywhere in the prompt itself: no
+  "trailer," "commit," "matching," "candidate," or `Closes:` syntax
+  visible to the owner. Those are Claude Code's own internal mechanism
+  (decision 1), not something the owner needs to know to answer.
+- "If any" is explicit in the closing question — declining to close
+  anything is a normal, expected answer, not something the owner has
+  to infer is allowed. Matches decision 4's "nothing closes until the
+  owner picks," including picking none.
+- Numbered list, not a run-on sentence — holds even at 2 candidates
+  (the original decision-4 example, "which one, or both?", was fine
+  for exactly 2 but doesn't scale past that; the numbered-list format
+  replaces it as the one form used regardless of count, so there's a
+  single consistent format rather than a special case for "exactly
+  two").
+
+**Remaining Milestones checklist** (continuation of the list under
+"## Milestones" above — M4/M6/M7 don't have their own resolved-detail
+section yet, unlike M1/M2/M3/M5):
+
 - [ ] M6 — Define the structural fact-sync trigger for ARCHITECTURE.md/
       ROADMAP.md/README.md: exactly which facts are checked (component
       directory list, dependency list, file paths, ROADMAP.md's
