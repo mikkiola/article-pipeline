@@ -32,6 +32,11 @@ def check(adr_dir: Path) -> list[str]:
     numbers: dict[str, list[str]] = {}
 
     for path in sorted(adr_dir.glob("*.md")):
+        if path.name == "ADR-INDEX.md":
+            # Generated build artifact (ADR-0036/ADR-0040,
+            # scripts/generate_adr_index.py), not a numbered ADR file --
+            # never subject to the NNNN-slug.md filename convention.
+            continue
         name_match = FILENAME_RE.match(path.name)
         if not name_match:
             violations.append(
