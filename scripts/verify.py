@@ -30,7 +30,7 @@ from pathlib import Path
 MILESTONES_HEADING_RE = re.compile(r"^##\s+Milestones\b", re.MULTILINE)
 NEXT_HEADING_RE = re.compile(r"^##\s+\S", re.MULTILINE)
 CHECKBOX_LINE_RE = re.compile(r"^\s*(?:-|\d+\.)\s*\[[ xX]\]", re.MULTILINE)
-CHECKBOX_FULL_LINE_RE = re.compile(r"^\s*(?:-|\d+\.)\s*\[[ xX]\](.*)$", re.MULTILINE)
+CHECKBOX_FULL_LINE_RE = re.compile(r"^[ \t]*(?:-|\d+\.)\s*\[[ xX]\](.*)$", re.MULTILINE)
 
 # Directories that hold project infrastructure, not a pipeline
 # component, and are therefore never SPEC.md/component candidates.
