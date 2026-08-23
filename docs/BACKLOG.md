@@ -1233,3 +1233,39 @@ later hardened.
 **Source.** P1-P5 DocOps fact-check follow-up, this session, 2026-08-21
 (read-only verification against `scripts/verify.py`,
 `scripts/doc_sync.py`, `scripts/doc_sync_tier2.py`).
+
+### [B-035] P1 — ToolTempest's GATED_DOCS still includes docs/ROADMAP.md, contradicting today's direct-write decision
+
+Found: 2026-08-22, Metadata/ID Layer `/spec` interview's implementation
+session, Step 7 (resuming `SPEC.md`'s M1). `scripts/doc_sync_tier2.py`
+(vendored, gitignored) hardcodes `GATED_DOCS = frozenset({"docs/BACKLOG.md",
+"docs/ROADMAP.md"})` — a write-infrastructure-level confirmation gate
+inside `apply_tier2_sync()` itself. Today's Metadata/ID Layer interview
+decided `docs/ROADMAP.md` gets `docs/ARCHITECTURE.md`/`README.md`'s
+direct-write, no-gate treatment instead (no `[R-NNN]` ID, no
+`Closes:` trailer, no confirmation before writing). `SPEC.md`'s own
+prose was corrected to match (Step 7 commit `7789914`), but this
+constant was not — it lives in a separate repository
+(`mikkiola/tooltempest`), out of scope for an article-pipeline-only
+correction pass.
+
+Blocking for `SPEC.md`'s M7 (integration with `apply_tier2_sync()`).
+Two sub-questions to resolve when M7 is picked up, not assumed now:
+
+- [ ] Does `apply_tier2_sync()` accept a per-call override of its
+      `interactive`/gated behavior for a specific doc, or does
+      `GATED_DOCS` itself need editing on the ToolTempest side? Check
+      the actual function signature before assuming either way.
+- [ ] If `GATED_DOCS` does need editing: ADR-0035's CODEOWNERS/
+      branch-protection design specifically grouped `docs/BACKLOG.md`/
+      `docs/ROADMAP.md` together for a *different*, GitHub-level review
+      gate (external contributor PRs) — confirm that reasoning still
+      holds independently of this write-infrastructure gate before
+      touching `GATED_DOCS`, since the two mechanisms currently share a
+      docs list but serve different purposes. A ToolTempest-side change
+      has its own cross-repo implications and its own review, not
+      decided here.
+
+**Source.** Metadata/ID Layer `/spec` interview, 2026-08-22,
+implementation session, Step 7 (`SPEC.md`'s M1 resumption and the
+ROADMAP.md mechanism-design correction that surfaced this gap).
