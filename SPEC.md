@@ -2,8 +2,8 @@
 
 ## Overview
 
-Design for a mechanism where Claude Code proposes closing `docs/BACKLOG.md`/
-`docs/ROADMAP.md` line items and directly syncs `docs/ARCHITECTURE.md`/
+Design for a mechanism where Claude Code proposes closing `docs/BACKLOG.md`
+line items and directly syncs `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/
 `README.md` structural facts at natural session-completion points, using
 structured commit-trailer matching (not natural-language inference) — so
 the owner stops having to manually prompt "go close that BACKLOG entry" or
@@ -49,13 +49,26 @@ natural-language matching as the trigger (see Decision 1 below).
 ## Scope
 
 **In scope:**
-- `docs/BACKLOG.md`/`docs/ROADMAP.md` — task-line-item closure at
-  session-end, gated by mandatory owner confirmation.
-- `docs/ARCHITECTURE.md`/`README.md` — structural fact-sync (component
-  lists, dependency lists, file paths — mechanically diffable content
-  only, not narrative prose) at the same session-end checkpoint, written
-  directly with no confirmation gate, reusing the existing `apply_tier2_sync()`
+- `docs/BACKLOG.md` — task-line-item closure at session-end, gated by
+  mandatory owner confirmation.
+- `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/`README.md` — structural
+  fact-sync (component lists, dependency lists, file paths, phase-status
+  table content — mechanically diffable content only, not narrative
+  prose) at the same session-end checkpoint, written directly with no
+  confirmation gate, reusing the existing `apply_tier2_sync()`
   write-safety infrastructure.
+
+**Correction, 2026-08-22 (Metadata/ID Layer `/spec` interview).** The
+original design above grouped `docs/ROADMAP.md` with `docs/BACKLOG.md`
+under the confirmation-gated flow. That's wrong: `docs/ROADMAP.md` has
+no line-item structure to close (it's a phase-status table plus prose,
+not individually-closeable tasks the way `docs/BACKLOG.md` is), and the
+Metadata/ID Layer interview explicitly decided it should get no
+`[R-NNN]`-style ID and no `Closes:` trailer — the same direct-write
+treatment as `docs/ARCHITECTURE.md`/`README.md`. This SPEC is corrected
+accordingly below; every section that previously paired BACKLOG.md with
+ROADMAP.md under the confirmation-gated design has been rewritten, not
+left as a stale artifact of the original two-pass interview.
 
 **Out of scope, and why:**
 - `docs/CONSTITUTION.md` — explicitly, permanently excluded. See its own
@@ -70,15 +83,19 @@ natural-language matching as the trigger (see Decision 1 below).
   This mechanism is scoped to the owner's own first-party Claude Code
   sessions only, which already push directly to `main` (ADR-0039).
 
-## Design decisions — `docs/BACKLOG.md`/`docs/ROADMAP.md` (task closure, confirmation-gated)
+## Design decisions — `docs/BACKLOG.md` (task closure, confirmation-gated)
+
+Scoped to `docs/BACKLOG.md` only, corrected 2026-08-22 (see the note
+under Scope above) — `docs/ROADMAP.md` moved to the direct-write table
+below.
 
 | # | Question | Decision |
 |---|---|---|
-| 1 | **Matching** — how does the mechanism know which BACKLOG/ROADMAP line a session's work closes? | Structured commit-message trailer convention (e.g. `Closes: BACKLOG#<id>`), written by Claude Code as part of the commit that does the work. No natural-language inference at match time. |
+| 1 | **Matching** — how does the mechanism know which BACKLOG.md line a session's work closes? | Structured commit-message trailer convention: `Closes: B-NNN`, written by Claude Code as part of the commit that does the work. `B-NNN` is `docs/BACKLOG.md`'s own stable per-entry ID (Metadata/ID Layer `/spec` interview, 2026-08-22, implemented across all 34 current entries) — the placeholder `Closes: BACKLOG#<id>` in the original design is replaced by this real, concrete format now that the ID gap is resolved. No natural-language inference at match time. |
 | 2 | **Trigger** — when does the mechanism act? | Session-end, anchored to the session-start plan CONSTITUTION.md's Session protocol already mandates stating. Claude Code holds accumulated trailers through the session; at a point where completed work appears to satisfy the stated plan, it proactively asks the owner whether to close now or keep accumulating. No timer, no separate `/session-end` command. **"Natural completion point" resolved:** no text-matching heuristic infers plan completion. If Claude Code is not confident the stated plan is done, it asks directly — "Is the session's stated plan done, or not yet?" — rather than guessing from plan text or commit content. Same owner-confirmation gate as decisions 2/3, not a separate mechanism. |
 | 3 | **Confirmation** — is there a human gate before a doc write? | Yes, mandatory, every time. No silent auto-write. The owner's explicit reply is what triggers the doc rewrite — answered as part of decision 2, not a separate mechanism. |
-| 4 | **Ambiguous match** — more than one plausible closed item? | Present every plausible candidate and wait — nothing closes until the owner picks. Must be phrased in plain language for a non-technical reader: task titles as written in BACKLOG.md/ROADMAP.md (e.g. "This session's work might close either of these two tasks — which one, or both?"), never raw IDs or internal jargon alone. |
-| 5 | **Blast radius / rollback** — if a wrong auto-close lands, what's the recovery path? | `docs/BACKLOG.md`/`docs/ROADMAP.md` are mutable working state, not a "publication" under Immutable Lineage. A wrong closure is fixed with an ordinary follow-up edit/commit; git history is the audit trail. Immutable Lineage stays scoped to ADRs/published artifacts as already defined. |
+| 4 | **Ambiguous match** — more than one plausible closed item? | Present every plausible candidate and wait — nothing closes until the owner picks. Must be phrased in plain language for a non-technical reader: task titles as written in BACKLOG.md (e.g. "This session's work might close either of these two tasks — [B-012] or [B-019] — which one, or both?"), never a raw ID alone without its title. |
+| 5 | **Blast radius / rollback** — if a wrong auto-close lands, what's the recovery path? | `docs/BACKLOG.md` is mutable working state, not a "publication" under Immutable Lineage. A wrong closure is fixed with an ordinary follow-up edit/commit; git history is the audit trail. Immutable Lineage stays scoped to ADRs/published artifacts as already defined. |
 | 6 | **Recovery — owner never replies before the session ends** (resolved 2026-08-21, via `finding-unknowns` gap check) | Accepted as a real possibility, not designed away. No new log/document is created for this — explicit owner instruction. Trailers already persist in git commit history regardless of session state, so nothing is silently destroyed; it just waits to be found. See Mechanism design step 0. |
 
 **Feasibility note.** Nothing in the above is infeasible as stated. The
@@ -87,18 +104,45 @@ would create is closed structurally by decision 3 (mandatory confirmation
 before every write) and decision 1 (structured trailer, not NL
 inference) — not by claiming perfect matching accuracy.
 
-## Design decisions — `docs/ARCHITECTURE.md`/`README.md` (structural fact-sync, direct-write)
+## Design decisions — `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/`README.md` (structural fact-sync, direct-write)
 
 Added 2026-08-21, second interview pass, after `finding-unknowns` found
 the original SPEC understated its own scope (see Source below). Reasoned
 through separately from the table above, not copy-pasted onto it — these
-two files have different properties (already direct-write today, no
-task-line-item structure).
+files have different properties from `docs/BACKLOG.md` (already
+direct-write today or, for ROADMAP.md, no task-line-item structure to
+gate in the first place).
+
+`docs/ROADMAP.md` added here 2026-08-22 (Metadata/ID Layer `/spec`
+interview) — moved from the confirmation-gated table above, where it
+was originally, incorrectly, grouped with `docs/BACKLOG.md`. Decisions
+A1/A2 below were reasoned for `docs/ARCHITECTURE.md`/`README.md`
+specifically but apply to `docs/ROADMAP.md` on the same logic: its
+Status table's phase rows and "Current pointer" paragraph are
+mechanically-diffable facts (phase status: Closed/Blocked/Not started),
+not task-closure judgment calls — the same property A1 already
+requires, not a new exception carved out for it.
 
 | # | Question | Decision |
 |---|---|---|
-| A1 | **"Out of sync" meaning** — what does this mechanism's trigger actually check for these two files? | Structural fact-sync only: component/dependency lists, file paths, and similar fact-table content matching actual repo state — mechanically checkable by diffing against reality. Explicitly **not** narrative/prose accuracy (descriptive paragraphs about system behavior) — that would reintroduce natural-language judgment calls, the exact failure mode decision 1 above was designed to avoid. This mechanism can guarantee what it claims (verifiably diffable) rather than "probably accurate." |
-| A2 | **Confirmation** — same mandatory gate as BACKLOG/ROADMAP, or different? | Same trailer-tagging + session-end batching pattern as decisions 1–2 above, but **no confirmation gate** — Claude Code writes directly at the same session-end checkpoint, consistent with the existing direct-write precedent (`apply_tier2_sync()`, ToolTempest ADR-0004) and `docs/CONSTITUTION.md`'s "unambiguous fact update, no confirmation needed" rule. Lower risk than BACKLOG/ROADMAP by design: A1's trigger is mechanically verifiable, not inferred from judgment about whether a task is "done." |
+| A1 | **"Out of sync" meaning** — what does this mechanism's trigger actually check for these files? | Structural fact-sync only: component/dependency lists, file paths, phase-status table content, and similar fact-table content matching actual repo state — mechanically checkable by diffing against reality. Explicitly **not** narrative/prose accuracy (descriptive paragraphs about system behavior) — that would reintroduce natural-language judgment calls, the exact failure mode decision 1 above was designed to avoid. This mechanism can guarantee what it claims (verifiably diffable) rather than "probably accurate." |
+| A2 | **Confirmation** — same mandatory gate as BACKLOG.md, or different? | Same trailer-tagging + session-end batching pattern as decisions 1–2 above, but **no confirmation gate** — Claude Code writes directly at the same session-end checkpoint, consistent with the existing direct-write precedent (`apply_tier2_sync()`, ToolTempest ADR-0004) and `docs/CONSTITUTION.md`'s "unambiguous fact update, no confirmation needed" rule. Lower risk than BACKLOG.md by design: A1's trigger is mechanically verifiable, not inferred from judgment about whether a task is "done." |
+
+**Known gap, flagged not resolved here (found 2026-08-22, implementation
+session):** ToolTempest's vendored `scripts/doc_sync_tier2.py` currently
+defines `GATED_DOCS = frozenset({"docs/BACKLOG.md", "docs/ROADMAP.md"})`
+— `docs/ROADMAP.md` is still marked as requiring `apply_tier2_sync()`'s
+own `interactive` confirmation at the write-infrastructure level, a
+different (cross-repo, ToolTempest-side) mechanism from this SPEC's own
+confirmation-gate decision above. A2's "no confirmation gate" decision
+for `docs/ROADMAP.md` doesn't fully take effect until `GATED_DOCS` is
+also updated in ToolTempest to drop `docs/ROADMAP.md` — a separate,
+cross-repo change with its own implications (ADR-0035's CODEOWNERS/
+branch-protection design specifically grouped `docs/BACKLOG.md`/
+`docs/ROADMAP.md` together for a *different*, GitHub-level review gate;
+worth checking whether that reasoning still holds before touching
+`GATED_DOCS`, not assumed either way here). Not resolved in this
+session — flag before M7 is implemented.
 
 ## `docs/CONSTITUTION.md` — explicitly excluded
 
@@ -117,13 +161,18 @@ already the project's established axis for deciding who may write
 where."*). This SPEC inherits that existing rule rather than reversing it
 — no new rationale needed.
 
-## Mechanism design — `docs/BACKLOG.md`/`docs/ROADMAP.md`
+## Mechanism design — `docs/BACKLOG.md`
+
+Scoped to `docs/BACKLOG.md` only, corrected 2026-08-22 — see the note
+under Scope above. Every step below previously also mentioned
+`docs/ROADMAP.md`; that file now goes through the direct-write
+mechanism below instead, alongside `docs/ARCHITECTURE.md`/`README.md`.
 
 0. **Session-start recovery check** (new step, runs before step 1):
    before stating the new session's plan, Claude Code greps recent
-   commit history for `Closes: BACKLOG#...`/`Closes: ROADMAP#...`
-   trailers not yet reflected as closed in `docs/BACKLOG.md`/
-   `docs/ROADMAP.md` — i.e. trailers left over from a prior session that
+   commit history for `Closes: B-NNN` trailers not yet reflected as
+   closed in `docs/BACKLOG.md` — i.e. trailers left over from a prior
+   session that
    ended without a reply to step 4/5's prompt (crashed, window closed,
    ran out of tokens with the session never resuming). If any are
    found, Claude Code surfaces them immediately, in plain language,
@@ -140,15 +189,15 @@ where."*). This SPEC inherits that existing rule rather than reversing it
    begins. This mechanism does not add a new step here — it reads the
    plan already being stated.
 2. **During the session:** when Claude Code makes a commit it judges
-   completes (fully or partially) a specific BACKLOG/ROADMAP line, it
-   adds a structured trailer to that commit's message. The trailer only
-   tags the commit — no BACKLOG.md/ROADMAP.md edit happens at commit
+   completes (fully or partially) a specific BACKLOG.md line, it adds a
+   structured `Closes: B-NNN` trailer to that commit's message. The
+   trailer only tags the commit — no BACKLOG.md edit happens at commit
    time.
 3. Claude Code holds the set of accumulated trailers in session context.
 4. **At a natural completion point** — when completed work appears to
    satisfy what the session's opening plan stated — Claude Code
    proactively asks the owner in plain language: "This looks like it
-   completes the stated session plan. Update BACKLOG/ROADMAP now, or
+   completes the stated session plan. Update BACKLOG.md now, or
    continue accumulating and batch it later?" When Claude Code is *not*
    confident the plan is complete, it does not guess from plan text or
    commit content — it asks directly instead: "Is the session's stated
@@ -157,8 +206,8 @@ where."*). This SPEC inherits that existing rule rather than reversing it
    trailers and re-asks at the next natural completion point, rather
    than assuming.
 6. **If the owner says close now:**
-   - Exactly one candidate: Claude Code writes the BACKLOG.md/ROADMAP.md
-     edit and commits/pushes it directly (the owner's own established
+   - Exactly one candidate: Claude Code writes the BACKLOG.md edit and
+     commits/pushes it directly (the owner's own established
      direct-push path, ADR-0039 — no PR needed).
    - More than one plausible candidate: present all candidates in plain
      language (decision 4) and wait for the owner's pick before writing
@@ -166,33 +215,38 @@ where."*). This SPEC inherits that existing rule rather than reversing it
 7. **If a closure later turns out wrong:** an ordinary follow-up
    edit/commit fixes it (decision 5) — no supersession ritual.
 
-## Mechanism design — `docs/ARCHITECTURE.md`/`README.md`
+## Mechanism design — `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/`README.md`
 
-Shares step 1's session-start and the session-end checkpoint (step 4)
-with the BACKLOG/ROADMAP flow above — one checkpoint, not two unrelated
-prompts. At that same moment, this flow runs silently alongside the
-BACKLOG/ROADMAP prompt, not as a separate owner-facing interaction:
+`docs/ROADMAP.md` added here 2026-08-22 — see the note under Scope
+above. Shares step 1's session-start and the session-end checkpoint
+(step 4) with the BACKLOG.md flow above — one checkpoint, not two
+unrelated prompts. At that same moment, this flow runs silently
+alongside the BACKLOG.md prompt, not as a separate owner-facing
+interaction:
 
 1. **During the session:** when Claude Code makes a commit that changes
-   a structural fact tracked in `docs/ARCHITECTURE.md`/`README.md`
-   (component list, dependency list, file paths — per decision A1), it
-   tags that commit with its own structured trailer, distinct from the
-   BACKLOG/ROADMAP trailer (exact key TBD, M1/M6 below).
-2. Claude Code holds these trailers the same way it holds BACKLOG/
-   ROADMAP trailers (step 3 above) — same session context, same
-   accumulation.
+   a structural fact tracked in `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/
+   `README.md` (component list, dependency list, file paths, phase-status
+   table content — per decision A1), it tags that commit with its own
+   structured trailer, distinct from BACKLOG.md's `Closes: B-NNN`
+   trailer (exact key TBD, M1/M6 below).
+2. Claude Code holds these trailers the same way it holds BACKLOG.md's
+   trailer (step 3 above) — same session context, same accumulation.
 3. **At the same session-end checkpoint** (step 4 above): Claude Code
-   writes `docs/ARCHITECTURE.md`/`README.md` directly — no owner prompt,
-   per decision A2 — using the existing `apply_tier2_sync()` write-safety
-   infrastructure (snapshot before write, line-level diff, atomic apply,
-   rollback on failure), not a new write path.
+   writes `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/`README.md`
+   directly — no owner prompt, per decision A2 — using the existing
+   `apply_tier2_sync()` write-safety infrastructure (snapshot before
+   write, line-level diff, atomic apply, rollback on failure), not a
+   new write path. See the "Known gap" note above (A2) regarding
+   `docs/ROADMAP.md` specifically still being in ToolTempest's
+   `GATED_DOCS` today.
 4. **If a write later turns out wrong:** an ordinary follow-up
    edit/commit fixes it, same as decision 5's rollback model — these
    files are equally mutable working state today, unchanged by this
    SPEC.
 
 **Not resolved in this pass:** whether step 0's session-start recovery
-check (BACKLOG/ROADMAP) has an equivalent for structural-fact trailers
+check (BACKLOG.md) has an equivalent for structural-fact trailers
 orphaned by an interrupted session before the session-end checkpoint
 fired. Not decided here — see Open questions / residual below.
 
@@ -216,10 +270,10 @@ fired. Not decided here — see Open questions / residual below.
   workflow — no new CODEOWNERS or branch-protection change is needed or
   implied by this SPEC.
 - **`docs/CONSTITUTION.md`'s "unambiguous fact update" rule**: the
-  BACKLOG/ROADMAP flow deliberately adds a confirmation step narrower
-  than that default (task-closure inference specifically, per decisions
-  3/4); the ARCHITECTURE.md/README.md flow deliberately does *not* add
-  one, staying consistent with that default (per decision A2).
+  BACKLOG.md flow deliberately adds a confirmation step narrower than
+  that default (task-closure inference specifically, per decisions
+  3/4); the ARCHITECTURE.md/ROADMAP.md/README.md flow deliberately does
+  *not* add one, staying consistent with that default (per decision A2).
 - **ToolTempest ADR-0002** ("Tier 2 /doc-sync architecture",
   `~/Dev/github.com/mikkiola/tooltempest/docs/adr/0002-tier2-doc-sync.md`
   — checked via targeted read of its "Scope / Invariants" section and
@@ -243,9 +297,20 @@ fired. Not decided here — see Open questions / residual below.
 
 Design only — none implemented this session.
 
-- [ ] M1 — Define exact commit-trailer syntax for BACKLOG/ROADMAP closure
-      (key name, ID format, full-vs-partial-progress distinction) and
-      where Claude Code writes it in the commit message.
+- [x] M1 — Partially resolved, 2026-08-22 (implementation session,
+      after the Metadata/ID Layer `/spec` interview unblocked it).
+      **Key name and ID format, decided:** `Closes: B-NNN`, a git
+      commit-message trailer, one per line if a commit closes more than
+      one entry. `B-NNN` is `docs/BACKLOG.md`'s own stable per-entry ID
+      (Metadata/ID Layer interview, implemented across all 34 current
+      entries — see that session's Step 1). No longer scoped to
+      `docs/ROADMAP.md` — see the correction under Scope above;
+      ROADMAP.md's phase-status facts are direct-write, no trailer.
+      **Full-vs-partial-progress distinction: still open**, not
+      resolved by the ID gap closing — see Open questions / residual
+      below, unchanged from the original interview. M1 is not fully
+      closed until that's answered; the ID-format blocker specifically
+      is.
 - [ ] M2 — Define the "work appears to satisfy the stated plan"
       matching heuristic operationally — what Claude Code actually
       checks before triggering the step-4 prompt.
@@ -254,7 +319,7 @@ Design only — none implemented this session.
       non-technical-reader bar.
 - [ ] M4 — Integration point in Claude Code's existing session/commit
       flow where steps 0, 2–6 hook in. Step 6's direct-commit path (the
-      BACKLOG/ROADMAP closure write) must reuse `reconcile.py`'s existing,
+      BACKLOG.md closure write) must reuse `reconcile.py`'s existing,
       already-hardened `push_with_retry()` rather than an unguarded
       `git push` — same concurrent-push race class it was built to catch
       (this session's `finding-unknowns` Finding 3), same reuse-not-
@@ -266,13 +331,22 @@ Design only — none implemented this session.
       central risk." Write a test defining the expected trigger/no-
       trigger cases before implementing, per that rule.
 - [ ] M6 — Define the structural fact-sync trigger for ARCHITECTURE.md/
-      README.md: exactly which facts are checked (component directory
-      list, dependency list, file paths) and how they're diffed
-      mechanically against actual repo state (decision A1).
+      ROADMAP.md/README.md: exactly which facts are checked (component
+      directory list, dependency list, file paths, ROADMAP.md's
+      phase-status table) and how they're diffed mechanically against
+      actual repo state (decision A1).
 - [ ] M7 — Integration with the existing, vendored `apply_tier2_sync()`
       (ToolTempest) — confirm the trailer-triggered write reuses that
       infrastructure rather than reimplementing snapshot/diff/rollback,
-      and define the distinct trailer key from M1's BACKLOG/ROADMAP one.
+      and define the distinct trailer key from M1's `Closes: B-NNN`.
+      Must also resolve the "Known gap" flagged above (A2): ToolTempest's
+      `GATED_DOCS` still includes `docs/ROADMAP.md` as of 2026-08-22 —
+      confirm whether that needs a ToolTempest-side change before this
+      milestone's write path can treat ROADMAP.md as truly
+      confirmation-free, or whether `apply_tier2_sync()`'s `interactive`
+      flag can be overridden per-call without a ToolTempest-side edit.
+      Not decided; check the actual function signature before assuming
+      either way.
 
 Each milestone: status: not started. This session's task was explicitly
 design-only — no implementation, no code, no other file, per the task's
@@ -280,15 +354,16 @@ own scope lock.
 
 ## Open questions / residual (not blocking, flag for the implementation session)
 
-- Whether partial progress on a BACKLOG/ROADMAP item (not full closure)
-  also gets a trailer and its own prompt, or whether this mechanism is
+- Whether partial progress on a BACKLOG.md item (not full closure) also
+  gets a trailer and its own prompt, or whether this mechanism is
   full-closure-only — the interview's five decisions covered closure
   matching/triggering/confirmation but didn't explicitly address partial
   progress. Not decided here; don't assume either way without asking.
-- Whether the session-start recovery check (step 0, BACKLOG/ROADMAP) has
-  an equivalent for ARCHITECTURE.md/README.md structural-fact trailers
-  orphaned by a session that ended before the session-end checkpoint
-  fired — not decided in the second interview pass; flag before M7 is
+- Whether the session-start recovery check (step 0, BACKLOG.md) has an
+  equivalent for ARCHITECTURE.md/ROADMAP.md/README.md structural-fact
+  trailers orphaned by a session that ended before the session-end
+  checkpoint fired — not decided in the second interview pass; flag
+  before M7 is
   implemented.
 
 ## Deferred / not this SPEC
@@ -364,3 +439,36 @@ to `~/.claude/skills/<name>/` to fix a loader path issue — a local
 environment change, unrelated to and outside this SPEC's scope, noted
 here only for session continuity. Both sensor skills used in the second
 pass are the same three relocated then.
+
+**Correction pass, 2026-08-22.** Implementation session, resuming M1
+after the Metadata/ID Layer `/spec` interview (same date) gave
+`docs/BACKLOG.md` real per-entry IDs (`[B-NNN]`), unblocking the
+`Closes: BACKLOG#<id>` placeholder. While resolving M1, found that the
+original design's grouping of `docs/ROADMAP.md` with `docs/BACKLOG.md`
+under the confirmation-gated flow directly contradicted that same
+interview's own decision (ROADMAP.md gets no ID, no trailer, no
+confirmation gate — the ARCHITECTURE.md/README.md direct-write
+treatment instead). Flagged to the owner rather than silently patched;
+owner confirmed: restructure now, not defer. Every section that had
+paired BACKLOG.md/ROADMAP.md under the confirmation-gated design was
+rewritten — Scope, both decision tables, both mechanism-design
+sections, the Consistency checks bullet on `docs/CONSTITUTION.md`'s
+"unambiguous fact update" rule, and the Open questions section.
+Historical Source entries above (first/second pass, 2026-08-21) were
+left unedited as an accurate record of what was decided and reasoned
+at the time — this correction did not retroactively rewrite them.
+
+While restructuring, a second, deeper gap was found and flagged (not
+resolved): ToolTempest's vendored `scripts/doc_sync_tier2.py` still
+defines `GATED_DOCS` to include `docs/ROADMAP.md` — a cross-repo,
+write-infrastructure-level gate distinct from this SPEC's own
+confirmation-gate decision, that doesn't automatically follow from
+correcting this SPEC's prose. Noted under the direct-write table (A2)
+and folded into M7's remaining scope, not resolved here — a
+cross-repo change, if needed, is its own decision.
+
+M1 itself: the key name (`Closes:`) and ID format (`B-NNN`) are now
+decided and reflected throughout. The full-vs-partial-progress
+question M1's original wording also named remains genuinely open,
+unaffected by the ID gap closing — not resolved in this pass, left as
+its own item under Open questions / residual, unchanged.
