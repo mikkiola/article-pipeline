@@ -1250,22 +1250,52 @@ constant was not — it lives in a separate repository
 correction pass.
 
 Blocking for `SPEC.md`'s M7 (integration with `apply_tier2_sync()`).
-Two sub-questions to resolve when M7 is picked up, not assumed now:
 
-- [ ] Does `apply_tier2_sync()` accept a per-call override of its
-      `interactive`/gated behavior for a specific doc, or does
-      `GATED_DOCS` itself need editing on the ToolTempest side? Check
-      the actual function signature before assuming either way.
-- [ ] If `GATED_DOCS` does need editing: ADR-0035's CODEOWNERS/
-      branch-protection design specifically grouped `docs/BACKLOG.md`/
-      `docs/ROADMAP.md` together for a *different*, GitHub-level review
-      gate (external contributor PRs) — confirm that reasoning still
-      holds independently of this write-infrastructure gate before
-      touching `GATED_DOCS`, since the two mechanisms currently share a
-      docs list but serve different purposes. A ToolTempest-side change
-      has its own cross-repo implications and its own review, not
-      decided here.
+**Confirmed, 2026-08-22 (same session, M7 attempt).** Read
+`apply_tier2_sync()`'s actual source
+(`scripts/doc_sync_tier2.py:140` onward): it unconditionally raises
+`RuntimeError` if `interactive=False` and `proposed` contains a
+`GATED_DOCS` member (`docs/ROADMAP.md` still one, as of this session) —
+`blocked = [rel for rel in TIER2_DOCS if rel in GATED_DOCS and rel in
+proposed]; if blocked and not interactive: raise RuntimeError(...)`.
+**No per-call override exists.** `interactive=True` avoids the
+exception but reintroduces the confirmation gate today's decision
+specifically rejected for `docs/ROADMAP.md`. Neither path works.
+
+Also checked, before concluding an upstream edit is the only fix:
+whether `GATED_DOCS`/the gating behavior is externally parameterizable
+(env var, config, CLI flag) without touching ToolTempest's source —
+`grep`'d the whole file for `os.environ`/`getenv`: zero hits.
+`GATED_DOCS` is a plain hardcoded constant. **No such seam exists
+today** — whoever picks this up next doesn't need to re-check this.
+
+**The only real fix is a ToolTempest-side edit** to `GATED_DOCS` —
+`mikkiola/tooltempest`, a different repository, out of this session's
+scope. Deliberately **not** worked around locally: cross-checked
+against three independent AI perspectives, all three unanimous that
+editing the vendored copy of `scripts/doc_sync_tier2.py` inside
+article-pipeline (even temporarily) is wrong regardless of local file
+access — it creates silent drift from `.tooltempest.lock`'s pinned
+commit and gets overwritten on the next `scripts/sync-tooling.sh`
+repin. Physical location in this repo's working tree isn't the same
+as governance ownership.
+
+- [ ] Not fixed now — deliberately deferred to a separate,
+      ToolTempest-repo session. Before making the `GATED_DOCS` edit
+      there: confirm ADR-0035's CODEOWNERS/branch-protection design
+      (a *different*, GitHub-level review gate for external contributor
+      PRs, which also groups `docs/BACKLOG.md`/`docs/ROADMAP.md`
+      together) still makes sense independently of this
+      write-infrastructure-level gate — the two mechanisms currently
+      share a docs list but serve different purposes; removing
+      `docs/ROADMAP.md` from one doesn't automatically justify removing
+      it from the other. Likely needs its own ToolTempest-side ADR per
+      this project's established convention, not a bare constant edit.
+      Once `GATED_DOCS` is fixed, `SPEC.md`'s M7 trailer-key definition
+      (the other, trivial half of M7) can close in the same pass.
 
 **Source.** Metadata/ID Layer `/spec` interview, 2026-08-22,
-implementation session, Step 7 (`SPEC.md`'s M1 resumption and the
-ROADMAP.md mechanism-design correction that surfaced this gap).
+implementation session, Step 7 (`SPEC.md`'s M1 resumption, the
+ROADMAP.md mechanism-design correction that surfaced this gap, and the
+M7 attempt that confirmed it as a hard blocker rather than an assumed
+one).

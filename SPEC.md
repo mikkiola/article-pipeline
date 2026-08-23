@@ -562,22 +562,82 @@ yet, unlike M1/M2/M3/M4/M5/M6):
 
 - [x] M6 — Resolved 2026-08-22 (README.md partially — see its own note
       below) — see the "M6" section below, right after "M4".
-- [ ] M7 — Integration with the existing, vendored `apply_tier2_sync()`
-      (ToolTempest) — confirm the trailer-triggered write reuses that
-      infrastructure rather than reimplementing snapshot/diff/rollback,
-      and define the distinct trailer key from M1's `Closes: B-NNN`.
-      Must also resolve the "Known gap" flagged above (A2): ToolTempest's
-      `GATED_DOCS` still includes `docs/ROADMAP.md` as of 2026-08-22 —
-      confirm whether that needs a ToolTempest-side change before this
-      milestone's write path can treat ROADMAP.md as truly
-      confirmation-free, or whether `apply_tier2_sync()`'s `interactive`
-      flag can be overridden per-call without a ToolTempest-side edit.
-      Not decided; check the actual function signature before assuming
-      either way.
+- [ ] M7 — **Confirmed blocked, 2026-08-22 — not resolved, deliberately
+      left open, not silently dropped.** See the "M7" section below,
+      right after "M6", for the full finding.
 
-Each milestone: status: not started. This session's task was explicitly
-design-only — no implementation, no code, no other file, per the task's
-own scope lock.
+## M7 — apply_tier2_sync() integration: confirmed blocked, not resolved
+
+Attempted 2026-08-22 (implementation session), stopped on a confirmed
+technical blocker rather than working around it. Read
+`apply_tier2_sync()`'s actual source (`scripts/doc_sync_tier2.py`,
+lines 140 onward) to answer the "Known gap" A2 already flagged:
+
+```python
+blocked = [rel for rel in TIER2_DOCS if rel in GATED_DOCS and rel in proposed]
+if blocked and not interactive:
+    raise RuntimeError(...)
+```
+
+**Confirmed: no per-call override exists.** With
+`GATED_DOCS = frozenset({"docs/BACKLOG.md", "docs/ROADMAP.md"})` as it
+stands today, any call passing `docs/ROADMAP.md` in `proposed` with
+`interactive=False` (the direct-write mode A2's decision requires)
+raises `RuntimeError` unconditionally — a deliberate safety block, the
+same one ADR-0034's own "constrained non-interactive mode" test case
+already verified works as designed. `interactive=True` would work
+mechanically but reintroduces exactly the confirmation gate A2 decided
+`docs/ROADMAP.md` should *not* have. Neither path satisfies today's
+decision.
+
+**Also checked, before concluding an upstream edit is the only path:**
+whether `GATED_DOCS` or the gating behavior is externally
+parameterizable (env var, config file, CLI flag) without touching
+ToolTempest's own source — `grep`'d the whole file for
+`os.environ`/`getenv`: zero hits. `GATED_DOCS` is a plain hardcoded
+module-level constant. No such seam exists today; a future session
+picking this up doesn't need to re-check this specific question.
+
+**The only real fix is a ToolTempest-side edit** (`GATED_DOCS` in
+`mikkiola/tooltempest`, removing `docs/ROADMAP.md`) — a different
+repository, out of this session's scope. Cross-checked against three
+independent AI perspectives before deciding how to handle this, all
+three unanimous: **do not locally edit the vendored copy of
+`scripts/doc_sync_tier2.py` inside article-pipeline**, even as a
+temporary unblock. A vendored file is read-only from the consumer
+repo's perspective regardless of local filesystem access — editing it
+creates silent, undetected drift between what `.tooltempest.lock`
+declares (a specific ToolTempest commit) and what the file actually
+contains, and gets silently overwritten on the next
+`scripts/sync-tooling.sh` repin. Physical location inside this repo's
+working tree isn't the same as governance ownership.
+
+**Not decided, flagged for whoever picks this up:** before making the
+`GATED_DOCS` edit, check whether ADR-0035's CODEOWNERS/branch-protection
+design — which groups `docs/BACKLOG.md`/`docs/ROADMAP.md` together for
+a *different*, GitHub-level review gate (external contributor PRs) —
+still makes sense independently of this write-infrastructure-level
+`GATED_DOCS` membership. The two mechanisms currently share a docs
+list but serve different purposes; removing `docs/ROADMAP.md` from one
+doesn't automatically imply removing it from the other, and that's a
+separate decision with its own review, likely its own ToolTempest-side
+ADR per this project's established convention.
+
+**M7 status: not started, deliberately.** The trailer-key-definition
+half of M7 ("define the distinct trailer key from M1's `Closes:
+B-NNN`") is trivial once `GATED_DOCS` is fixed but isn't worth
+resolving in isolation — it's a one-line decision (e.g. `Syncs:
+ARCHITECTURE.md` or similar) best made alongside the actual
+ToolTempest-side fix, in the same later session, not split across two
+sessions for no reason.
+
+Each milestone: status: not started, except M1 (partially resolved,
+ID-format half only), M2/M3/M4/M5/M6 (resolved 2026-08-22, see their
+own sections above), and M7 (confirmed blocked, 2026-08-22, see above
+— not silently dropped, a real cross-repo dependency). This session's
+original task was explicitly design-only — no implementation, no code,
+no other file, per that task's own scope lock; the 2026-08-22
+implementation session that resolved M1-M6 was a later, separate task.
 
 ## Open questions / residual (not blocking, flag for the implementation session)
 
