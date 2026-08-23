@@ -1,8 +1,8 @@
 ---
 id: ADR-0036
-status: Accepted
+status: Superseded
 supersedes: null
-superseded_by: null
+superseded_by: ADR-0040
 source_type: verbatim
 ---
 
@@ -15,7 +15,12 @@ or edit any prior ADR.
 
 ## Status
 
-Accepted
+Superseded by ADR-0040 — field-placement only (this ADR's `Status`
+line/section and `Supersedes`/`Superseded by` body-level field design
+moved to YAML frontmatter). This ADR's actual lifecycle logic and its
+4-value `Status` enum (`Proposed`/`Accepted`/`Deprecated`/`Superseded`)
+are unchanged and carry forward — see ADR-0040 for the narrow scope of
+what changed.
 
 ## Context & Constraints
 
