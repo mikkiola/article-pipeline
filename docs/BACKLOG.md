@@ -1300,7 +1300,7 @@ ROADMAP.md mechanism-design correction that surfaced this gap, and the
 M7 attempt that confirmed it as a hard blocker rather than an assumed
 one).
 
-### [B-036] P2 — "Machine-Verifiable SPEC Format" needed, verify:/done-when: per-milestone fields missing from inline_spec pattern
+### [B-036] P2 — "Machine-Verifiable SPEC Format" needed, verify:/done-when: per-milestone fields missing from inline_spec pattern — RESOLVED
 
 Found: 2026-08-18, still applies to every current `SPEC.md` including
 today's session-end doc-sync one. Two SPEC file patterns exist in this
@@ -1315,18 +1315,53 @@ satisfy what `SPEC.md`'s prose describes" check exists today; only
 `scripts/verify.py`'s structural well-formedness check plus the
 owner's manual Evidence review.
 
-- [ ] Needs its own `/spec` interview — do not fold into any other
-      spec. Should also cover a related, separately-found gap:
-      `docs/CONSTITUTION.md` has no existing "mechanically-verifiable
-      prose rules must be script-enforced" principle (confirmed absent
-      by full read, 2026-08-22) — the owner may want to adopt one as
-      part of the same interview, since both are about the same
-      underlying gap (prose isn't enough, needs code enforcement).
+**Resolved, 2026-08-24, commit `9e87733`.** Chosen format: indented
+`verify:`/`done-when:` sub-lines at a fixed 2-space indent directly
+under a milestone checkbox line, both optional, single-line values,
+no escaping needed for embedded colons/backticks/pipes — decided in
+the architect chat, cross-checked against three independent AI
+reviews plus a structural/causal analysis (rejected a pipe-delimited
+single-line format for the same reason its embedded-pipe test case
+exists: verification commands routinely contain `|`; rejected an
+HTML-comment-hidden format because it isn't visible in rendered
+GitHub view). Implemented as `parse_milestone_fields()` in
+`scripts/verify.py`, TDD (`scripts/test_milestone_fields.py`, 8
+cases, RED before/GREEN after), additive only — `classify()`/
+`validate_inline_spec_structure()` untouched. Retrofitted onto
+SPEC.md's own M7 milestone only (M1-M6 are design-decision records,
+not mechanically re-verifiable facts — deliberately not touched).
+
+**This is not a revival of ADR-0037's deprecated CHECKPOINT.md
+paired-file pattern.** ADR-0037's Confirmation & Revisit clause
+reads: "If a future need for CHECKPOINT.md's richer per-block field
+format becomes concrete (not hypothetical), revisit this ADR." This
+work does not do that — it stays inline, single-file, within
+SPEC.md's own `## Milestones` section (no companion file), and
+implements only the two fields this entry originally asked for
+(`verify:`/`done-when:`), not `status:` (already encoded by
+`- [ ]`/`- [x]`) or CHECKPOINT.md's fuller field set. ADR-0037 itself
+is unedited, per Immutable Lineage.
+
+**Known gap surfaced, filed separately as [B-039]:** M7's checkbox
+(and M6's) sit outside `isolate_milestones_section()`'s own
+"## Milestones"-to-next-"##"-heading boundary, so `classify()`/
+`validate_inline_spec_structure()` never see them — unrelated to this
+entry's scope, not fixed here.
+
+- [x] Needs its own `/spec` interview — **superseded.** Owner
+      determined in the architect chat (cross-checked against three
+      independent AI reviews plus a structural/causal analysis) that
+      the design was already settled and this was a direct TDD
+      implementation task, not a design decision requiring interview.
+      The related `docs/CONSTITUTION.md` gap (no "mechanically-
+      verifiable prose rules must be script-enforced" principle) noted
+      below remains open, not resolved by this entry.
 
 **Source.** Architect chat session, 2026-08-18. Cross-referenced with
 the `docs/CONSTITUTION.md` gap found 2026-08-22 during the Metadata/ID
 Layer `/spec` interview's Topic 2 (no mechanical-verification
-principle exists in that file).
+principle exists in that file — still open, not resolved by this
+entry's implementation). Resolved 2026-08-24, commit `9e87733`.
 
 ### [B-037] P3 — Remaining "Neutron Star Protocol" claims not covered by today's Metadata/ID Layer work
 
@@ -1370,3 +1405,36 @@ side.
 **Source.** Metadata/ID Layer `/spec` interview, 2026-08-22 (deferred
 during the interview itself, per the task's own instruction not to ask
 for more ODS-KG precision than exists).
+
+### [B-039] P3 — `scripts/verify.py`'s "## Milestones" section boundary silently excludes M6/M7's checkboxes
+
+Found: 2026-08-24, [B-036] implementation session. `isolate_milestones_section()`
+(`scripts/verify.py`) captures only the text between the `## Milestones`
+heading and the *next* `##` heading. In this repo's own `SPEC.md`, that
+next heading is `## M2/M5 — Plan-completion trigger, operationally
+defined` — so the isolated section stops there, well before M6's and
+M7's checkbox lines (under "Remaining Milestones checklist", after
+several other `##` headings). Confirmed directly: `classify()`/
+`validate_inline_spec_structure()` report exactly 5 checkbox units
+(M1-M5) for this `SPEC.md`, even though it has 7 checkbox lines total —
+M6 and M7 are structurally invisible to both functions.
+
+Found while implementing [B-036]'s `parse_milestone_fields()`, which
+deliberately does **not** reuse this boundary (scans the whole document
+for checkbox lines instead, per an explicit owner decision — see that
+entry) specifically to avoid this gap for the new field-parsing
+capability. `classify()`/`validate_inline_spec_structure()` themselves
+are untouched and still carry the gap.
+
+- [ ] Not fixed here — component-discovery boundary logic, a different
+      concern from [B-036]'s field-parsing addition. Needs its own
+      decision: whether `isolate_milestones_section()` should keep
+      scanning past interior `##` headings (and if so, where it should
+      actually stop — end of file? a different terminating condition?),
+      or whether SPEC.md files with per-milestone detail sections
+      (like this one's M2/M5/M3/M4/M6/M7 pattern) should structure
+      their Milestones list differently instead.
+
+**Source.** [B-036] implementation session, 2026-08-24 (owner's explicit
+instruction to file this gap separately, after checking for and finding
+no existing duplicate entry, rather than fix it as part of that entry).
