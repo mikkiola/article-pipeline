@@ -272,6 +272,43 @@ def parse_milestone_fields(spec_path: str) -> list[dict]:
     return results
 
 
+def check_milestones_boundary_integrity(spec_path: str) -> dict:
+    """Lint backstop for the [B-039] bug class: a milestone-detail
+    section written at the "## " level truncates
+    isolate_milestones_section()'s own output early, silently hiding
+    later checkbox lines from classify()/validate_inline_spec_structure().
+
+    Does NOT scan isolate_milestones_section()'s own output for a "##"
+    heading -- that output can never contain one by construction (the
+    function is defined to stop exactly at the first "## " heading it
+    finds), so a check limited to it would always pass regardless of
+    whether the bug is present. Instead cross-checks the isolated
+    section's checkbox count against a whole-document checkbox count:
+    if more checkboxes exist in the document than the isolated section
+    captured, some are sitting outside the recognized Milestones
+    boundary -- the actual, detectable signature of this bug class.
+    """
+    text = Path(spec_path).read_text(encoding="utf-8")
+    section, _ = isolate_milestones_section(text)
+
+    isolated_count = len(list(CHECKBOX_FULL_LINE_RE.finditer(section))) if section else 0
+    total_count = len(list(CHECKBOX_FULL_LINE_RE.finditer(text)))
+
+    if total_count > isolated_count:
+        return {
+            "status": "VIOLATION",
+            "isolated_count": isolated_count,
+            "total_count": total_count,
+            "detail": (
+                f"{total_count} checkbox line(s) exist in {spec_path}, but "
+                f"isolate_milestones_section() only captured {isolated_count} "
+                f"-- an interior '##' heading (or other boundary issue) is "
+                f"likely truncating the Milestones section early."
+            ),
+        }
+    return {"status": "OK", "isolated_count": isolated_count, "total_count": total_count}
+
+
 def validate_structure(pattern: str, source_file) -> dict:
     if pattern == "inline_spec":
         return validate_inline_spec_structure(source_file)

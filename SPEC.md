@@ -328,7 +328,7 @@ Design only — none implemented this session.
       automatable and keep their own, separate TDD treatment when
       implemented.
 
-## M2/M5 — Plan-completion trigger, operationally defined
+### M2/M5 — Plan-completion trigger, operationally defined
 
 Resolved together, 2026-08-22 (implementation session) — one question,
 not two. M2 asks what Claude Code actually checks before the step-4
@@ -396,7 +396,7 @@ on its own):
    candidates in plain language (M3's format), wait for the owner's
    pick — never silently guess which one(s) were meant.
 
-## M3 — Candidate-presentation format
+### M3 — Candidate-presentation format
 
 Resolved 2026-08-22 (implementation session). No TDD test needed here
 — unlike M2/M5, this isn't a trigger-condition mechanism, it's a
@@ -441,7 +441,7 @@ Which one(s) should I mark done, if any?
   single consistent format rather than a special case for "exactly
   two").
 
-## M4 — Integration point in Claude Code's session/commit flow
+### M4 — Integration point in Claude Code's session/commit flow
 
 Resolved 2026-08-22 (implementation session). Checked
 `.github/scripts/reconcile.py`'s actual `push_with_retry()` (lines
@@ -507,7 +507,7 @@ the concurrent-push race class `push_with_retry()` was built to catch
 commit and its push) — the exact risk an unguarded `git push` in the
 original design would have reintroduced.
 
-## M6 — Structural fact-sync trigger, defined
+### M6 — Structural fact-sync trigger, defined
 
 Resolved 2026-08-22 (implementation session). Read `docs/ARCHITECTURE.md`
 in full before writing this — its own stated design ("Every fact is a
@@ -585,7 +585,7 @@ yet, unlike M1/M2/M3/M4/M5/M6):
   verify: `grep -c "os.environ\|getenv" scripts/doc_sync_tier2.py`
   done-when: GATED_DOCS in scripts/doc_sync_tier2.py no longer contains docs/ROADMAP.md
 
-## M7 — apply_tier2_sync() integration: confirmed blocked, resolved 2026-08-24
+### M7 — apply_tier2_sync() integration: confirmed blocked, resolved 2026-08-24
 
 **Resolved, 2026-08-24.** The blocker described below (no per-call
 override, no parameterization seam, ToolTempest-side edit the only

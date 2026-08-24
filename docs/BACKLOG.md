@@ -1475,7 +1475,7 @@ side.
 during the interview itself, per the task's own instruction not to ask
 for more ODS-KG precision than exists).
 
-### [B-039] P3 — `scripts/verify.py`'s "## Milestones" section boundary silently excludes M6/M7's checkboxes
+### [B-039] P3 — `scripts/verify.py`'s "## Milestones" section boundary silently excludes M6/M7's checkboxes — RESOLVED
 
 Found: 2026-08-24, [B-036] implementation session. `isolate_milestones_section()`
 (`scripts/verify.py`) captures only the text between the `## Milestones`
@@ -1495,18 +1495,54 @@ entry) specifically to avoid this gap for the new field-parsing
 capability. `classify()`/`validate_inline_spec_structure()` themselves
 are untouched and still carry the gap.
 
-- [ ] Not fixed here — component-discovery boundary logic, a different
+**Resolved, 2026-08-24 — document restructuring, not a parser
+heuristic.** Cross-checked against 4 independent AI research passes
+(CommonMark/mdast/remark semantics, changelog parsers, static site
+generators, markdownlint), unanimous: the parser's "stop at next `##`"
+rule is *correct* per CommonMark — same-level headings are siblings by
+definition. The actual root cause is `SPEC.md` using an identical
+heading level (`##`) for two different semantic relationships ("a new,
+unrelated top-level section" vs. "this milestone's own supporting
+detail"). No standard Markdown tool distinguishes these via
+heuristics; heading depth is the only structural signal Markdown
+provides for parent/child relationships.
+
+**Fix applied:** `SPEC.md`'s five milestone-detail headings (M2/M5,
+M3, M4, M6, M7) demoted from `##` to `###`, correctly nesting them
+under `## Milestones`. `isolate_milestones_section()`'s termination
+logic needed **zero code changes** — "stop at next `##`" now correctly
+runs past the (now `###`) detail sections to the real next top-level
+heading. Confirmed directly: `classify()`/`validate_inline_spec_structure()`
+now report 7/7 checkbox units, up from 5/5, still `status: "OK"`.
+
+**Lint backstop added:** `check_milestones_boundary_integrity()`
+(`scripts/verify.py`), TDD (`scripts/test_milestones_boundary_check.py`,
+4 cases, RED before/GREEN after). Deliberately does **not** grep
+`isolate_milestones_section()`'s own output for a `##` heading — that
+output can never contain one by construction (the function stops
+exactly at the first one it finds), so such a check would always pass
+regardless of whether the bug is present. Instead cross-checks the
+isolated section's checkbox count against a whole-document checkbox
+count (reusing the same whole-document scan pattern [B-036]'s
+`parse_milestone_fields()` already established) — a mismatch is the
+actual, detectable signature of this bug class: checkboxes existing
+outside the recognized boundary.
+
+- [x] Not fixed here — component-discovery boundary logic, a different
       concern from [B-036]'s field-parsing addition. Needs its own
       decision: whether `isolate_milestones_section()` should keep
       scanning past interior `##` headings (and if so, where it should
       actually stop — end of file? a different terminating condition?),
       or whether SPEC.md files with per-milestone detail sections
       (like this one's M2/M5/M3/M4/M6/M7 pattern) should structure
-      their Milestones list differently instead.
+      their Milestones list differently instead. **Resolved: the
+      latter — heading-depth correction, not a parser change (see
+      above).**
 
 **Source.** [B-036] implementation session, 2026-08-24 (owner's explicit
 instruction to file this gap separately, after checking for and finding
 no existing duplicate entry, rather than fix it as part of that entry).
+Resolved 2026-08-24, 4-AI unanimous cross-check on root cause and fix.
 
 ### [B-040] P3 — Convert docs/ARCHITECTURE.md/docs/ROADMAP.md to table-only format (remove all prose)
 
