@@ -572,7 +572,16 @@ yet, unlike M1/M2/M3/M4/M5/M6):
       is still undecided** — not silently resolved by this repin; a
       genuinely open naming choice (e.g. `Syncs: ARCHITECTURE.md`),
       left for a session that actually needs it rather than decided
-      here without a concrete trigger.
+      here without a concrete trigger. **Checked against real git
+      history, 2026-08-24** (`git log --all -- docs/ARCHITECTURE.md`
+      and `-- README.md`): zero commits show `apply_tier2_sync()`
+      having ever produced a commit with a distinct trailer/message
+      convention — `apply_tier2_sync()` has never actually fired in
+      production for either file (matches this repo's own 2026-08-21
+      fact-check); every historical write to both files was manually
+      authored. This is a confirmed absence of precedent, not an
+      unchecked gap — the deferral above is now evidence-based, not
+      speculative. Still deliberately not inventing a trailer now.
   verify: `grep -c "os.environ\|getenv" scripts/doc_sync_tier2.py`
   done-when: GATED_DOCS in scripts/doc_sync_tier2.py no longer contains docs/ROADMAP.md
 
@@ -657,6 +666,21 @@ this resolution — it's a one-line decision (e.g. `Syncs:
 ARCHITECTURE.md` or similar) with no concrete trigger forcing a choice
 yet; left for a session that actually implements the trailer-tagging
 mechanism M2/M4 describe, rather than decided speculatively here.
+
+**Fact-checked against real git history, 2026-08-24, not left as an
+assumed-unknown.** Searched `git log --all -- docs/ARCHITECTURE.md`
+(8 commits) and `git log --all -- README.md` (1 commit, the initial
+scaffold) for any commit produced by `apply_tier2_sync()` carrying a
+distinct trailer or message convention this decision could reuse.
+Zero found — every commit touching either file is a manually-authored,
+conventional message (`docs(...)`/`fix(...)`/`feat(...)`-style), none
+resembling a `Syncs:`-style trailer. This is consistent with, and
+confirms, this repo's own earlier fact-check (2026-08-21) that
+`apply_tier2_sync()` has never actually run in production for either
+file. The trailer-naming question therefore has no real precedent to
+anchor a choice, confirmed rather than assumed — the deferral (wait
+for a real first case rather than invent one now) stands, now on
+evidence instead of an unchecked gap.
 
 Each milestone: status: not started, except M1 (partially resolved,
 ID-format half only), M2/M3/M4/M5/M6 (resolved 2026-08-22, see their

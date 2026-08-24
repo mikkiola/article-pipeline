@@ -1318,6 +1318,18 @@ trigger requiring the name yet, and inventing one speculatively would
 be a design decision with no basis to choose between options, not a
 mechanical consequence of this fix.
 
+**Fact-checked against real git history, 2026-08-24** — not left as an
+assumed-unknown. Searched `git log --all -- docs/ARCHITECTURE.md`
+(8 commits) and `git log --all -- README.md` (1 commit, initial
+scaffold) for any commit `apply_tier2_sync()` itself produced with a
+distinct trailer/message convention this decision could reuse. Zero
+found — every commit touching either file is manually authored,
+conventional style, none resembling a `Syncs:`-style trailer.
+Confirms (matches this repo's own 2026-08-21 fact-check) that
+`apply_tier2_sync()` has never actually run in production for either
+file. Confirmed absence of precedent, not an unchecked gap — the
+deferral stands, now evidence-based rather than speculative.
+
 - [x] Not fixed now — deliberately deferred to a separate,
       ToolTempest-repo session. Before making the `GATED_DOCS` edit
       there: confirm ADR-0035's CODEOWNERS/branch-protection design
