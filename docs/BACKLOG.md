@@ -1363,7 +1363,7 @@ Layer `/spec` interview's Topic 2 (no mechanical-verification
 principle exists in that file — still open, not resolved by this
 entry's implementation). Resolved 2026-08-24, commit `9e87733`.
 
-### [B-037] P3 — Remaining "Neutron Star Protocol" claims not covered by today's Metadata/ID Layer work
+### [B-037] P3 — Remaining "Neutron Star Protocol" claims not covered by today's Metadata/ID Layer work — RESOLVED (split into [B-040]/[B-041])
 
 Found: 2026-08-22, Metadata/ID Layer `/spec` interview's closing
 independence check. Two things the external "Neutron Star Protocol"
@@ -1375,15 +1375,31 @@ ADR-citation exemption, the destination-invariant check). Confirmed
 independent of today's metadata/ID work (2026-08-22, owner's explicit
 closing check) — no dependency either direction.
 
-- [ ] Needs its own `/spec` interview if the owner wants to pursue it —
-      a significant, separate architectural change, not a sub-step of
-      anything already built. Do NOT bundle with `[B-036]` — different
-      scope, different risk profile (this one touches the actual shape
-      of `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`'s content, not just
-      spec-file format).
+**Resolved, 2026-08-24.** The original "Neutron Star Protocol" draft
+this entry references is not locatable anywhere in this repository or
+its git history (confirmed: no file content, no commit message,
+`git log --all` has zero matches for "neutron") — it was never
+committed here, only referenced secondhand. Rather than keep tracking
+an entry framed around a document this repo has no copy of, its two
+still-open claims are split into their own entries, sourced to what
+this entry's own text actually says, not to the lost original:
+
+- **[B-040]** — `docs/ARCHITECTURE.md`/`docs/ROADMAP.md` table-only
+  format (removing all prose).
+- **[B-041]** — a "Mechanical Verification Rule" principle for
+  `docs/CONSTITUTION.md` (related to, broader than, [B-036]).
+
+Neither is decided or implemented today — both remain open, deferred
+to their own future `/spec` interviews. This entry is closed only in
+the sense of no longer needing to reference a document that can't be
+found; nothing it named was actually resolved by this split.
+
+- [x] Needs its own `/spec` interview if the owner wants to pursue it —
+      superseded by the split above; tracked under `[B-040]`/`[B-041]`
+      instead of this entry going forward.
 
 **Source.** Metadata/ID Layer `/spec` interview, 2026-08-22, closing
-independence check.
+independence check. Split into `[B-040]`/`[B-041]`, 2026-08-24.
 
 ### [B-038] P3 — Whether docs/BACKLOG.md's bare [B-NNN] token needs its own structured field for ODS-KG compatibility
 
@@ -1438,3 +1454,97 @@ are untouched and still carry the gap.
 **Source.** [B-036] implementation session, 2026-08-24 (owner's explicit
 instruction to file this gap separately, after checking for and finding
 no existing duplicate entry, rather than fix it as part of that entry).
+
+### [B-040] P3 — Convert docs/ARCHITECTURE.md/docs/ROADMAP.md to table-only format (remove all prose)
+
+Found: 2026-08-22, Metadata/ID Layer `/spec` interview's closing
+independence check, originally tracked under `[B-037]` (an entry
+framed around an external "Neutron Star Protocol" draft not locatable
+anywhere in this repo or its git history — see `[B-037]`'s own
+resolution note). Split out as its own entry, 2026-08-24, sourced to
+`[B-037]`'s text, not to the lost original.
+
+Today's session gave a concrete, live example of exactly the kind of
+table/prose split this proposal would remove: `docs/ROADMAP.md`'s
+Status table said Phase 3 was "Blocked on 2.5" while its own "Current
+pointer" prose paragraph said the opposite ("Phase 3 is no longer
+blocked on this question") — a contradiction that persisted across
+several commits because the two representations of the same fact
+could drift independently. Fixed today as a factual correction (Phase
+3's row now reads "Not started — no longer blocked"), not as a
+resolution of this entry — the underlying design question (should
+`docs/ROADMAP.md` structurally prevent this class of drift by
+removing prose entirely, keeping only tables?) is still open.
+
+`docs/ARCHITECTURE.md` already states "every fact is a table cell — no
+prose sections" as a design principle (see its own header) but still
+contains prose sections (`## Repositories`, `## Models used by this
+project` are tables; but validation/rationale text inside table cells
+is prose-shaped, per SPEC.md's own M6 analysis distinguishing
+mechanically-diffable table-cell facts from narrative judgment inside
+a cell). `docs/ROADMAP.md`'s "Current pointer" section and dependency-
+chain diagram are prose/ASCII-art, not tables, by design as written
+today.
+
+- [ ] Needs its own `/spec` interview if the owner wants to pursue it —
+      a significant, separate architectural change, not a sub-step of
+      anything already built. Do NOT bundle with `[B-036]`/`[B-039]` —
+      different scope, different risk profile (this touches the actual
+      shape of `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`'s content, not
+      spec-file format or component-discovery logic).
+
+**Source.** Metadata/ID Layer `/spec` interview, 2026-08-22, closing
+independence check (originally `[B-037]`). Split out 2026-08-24,
+during the ROADMAP.md Phase 3 contradiction fix that gave this entry
+a concrete live example.
+
+### [B-041] P2 — "Mechanical Verification Rule" principle needed in docs/CONSTITUTION.md
+
+Found: 2026-08-22, Metadata/ID Layer `/spec` interview's closing
+independence check, originally tracked under `[B-037]` (see that
+entry's resolution note on why it's split out). Related to, but
+broader than, `[B-036]`: `[B-036]` implemented one specific mechanical
+check (`verify:`/`done-when:` per-milestone fields in SPEC.md's inline
+Milestones pattern). This entry is about the general principle —
+`docs/CONSTITUTION.md` currently has no stated rule that a format/
+structural requirement must be backed by a script in `scripts/verify.py`
+(or equivalent) rather than living purely as prose convention.
+
+**Confirmed still open, 2026-08-24** (re-checked directly, not assumed
+from the earlier 2026-08-22 finding): `docs/CONSTITUTION.md` (347
+lines, 16 `##` sections) has exactly one "mechanical" hit — line 307,
+about the ADR-citation pre-push check, a single already-implemented
+mechanism, not a general principle — and zero hits for "prose rule,"
+"format rule," or "structural rule." No existing section covers this.
+
+- [ ] Needs its own `/spec` interview if the owner wants to pursue it —
+      do not fold into `[B-036]` or any other spec; this is a
+      `docs/CONSTITUTION.md`-level principle, not a single mechanism.
+
+**Source.** Metadata/ID Layer `/spec` interview, 2026-08-22, closing
+independence check (originally `[B-037]`); cross-referenced with
+`[B-036]`'s own note on the same gap. Split out and re-confirmed open,
+2026-08-24.
+
+### [B-042] P3 — docs/ARCHITECTURE.md has no row for the session-end doc-sync auto-close mechanism (SPEC.md)
+
+Found: 2026-08-24, fact-check pass before the `[B-037]` split above.
+`docs/ARCHITECTURE.md`'s only doc-sync-related row is "ToolTempest
+Tier 2 doc-sync (snapshot, diff, role-gated apply, CLI)" — the
+lower-level `apply_tier2_sync()` infrastructure. The session-end
+auto-close mechanism `SPEC.md` (repo root) designs — BACKLOG.md
+closure via a `Closes:` commit trailer, plus `ARCHITECTURE.md`/
+`ROADMAP.md`/`README.md` structural fact-sync reusing that same
+infrastructure — has no `docs/ARCHITECTURE.md` row of its own.
+
+Informational only, not an action item: **do not add a row now.**
+`SPEC.md`'s own M7 milestone is still confirmed-blocked (see `[B-035]`
+and `SPEC.md`'s "M7" section) — the mechanism isn't fully implemented.
+Adding an "Implemented" (or any status) row today would create the
+same kind of table/prose mismatch this session just fixed in
+`docs/ROADMAP.md`'s Phase 3 row (`[B-040]`'s live example). Revisit
+once M7 resolves — tracked under `[B-035]`, the eventual
+ToolTempest-side session.
+
+**Source.** Fact-check pass, 2026-08-24, immediately before the
+`[B-037]` split.

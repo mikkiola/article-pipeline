@@ -13,7 +13,7 @@ see `docs/adr/`.
 | 1 — Claim Extraction pilot | Closed |
 | 2 — Evidence Package | Closed |
 | 2.5 — Context/causal-structure layer | Closed — M1-M5 implemented; causal question resolved, partially confirmed: enrichment helps on-domain, harms via polysemous-tag collision, tracked as a non-blocking P1 fix. Phase 3 no longer blocked on this. |
-| 3 — Strategy Layer + Author + Quality Gate | Blocked on 2.5 |
+| 3 — Strategy Layer + Author + Quality Gate | Not started — no longer blocked (see Current pointer) |
 | 4 — Platform Adapter (Habr → LinkedIn) + Circuit Breaker | Not started |
 | 5+ — Experiment Log, remaining platforms | Not started |
 
