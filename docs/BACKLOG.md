@@ -1234,7 +1234,7 @@ later hardened.
 (read-only verification against `scripts/verify.py`,
 `scripts/doc_sync.py`, `scripts/doc_sync_tier2.py`).
 
-### [B-035] P1 — ToolTempest's GATED_DOCS still includes docs/ROADMAP.md, contradicting today's direct-write decision
+### [B-035] P1 — ToolTempest's GATED_DOCS still includes docs/ROADMAP.md, contradicting today's direct-write decision — RESOLVED
 
 Found: 2026-08-22, Metadata/ID Layer `/spec` interview's implementation
 session, Step 7 (resuming `SPEC.md`'s M1). `scripts/doc_sync_tier2.py`
@@ -1280,7 +1280,45 @@ commit and gets overwritten on the next `scripts/sync-tooling.sh`
 repin. Physical location in this repo's working tree isn't the same
 as governance ownership.
 
-- [ ] Not fixed now — deliberately deferred to a separate,
+**Resolved, 2026-08-24, in two steps.**
+
+1. **ToolTempest-side fix.** `GATED_DOCS` edited directly in
+   `mikkiola/tooltempest` (the repository that actually owns the
+   code, not a local workaround here) — commit `622e326`, `ADR-0007:
+   ROADMAP.md Reclassified as Direct-Write`. `GATED_DOCS` now reads
+   `frozenset({"docs/BACKLOG.md"})` only. ADR-0007 explicitly confirms
+   the ADR-0035 CODEOWNERS/branch-protection question flagged below
+   was checked and found independent: `TIER2_DOCS` (and CODEOWNERS'
+   own separate grouping) is unchanged by this ADR — only the
+   write-infrastructure-level confirmation gate moved. Verified
+   directly before trusting the claim: `git ls-remote` confirmed
+   `622e326` really is ToolTempest's `origin/main` tip; a throwaway
+   scratch clone confirmed the commit's actual `GATED_DOCS` content
+   and the presence of `docs/adr/0007-roadmap-direct-write.md`.
+
+2. **Repin.** This repo's `.tooltempest.lock` updated from
+   `71f53d88a` to `622e326e9`, commit `db42b43`. Note:
+   `scripts/sync-tooling.sh` does not itself fetch ToolTempest's
+   `origin/main` tip or update the lock file — it only installs files
+   matching whatever SHA is *already* in `.tooltempest.lock`. The
+   actual repin (editing the pinned SHA) was a separate, manual step,
+   consistent with `docs/CONSTITUTION.md`'s own description of
+   repinning as "a deliberate, separate action, not automatic."
+   Confirmed post-repin: vendored `scripts/doc_sync_tier2.py`'s
+   `GATED_DOCS` matches the upstream fix; `scripts/verify.py` still
+   reports `SPEC.md` structurally OK (unaffected).
+
+`SPEC.md`'s M7 milestone's `apply_tier2_sync()` integration blocker is
+closed as a direct result (see `SPEC.md`'s own M7 section). **Not
+resolved by this fix:** the trailer-key-definition half of M7 (a
+one-line naming decision, e.g. `Syncs: ARCHITECTURE.md`) — flagged
+below when this entry was still open as something that "can close in
+the same pass," but deliberately left undecided here; no concrete
+trigger requiring the name yet, and inventing one speculatively would
+be a design decision with no basis to choose between options, not a
+mechanical consequence of this fix.
+
+- [x] Not fixed now — deliberately deferred to a separate,
       ToolTempest-repo session. Before making the `GATED_DOCS` edit
       there: confirm ADR-0035's CODEOWNERS/branch-protection design
       (a *different*, GitHub-level review gate for external contributor
@@ -1291,14 +1329,17 @@ as governance ownership.
       `docs/ROADMAP.md` from one doesn't automatically justify removing
       it from the other. Likely needs its own ToolTempest-side ADR per
       this project's established convention, not a bare constant edit.
-      Once `GATED_DOCS` is fixed, `SPEC.md`'s M7 trailer-key definition
-      (the other, trivial half of M7) can close in the same pass.
+      **Done — see ADR-0007, which confirms this independence
+      explicitly.** Once `GATED_DOCS` is fixed, `SPEC.md`'s M7
+      trailer-key definition (the other, trivial half of M7) can close
+      in the same pass. **Not done — still genuinely open, see above.**
 
 **Source.** Metadata/ID Layer `/spec` interview, 2026-08-22,
 implementation session, Step 7 (`SPEC.md`'s M1 resumption, the
 ROADMAP.md mechanism-design correction that surfaced this gap, and the
 M7 attempt that confirmed it as a hard blocker rather than an assumed
-one).
+one). Resolved 2026-08-24, commits `mikkiola/tooltempest@622e326`
+(ADR-0007) and this repo's `db42b43` (repin).
 
 ### [B-036] P2 — "Machine-Verifiable SPEC Format" needed, verify:/done-when: per-milestone fields missing from inline_spec pattern — RESOLVED
 

@@ -562,13 +562,36 @@ yet, unlike M1/M2/M3/M4/M5/M6):
 
 - [x] M6 — Resolved 2026-08-22 (README.md partially — see its own note
       below) — see the "M6" section below, right after "M4".
-- [ ] M7 — **Confirmed blocked, 2026-08-22 — not resolved, deliberately
-      left open, not silently dropped.** See the "M7" section below,
-      right after "M6", for the full finding.
+- [x] M7 — **`apply_tier2_sync()` integration blocker resolved,
+      2026-08-24.** ToolTempest's `GATED_DOCS` fixed upstream
+      (`mikkiola/tooltempest@622e326`, ADR-0007: `GATED_DOCS` no
+      longer includes `docs/ROADMAP.md`, only `docs/BACKLOG.md`), then
+      `.tooltempest.lock` repinned in this repo (commit `db42b43`).
+      `done-when:` condition confirmed true post-repin. **Trailer-key
+      naming (M7's other, "trivial" half — see the "M7" section below)
+      is still undecided** — not silently resolved by this repin; a
+      genuinely open naming choice (e.g. `Syncs: ARCHITECTURE.md`),
+      left for a session that actually needs it rather than decided
+      here without a concrete trigger.
   verify: `grep -c "os.environ\|getenv" scripts/doc_sync_tier2.py`
   done-when: GATED_DOCS in scripts/doc_sync_tier2.py no longer contains docs/ROADMAP.md
 
-## M7 — apply_tier2_sync() integration: confirmed blocked, not resolved
+## M7 — apply_tier2_sync() integration: confirmed blocked, resolved 2026-08-24
+
+**Resolved, 2026-08-24.** The blocker described below (no per-call
+override, no parameterization seam, ToolTempest-side edit the only
+real fix) was closed the way this section's own finding said it would
+have to be: a direct edit to `GATED_DOCS` inside `mikkiola/tooltempest`
+itself — `mikkiola/tooltempest@622e326` (ADR-0007), *not* a local edit
+to the vendored copy inside article-pipeline (the specific workaround
+this section's three-AI cross-check already rejected, still correctly
+rejected). This repo's `.tooltempest.lock` repinned to that commit
+(`db42b43`), confirmed post-repin: the vendored `scripts/doc_sync_tier2.py`
+now reads `GATED_DOCS = frozenset({"docs/BACKLOG.md"})`.
+`docs/BACKLOG.md`'s `[B-035]` entry carries the full resolution
+record. The trailer-key-definition half below remains genuinely
+undecided — this resolution closes only the `apply_tier2_sync()`
+integration blocker, not that separate naming choice.
 
 Attempted 2026-08-22 (implementation session), stopped on a confirmed
 technical blocker rather than working around it. Read
@@ -625,18 +648,21 @@ doesn't automatically imply removing it from the other, and that's a
 separate decision with its own review, likely its own ToolTempest-side
 ADR per this project's established convention.
 
-**M7 status: not started, deliberately.** The trailer-key-definition
-half of M7 ("define the distinct trailer key from M1's `Closes:
-B-NNN`") is trivial once `GATED_DOCS` is fixed but isn't worth
-resolving in isolation — it's a one-line decision (e.g. `Syncs:
-ARCHITECTURE.md` or similar) best made alongside the actual
-ToolTempest-side fix, in the same later session, not split across two
-sessions for no reason.
+**M7 status: `apply_tier2_sync()` integration blocker resolved
+2026-08-24 (see the resolution note above); trailer-key-definition
+still not started, deliberately.** The trailer-key-definition half of
+M7 ("define the distinct trailer key from M1's `Closes: B-NNN`") is
+trivial now that `GATED_DOCS` is fixed but wasn't decided as part of
+this resolution — it's a one-line decision (e.g. `Syncs:
+ARCHITECTURE.md` or similar) with no concrete trigger forcing a choice
+yet; left for a session that actually implements the trailer-tagging
+mechanism M2/M4 describe, rather than decided speculatively here.
 
 Each milestone: status: not started, except M1 (partially resolved,
 ID-format half only), M2/M3/M4/M5/M6 (resolved 2026-08-22, see their
-own sections above), and M7 (confirmed blocked, 2026-08-22, see above
-— not silently dropped, a real cross-repo dependency). This session's
+own sections above), and M7 (`apply_tier2_sync()` integration blocker
+resolved 2026-08-24, trailer-key-definition still not started, see
+above). This session's
 original task was explicitly design-only — no implementation, no code,
 no other file, per that task's own scope lock; the 2026-08-22
 implementation session that resolved M1-M6 was a later, separate task.
