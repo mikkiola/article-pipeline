@@ -31,6 +31,7 @@ MILESTONES_HEADING_RE = re.compile(r"^##\s+Milestones\b", re.MULTILINE)
 NEXT_HEADING_RE = re.compile(r"^##\s+\S", re.MULTILINE)
 CHECKBOX_LINE_RE = re.compile(r"^\s*(?:-|\d+\.)\s*\[[ xX]\]", re.MULTILINE)
 CHECKBOX_FULL_LINE_RE = re.compile(r"^[ \t]*(?:-|\d+\.)\s*\[[ xX]\](.*)$", re.MULTILINE)
+FIELD_LINE_RE = re.compile(r"^([ \t]*)(verify|done-when):\s*(.*)$")
 
 # Directories that hold project infrastructure, not a pipeline
 # component, and are therefore never SPEC.md/component candidates.
@@ -198,6 +199,77 @@ def validate_inline_spec_structure(spec_path: str) -> dict:
         "well_formed": well_formed,
         "malformed_details": malformed_details,
     }
+
+
+def parse_milestone_fields(spec_path: str) -> list[dict]:
+    """Extracts optional `verify:`/`done-when:` metadata (B-036) from
+    every checkbox line in a SPEC.md, anywhere in the document -- not
+    limited to isolate_milestones_section()'s narrow "## Milestones"-
+    to-next-"##"-heading boundary (that boundary serves classify()'s
+    component-discovery purpose; this is a separate, additive scan and
+    does not share or alter it).
+
+    Field-line contract:
+    - `verify:`/`done-when:` are both optional per milestone.
+    - When present, each sits at a fixed indent of exactly 2 spaces
+      deeper than its own checkbox line's indent, single-line only,
+      taken verbatim after the first colon following the key -- no
+      escaping of embedded colons, backticks, or pipe characters.
+    - Any other indented sub-line under a checkbox that isn't exactly
+      a recognized key at that fixed indent is ordinary descriptive
+      text: skipped, never an error.
+    - A milestone's scanned block ends at the first blank line, the
+      next checkbox line, or a line indented no deeper than the
+      checkbox itself.
+    """
+    text = Path(spec_path).read_text(encoding="utf-8")
+    lines = text.split("\n")
+
+    results = []
+    idx = 0
+    while idx < len(lines):
+        line = lines[idx]
+        cb_match = CHECKBOX_FULL_LINE_RE.match(line)
+        if not cb_match:
+            idx += 1
+            continue
+
+        indent = len(line) - len(line.lstrip(" \t"))
+        description = cb_match.group(1).strip()
+        line_no = idx + 1
+
+        verify = None
+        done_when = None
+        j = idx + 1
+        while j < len(lines):
+            nxt = lines[j]
+            if nxt.strip() == "":
+                break
+            if CHECKBOX_LINE_RE.match(nxt):
+                break
+            nxt_indent = len(nxt) - len(nxt.lstrip(" \t"))
+            if nxt_indent <= indent:
+                break
+            field_match = FIELD_LINE_RE.match(nxt)
+            if field_match and len(field_match.group(1)) == indent + 2:
+                key, value = field_match.group(2), field_match.group(3).strip()
+                if key == "verify" and verify is None:
+                    verify = value
+                elif key == "done-when" and done_when is None:
+                    done_when = value
+            j += 1
+
+        results.append(
+            {
+                "line": line_no,
+                "description": description,
+                "verify": verify,
+                "done_when": done_when,
+            }
+        )
+        idx = j
+
+    return results
 
 
 def validate_structure(pattern: str, source_file) -> dict:

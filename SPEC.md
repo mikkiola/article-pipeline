@@ -565,6 +565,8 @@ yet, unlike M1/M2/M3/M4/M5/M6):
 - [ ] M7 — **Confirmed blocked, 2026-08-22 — not resolved, deliberately
       left open, not silently dropped.** See the "M7" section below,
       right after "M6", for the full finding.
+  verify: `grep -c "os.environ\|getenv" scripts/doc_sync_tier2.py`
+  done-when: GATED_DOCS in scripts/doc_sync_tier2.py no longer contains docs/ROADMAP.md
 
 ## M7 — apply_tier2_sync() integration: confirmed blocked, not resolved
 
