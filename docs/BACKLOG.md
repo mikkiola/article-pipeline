@@ -1714,3 +1714,67 @@ filing — no existing entry.
 
 **Source.** Dry-run test of M2/M5's trigger against 2026-08-24's real
 session, 2026-08-25, per explicit owner task.
+
+### [B-044] P2 — `/session-end`: explicit owner-triggered doc-sync command, supplementing M2/M5's autonomous trigger
+
+Added: 2026-08-25, directly motivated by `[B-043]`'s finding: M2/M5's
+autonomous-judgment plan-completion trigger cannot fire without a
+`docs/CONSTITUTION.md`-required "opening stated plan," which a session
+made of many independently-scoped tasks — this project's actual
+observed pattern, confirmed against 2026-08-24's real session — never
+produces. The owner found the "agent guesses session is over and acts"
+model impractical in practice: 2026-08-24's real doc-sync work (closing
+`[B-035]`/`[B-036]`/`[B-037]`/`[B-039]`) was driven by explicit
+architect-chat prompts throughout, not autonomous agent judgment.
+
+**Added, not a replacement:** `SPEC.md`'s M2/M5 section is unchanged
+and not superseded — this is an additional, simpler trigger path. The
+owner explicitly signals session-end by typing `/session-end`; the
+command then runs the already-designed M1/M3 mechanism
+deterministically, on that explicit trigger, not on inferred judgment.
+
+**What's built (`~/.claude/skills/session-end/SKILL.md`):**
+- `docs/BACKLOG.md` closure (M1/M3), fully wired: scans this session's
+  own commits for `Closes: B-NNN` trailers, looks up each entry's
+  title verbatim, and either writes the closure directly (exactly one
+  candidate — invoking `/session-end` is itself the "close now"
+  signal) or presents M3's exact candidate-list template and waits for
+  the owner's pick (multiple candidates). Never touches
+  `docs/CONSTITUTION.md`.
+- Registered `user-invocable: true`, `disable-model-invocation: true`
+  — same pattern as `/spec` — so it can only ever be invoked by the
+  owner explicitly typing `/session-end`, never by Claude Code's own
+  judgment.
+
+**What's NOT built yet — structural fact-sync (M6), a real gap found
+while implementing this, not invented:** M6's design ties
+`docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/`README.md` direct-writes to
+a distinct commit trailer, explicitly left "exact key TBD" in
+`SPEC.md`'s own "Mechanism design" section — never decided, never used
+in any actual commit in this repo's history. Without that trailer,
+`/session-end` has no mechanism-specified way to detect which
+structural facts changed this session; building an alternative
+git-diff-based detection method would be new logic beyond a thin
+wrapper, so it wasn't invented here — flagged instead. The skill file
+itself documents exactly what to wire in once the trailer key is
+decided (read tagged commits, assemble `proposed` content, call
+`apply_tier2_sync()` directly, `interactive=False`).
+
+- [ ] Needs the M6 trailer-key decision (e.g. `Syncs: ARCHITECTURE.md`
+      or similar — this is also M7's own still-open "trivial half," so
+      resolving it here would close both) before `/session-end`'s
+      structural-fact-sync half can be built. Not decided here.
+
+**Proactive-suggestion behavior — separate, smaller addition:**
+`docs/CONSTITUTION.md`'s "Session protocol" section now includes a
+"Long-session `/session-end` suggestion" paragraph: Claude Code may
+mention, once, briefly, that a long session might be worth syncing via
+`/session-end` — a qualitative judgment call (many commits, several
+closed items, multiple unrelated topics), never a hard threshold
+(explicitly not token counting or duration estimation), and never more
+than once per session unless raised again. Suggesting is the entire
+scope — Claude Code never runs `/session-end` itself without the
+owner's explicit go-ahead.
+
+**Source.** Owner task, 2026-08-25, directly citing `[B-043]`'s
+dry-run finding as the concrete motivation.

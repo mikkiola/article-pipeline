@@ -45,6 +45,20 @@ was made," and any conflict that isn't resolved by that priority is
 itself a stop-and-ask case (see below) — don't guess which one is
 stale.
 
+**Long-session `/session-end` suggestion.** When a session shows rough
+signs of covering a lot of ground — many commits made (5+), several
+distinct `docs/BACKLOG.md` items closed, or the conversation has
+spanned multiple unrelated topics/tasks — Claude Code may mention,
+once, briefly: something like "This session has covered a lot of
+ground — want me to run `/session-end` to check what's ready to
+sync?" A qualitative judgment call, not a deterministic threshold — no
+token counting, no duration estimation — matching this project's
+existing "judgment, not deterministic matching" stance (`SPEC.md`'s
+M2/M5). Never more than once per session unless the owner explicitly
+raises it again, and Claude Code never runs `/session-end` itself
+without the owner's explicit go-ahead — suggesting is the entire scope
+of this behavior.
+
 ## Keeping documents current
 
 `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/BACKLOG.md`
