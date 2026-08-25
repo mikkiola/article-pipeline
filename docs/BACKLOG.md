@@ -1715,7 +1715,7 @@ filing — no existing entry.
 **Source.** Dry-run test of M2/M5's trigger against 2026-08-24's real
 session, 2026-08-25, per explicit owner task.
 
-### [B-044] P2 — `/session-end`: explicit owner-triggered doc-sync command, supplementing M2/M5's autonomous trigger
+### [B-044] P2 — `/session-end`: explicit owner-triggered doc-sync command, supplementing M2/M5's autonomous trigger — RESOLVED
 
 Added: 2026-08-25, directly motivated by `[B-043]`'s finding: M2/M5's
 autonomous-judgment plan-completion trigger cannot fire without a
@@ -1746,24 +1746,33 @@ deterministically, on that explicit trigger, not on inferred judgment.
   owner explicitly typing `/session-end`, never by Claude Code's own
   judgment.
 
-**What's NOT built yet — structural fact-sync (M6), a real gap found
-while implementing this, not invented:** M6's design ties
-`docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/`README.md` direct-writes to
-a distinct commit trailer, explicitly left "exact key TBD" in
-`SPEC.md`'s own "Mechanism design" section — never decided, never used
-in any actual commit in this repo's history. Without that trailer,
-`/session-end` has no mechanism-specified way to detect which
-structural facts changed this session; building an alternative
-git-diff-based detection method would be new logic beyond a thin
-wrapper, so it wasn't invented here — flagged instead. The skill file
-itself documents exactly what to wire in once the trailer key is
-decided (read tagged commits, assemble `proposed` content, call
-`apply_tier2_sync()` directly, `interactive=False`).
+**Structural fact-sync (M6) — resolved 2026-08-25, now fully wired.**
+M6's design ties `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/`README.md`
+direct-writes to a distinct commit trailer, which was explicitly left
+"exact key TBD" in `SPEC.md`'s own "Mechanism design" section — never
+decided, never used in any actual commit in this repo's history, until
+`/session-end`'s own build gave it a concrete trigger. **Decided:
+`Syncs: <path>`, one line per file** — sourced from git's own
+`git-interpret-trailers` documentation on repeated trailers of the
+same key, plus this repo's existing `Closes: B-NNN` one-per-line
+precedent, not invented from scratch. Full decision and worked example
+now in `SPEC.md`'s "Mechanism design —
+`docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/`README.md`" section; this
+also resolves M7's own still-open "trivial half" (see `SPEC.md`'s M7
+section).
 
-- [ ] Needs the M6 trailer-key decision (e.g. `Syncs: ARCHITECTURE.md`
-      or similar — this is also M7's own still-open "trivial half," so
-      resolving it here would close both) before `/session-end`'s
-      structural-fact-sync half can be built. Not decided here.
+`~/.claude/skills/session-end/SKILL.md` extended to scan this
+session's commits for `Syncs:` trailers, deduplicate paths, and call
+`apply_tier2_sync()` (`scripts/doc_sync_tier2.py`) directly with
+`interactive=False` for each — reusing that function unmodified, per
+ADR-0034's "content supplied by whoever authored it, not regenerated"
+pattern. Zero `Syncs:` trailers this session is handled the same way
+as zero `Closes:` trailers (stated plainly, not an error). Never
+touches `docs/CONSTITUTION.md`/`docs/BACKLOG.md` in this half — those
+stay in the already-wired `Closes:`/M1 half, kept separate.
+
+- [x] Needed the M6 trailer-key decision before `/session-end`'s
+      structural-fact-sync half could be built. **Done, 2026-08-25.**
 
 **Proactive-suggestion behavior — separate, smaller addition:**
 `docs/CONSTITUTION.md`'s "Session protocol" section now includes a
