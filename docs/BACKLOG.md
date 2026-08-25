@@ -1659,3 +1659,58 @@ ToolTempest-side session.
 
 **Source.** Fact-check pass, 2026-08-24, immediately before the
 `[B-037]` split.
+
+### [B-043] P2 — SPEC.md's M2/M5 plan-completion trigger can't fire without an "opening stated plan," which a multi-task session never produces
+
+Found: 2026-08-25, a real dry-run test of SPEC.md's M2/M5 trigger
+against 2026-08-24's actual session (9 commits, 4 `Closes:` trailers —
+`B-035`, `B-036`, `B-037`, `B-039` — all genuinely closed that day).
+M2/M5's own text (`SPEC.md`'s "What gets compared" paragraph) defines
+the trigger as comparing "Claude Code's own understanding of the
+session's opening stated plan (per `docs/CONSTITUTION.md`'s Session
+protocol) against the human-readable titles of the `docs/BACKLOG.md`
+entries covered by trailers accumulated so far this session." This
+requires an actual stated-plan output on one side of the comparison.
+
+`docs/CONSTITUTION.md`'s Session protocol (lines 30–34) requires: read
+the four canonical docs, "Then state the session's plan before
+starting work." **2026-08-24's actual session never produced that
+statement** — every visible message in it was an independently-scoped
+"TASK:"/"SCOPE:" instruction from the owner, executed as given, with
+no single overarching plan ever stated by Claude Code at any point.
+(Caveat, honestly noted: this can't be verified with certainty for
+whatever happened before this conversation's earliest visible message,
+since long sessions get summarized — but nothing visible shows a
+stated-plan moment, and the session's actual shape, many small
+separately-scoped tasks touching unrelated `[B-NNN]` items in
+sequence, is not the single-continuous-plan shape M2/M5 appears to
+assume.)
+
+**Result: the trigger cannot fire as literally defined** — not because
+the accumulated trailers or `docs/BACKLOG.md` titles fail to qualify,
+but because there is no "opening stated plan" to compare them against
+in the first place. The half of the mechanism that *does* have
+evidence — trailer accumulation + `docs/BACKLOG.md` title lookup —
+works correctly on its own: 2026-08-24's 4 trailers do map exactly
+onto the 4 entries a human closed by hand that day. The gap is
+specifically in M2/M5's assumption that a "session" is one continuous
+unit with one upfront stated plan, which doesn't match this project's
+actual observed usage pattern of many independently-scoped tasks per
+session.
+
+Not already tracked: checked `SPEC.md`'s "Open questions / residual"
+section and searched `docs/BACKLOG.md` for related terms before
+filing — no existing entry.
+
+- [ ] Not fixed here — a real gap in M2/M5's own definition, not a
+      redesign to attempt inline. Needs its own decision: does the
+      mechanism need a fallback trigger condition for sessions with no
+      stated plan (e.g., treat trailer accumulation alone, without a
+      plan comparison, as sufficient grounds to ask), or does
+      `docs/CONSTITUTION.md`'s Session protocol itself need
+      strengthening so a stated plan is reliably produced, or is a
+      multi-task, no-single-plan session simply out of this
+      mechanism's intended scope entirely? Not decided here.
+
+**Source.** Dry-run test of M2/M5's trigger against 2026-08-24's real
+session, 2026-08-25, per explicit owner task.
