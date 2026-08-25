@@ -1623,11 +1623,19 @@ independence check (originally `[B-037]`); cross-referenced with
 **Pre-`/spec` fact prep:** see `docs/spec-prep/B-040-B-041-facts.md`
 (2026-08-24) — internal fact inventory, external research synthesis,
 and `finding-unknowns`/`phrase-decomposer` sensor output.
-**`phrase-decomposer` returned 1 BLOCKING finding**, not yet resolved:
-whether "format/structural requirement" means narrowly (document-
-content conventions) or broadly (any prescriptive CONSTITUTION.md
-statement) — must be answered before a `/spec` interview on this entry
-can proceed, per pre-spec's own merge rule.
+`phrase-decomposer`'s 1 BLOCKING finding (whether "format/structural
+requirement" means narrowly — document-content conventions only — or
+broadly — any prescriptive CONSTITUTION.md statement) is **resolved,
+2026-08-25: narrow.** Enforcement covers only what a script can
+mechanically verify (document format — headings, IDs, citation
+patterns, field presence); judgment-based/behavioral rules are
+explicitly out of scope for this principle, per the project's existing
+token/cost-consciousness principle (owner's decision — see
+`docs/spec-prep/B-040-B-041-facts.md`'s "Open decisions" section for
+the full rationale, quoted verbatim). This unblocks `/spec` for
+[B-041], per pre-spec's own merge rule — the actual new
+`docs/CONSTITUTION.md` principle text is still `/spec`'s job, not
+written here.
 
 ### [B-042] P3 — docs/ARCHITECTURE.md has no row for the session-end doc-sync auto-close mechanism (SPEC.md)
 

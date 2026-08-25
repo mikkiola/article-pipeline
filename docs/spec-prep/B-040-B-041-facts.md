@@ -282,10 +282,9 @@ Finding
   нет. Можно в /spec." (2 WARNING findings pass through as `/spec`
   context.)
 - **[B-041]:** 1 BLOCKING (from `phrase-decomposer`) → per pre-spec's
-  merge rule, this must be closed before a `/spec` interview on
-  [B-041] can proceed: **is "format/structural requirement" meant
-  narrowly (document-content conventions only) or broadly (any
-  prescriptive CONSTITUTION.md statement)?**
+  merge rule, this had to be closed before a `/spec` interview on
+  [B-041] could proceed. **Resolved 2026-08-25 — see "Open decisions"
+  below.** [B-041] is now clear for `/spec`.
 
 ## Open decisions
 
@@ -300,17 +299,35 @@ Recorded neutrally — no proposed answers.
    2 of 3 passes keep it as prose; 1 of 3 recommends removing it.)
 
 **[B-041]:**
-1. **Blocking, per phrase-decomposer:** does "format/structural
-   requirement" mean narrowly (document-content conventions, the same
-   category as the existing ADR-citation precedent) or broadly (any
-   prescriptive CONSTITUTION.md statement, including behavioral/
-   process rules)?
-2. If broad: how should the 4+ judgment-based, currently-unenforceable
-   rules found in today's inventory (TDD threshold, "verify no
-   existing coverage," search-before-diff, sensitive-ops environment)
-   be classified — exempted, redefined to be checkable, or left
-   partially uncovered? (External research offers two contrasting
-   answers: a convergent tiered-enforcement model from 2 of 3 passes,
-   vs. Pass 1's dissenting "delete unenforceable rules" position.)
+1. **RESOLVED, 2026-08-25.** Was blocking, per `phrase-decomposer`:
+   does "format/structural requirement" mean narrowly (document-content
+   conventions, the same category as the existing ADR-citation
+   precedent) or broadly (any prescriptive CONSTITUTION.md statement,
+   including behavioral/process rules)? **Owner's decision: narrow.**
+   In the owner's own words: *"у нас есть правило токенов и затрат,
+   логично что проверяем только то что легко проверяется...
+   автоматизация автоматизирует только то что можно автоматизировать"*
+   — enforcement covers only what a script can cheaply and mechanically
+   verify (document format: headings, IDs, citation patterns, field
+   presence), per this project's existing token/cost-consciousness
+   principle. Not a judgment that behavioral/process rules are
+   unimportant — a judgment that they cannot be verified by a script
+   in principle, and attempting to would waste effort on an
+   unachievable goal. This unblocks `/spec` for [B-041], per pre-spec's
+   own merge rule — does not itself write the new CONSTITUTION.md
+   principle's text, which remains `/spec`'s job.
+2. **RESOLVED, 2026-08-25 — same decision as (1).** Was: if broad, how
+   should the 4+ judgment-based, currently-unenforceable rules found in
+   today's inventory (TDD threshold, "verify no existing coverage,"
+   search-before-diff, sensitive-ops environment) be classified? Now
+   moot — the narrow-scope decision above means these rules are
+   explicitly **not candidates for mechanical enforcement at all**, not
+   merely unresolved. (External research's two contrasting answers — a
+   convergent tiered-enforcement model from 2 of 3 passes, vs. Pass 1's
+   dissenting "delete unenforceable rules" position — are both
+   answers to the broad-reading branch this decision didn't take;
+   recorded above for reference, not applicable to the narrow reading
+   chosen.)
 3. Does `check_manifest.py`'s named-but-unwired status matter to this
    decision, or is it out of scope as a ToolTempest-owned script?
+   **Still open** — not resolved by the scope decision above.
