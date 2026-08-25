@@ -1587,6 +1587,11 @@ independence check (originally `[B-037]`). Split out 2026-08-24,
 during the ROADMAP.md Phase 3 contradiction fix that gave this entry
 a concrete live example.
 
+**Pre-`/spec` fact prep:** see `docs/spec-prep/B-040-B-041-facts.md`
+(2026-08-24) — internal fact inventory, external research synthesis,
+and `finding-unknowns`/`phrase-decomposer` sensor output. No BLOCKING
+findings; ready for `/spec` interview.
+
 ### [B-041] P2 — "Mechanical Verification Rule" principle needed in docs/CONSTITUTION.md
 
 Found: 2026-08-22, Metadata/ID Layer `/spec` interview's closing
@@ -1614,6 +1619,15 @@ mechanism, not a general principle — and zero hits for "prose rule,"
 independence check (originally `[B-037]`); cross-referenced with
 `[B-036]`'s own note on the same gap. Split out and re-confirmed open,
 2026-08-24.
+
+**Pre-`/spec` fact prep:** see `docs/spec-prep/B-040-B-041-facts.md`
+(2026-08-24) — internal fact inventory, external research synthesis,
+and `finding-unknowns`/`phrase-decomposer` sensor output.
+**`phrase-decomposer` returned 1 BLOCKING finding**, not yet resolved:
+whether "format/structural requirement" means narrowly (document-
+content conventions) or broadly (any prescriptive CONSTITUTION.md
+statement) — must be answered before a `/spec` interview on this entry
+can proceed, per pre-spec's own merge rule.
 
 ### [B-042] P3 — docs/ARCHITECTURE.md has no row for the session-end doc-sync auto-close mechanism (SPEC.md)
 
