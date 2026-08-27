@@ -1787,3 +1787,108 @@ owner's explicit go-ahead.
 
 **Source.** Owner task, 2026-08-25, directly citing `[B-043]`'s
 dry-run finding as the concrete motivation.
+
+### [B-045] P1 — Monetization MVP: reader-facing CTA + metrics collection
+
+Added: 2026-08-27, owner task.
+
+Platform Adapter must support two independent, optional CTA slots per
+published article — "hire me" (links to the owner's professional
+profile) and "consult me" (links to a booking/contact page) —
+configurable per platform, not merged into one link.
+
+Experiment Log's originally-planned scope (Phase 5+) is reprioritized
+earlier: it must record per-article reader metrics (views, engagement,
+CTA click-through) keyed by `claim_id`, sourced from each platform's
+own analytics. Manual entry is acceptable for MVP; no new platform API
+integration is implied.
+
+Both halves are deliberately minimal: no new content type, no new
+hosting channel, no payment processing in this item's scope.
+
+**Depends on:** Platform Adapter and Experiment Log both being
+designed (currently Not started per `docs/ARCHITECTURE.md`). This item
+defines their monetization-related requirements — it does not itself
+start their implementation.
+
+**Source.** Owner task, 2026-08-27.
+
+### [B-046] P2 — Monetization hypotheses — deferred (owner decision needed before any implementation)
+
+Added: 2026-08-27, owner task, filed alongside `[B-045]`.
+
+Deferred hypotheses, none to be implemented before `[B-045]` is built
+and produces real usage data:
+
+- Paywall on extended article content — requires a third-party hosting
+  channel neither Habr nor LinkedIn provide natively.
+- Claim-derived downloadable artifact as a paid product — requires a
+  new Author output type.
+- Topic-matched sponsorship — requires an existing audience and an
+  ad-matching mechanism; risks conflicting with the not-yet-designed
+  Content Constitution.
+- Paid formal/methodological breakdown of a claim — a Toulmin/
+  causal-diagram version of an article, sold separately.
+- Risk-sharing consulting pricing — pay only if outcome is achieved.
+- Early access to unpublished claims for subscribers.
+- Automatic notification when a claim's evidence status flips from
+  hypothesis to fact — uses the existing tag field in Claim's schema.
+- Pipeline-as-a-service API for external users.
+- Claim-evidence dataset licensing for ML/research use.
+- Affiliate link injection for claims that reference a named
+  tool/service.
+- Content syndication revenue-share.
+- White-label pipeline licensing.
+
+Each requires either an audience, a trust/reputation baseline, or a
+new hosting channel that doesn't exist yet as of this entry's creation
+date.
+
+**Source.** Owner task, 2026-08-27, filed alongside `[B-045]`.
+
+### [B-047] P2 — Loop Engineering — deferred, own future `/spec`
+
+Added: 2026-08-27, owner task.
+
+Anthropic's loop-engineering pattern (turn-based/goal-based/
+time-based/proactive loops) was evaluated for Evidence Package's
+search-retry behavior and Quality Gate's repair behavior. **Decision:
+not adopted now.**
+
+Reasoning: a retry/reformulation loop on Evidence Package's search
+step is premature — ADR-0029/ADR-0031 already show one enrichment
+attempt (Context Layer) did not systematically resolve the 5/5-
+unverifiable pilot result, suggesting some claims may have no external
+evidence equivalent at all rather than needing better search queries.
+A retry loop risks repeating a doomed search at extra token cost
+rather than fixing the actual gap.
+
+Quality Gate as a repair loop is plausible in principle, but Quality
+Gate has zero implementation today — loop/retry design should follow,
+not precede, a working linear version.
+
+Radar and Brain loop applications were not evaluated — their code has
+not been read by this project as of this entry.
+
+**Revisit only after:** Quality Gate has a working linear version with
+real repair-attempt data, and Radar/Brain's actual code has been read
+in a dedicated session.
+
+**Source.** Owner task, 2026-08-27.
+
+### [B-048] P3 — docs/ARCHITECTURE.md's `.tooltempest.lock` reference is stale
+
+Found: 2026-08-25, during a routine state check.
+`docs/ARCHITECTURE.md` lines 21–22 state the lock is pinned at
+`5fb62a9`, but `.tooltempest.lock`'s actual current content pins
+`622e326e9d434aba96d95ae36b799bb1928caabb`. Commit `db42b43`
+("chore(tooling): repin .tooltempest.lock to 622e326...") already
+repinned it before this finding — `docs/ARCHITECTURE.md`'s Commit
+column was never updated to match.
+
+Not fixed in this entry. Fixing requires confirming `622e326` is
+indeed the intended current pin (not a leftover from an abandoned
+repin) before editing `docs/ARCHITECTURE.md`, which is out of this
+entry's scope.
+
+**Source.** Routine state check, 2026-08-25.

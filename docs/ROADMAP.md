@@ -27,6 +27,14 @@ longer blocked on this question. The atom-tag-disambiguation P1 item
 — see `docs/BACKLOG.md`. Next work can pull from P1 items or begin
 Phase 3 planning.
 
+Phase 3 scope now explicitly includes monetization-related
+requirements for Platform Adapter and Experiment Log (see
+`docs/BACKLOG.md`'s `[B-045]`/`[B-046]`). A Multi-Source Claim Layer
+expansion (Brain + Radar + ODS + repos as claim sources) is under
+architectural discussion but not yet started — Radar and Brain are
+mid-migration to GitHub as of this entry, and that work is explicitly
+paused pending migration completion.
+
 ## Dependency chain
 
 ```
