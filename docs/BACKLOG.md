@@ -1892,3 +1892,23 @@ repin) before editing `docs/ARCHITECTURE.md`, which is out of this
 entry's scope.
 
 **Source.** Routine state check, 2026-08-25.
+
+### [B-049] P3 — article-pipeline is behind ToolTempest's latest commit
+
+Found: 2026-08-27, during commit `f9d51d0`'s push. The pre-push hook
+warned: "article-pipeline is behind ToolTempest. Pinned: 622e326,
+latest: a59d9aa."
+
+This is a separate, further-along drift than `[B-048]`'s finding —
+`[B-048]` is about `docs/ARCHITECTURE.md`'s stale documentation of the
+pin (`5fb62a9` vs. actual `622e326`); this entry is about the actual
+pin (`622e326`) itself now being behind ToolTempest's current HEAD
+(`a59d9aa`).
+
+Not fixed in this entry. Repinning requires reviewing what changed in
+ToolTempest between `622e326` and `a59d9aa` first, per this project's
+ToolTempest consumer obligation: check `MANIFEST.txt` completeness,
+run `scripts/sync-tooling.sh` deliberately, not as an automatic side
+effect. Out of this entry's scope.
+
+**Source.** Pre-push hook warning, commit `f9d51d0`, 2026-08-27.
