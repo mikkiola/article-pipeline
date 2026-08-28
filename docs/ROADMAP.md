@@ -19,29 +19,24 @@ see `docs/adr/`.
 
 ## Current pointer
 
-Phase 2.5's causal question is resolved, partially confirmed — the
-P0 item that tracked it is done and removed from
-`docs/BACKLOG.md`'s P0 section, which is now empty. Phase 3 is no
-longer blocked on this question. The atom-tag-disambiguation P1 item
-(found via the same experiment) is a targeted, non-blocking follow-up
-— see `docs/BACKLOG.md`. Next work can pull from P1 items or begin
-Phase 3 planning.
+- Phase 2.5's causal question is resolved, partially confirmed (see
+  Status table above) — Phase 3 is no longer blocked on it. The
+  atom-tag-disambiguation P1 item found via the same experiment is a
+  targeted, non-blocking follow-up — see `docs/BACKLOG.md`.
+- Phase 3 scope explicitly includes monetization-related requirements
+  for Platform Adapter and Experiment Log — see `docs/BACKLOG.md`'s
+  `[B-045]`/`[B-046]`.
+- A Multi-Source Claim Layer expansion (Brain + Radar + ODS + repos as
+  claim sources) is under architectural discussion, not started —
+  paused pending Radar's and Brain's in-progress migration to GitHub.
+- Extensive monetization-loop modeling, for both the owner's own
+  pipeline and a separate sellable client-template product, was
+  completed 2026-08-27/28 — full record in `docs/BACKLOG.md`'s
+  `[B-045]`/`[B-046]`/`[B-050]`/`[B-051]`/`[B-052]`. The session
+  concluded with an explicit decision to stop further monetization
+  analysis and resume Phase 3.
 
-Phase 3 scope now explicitly includes monetization-related
-requirements for Platform Adapter and Experiment Log (see
-`docs/BACKLOG.md`'s `[B-045]`/`[B-046]`). A Multi-Source Claim Layer
-expansion (Brain + Radar + ODS + repos as claim sources) is under
-architectural discussion but not yet started — Radar and Brain are
-mid-migration to GitHub as of this entry, and that work is explicitly
-paused pending migration completion.
-
-Extensive monetization-loop modeling for both the owner's own pipeline
-and a separate sellable client-template product was completed
-2026-08-27/28 (see `docs/BACKLOG.md`'s `[B-045]`/`[B-046]`/`[B-050]`/
-`[B-051]`) — full raw analysis lives in an external working document,
-not committed to this repo. The session concluded with an explicit
-decision to stop further monetization analysis and resume Phase 3
-(Strategy Layer `/spec`) as the next session's primary work.
+Next work can pull from P1 items or begin Phase 3 planning.
 
 ## Dependency chain
 

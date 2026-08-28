@@ -1544,7 +1544,7 @@ instruction to file this gap separately, after checking for and finding
 no existing duplicate entry, rather than fix it as part of that entry).
 Resolved 2026-08-24, 4-AI unanimous cross-check on root cause and fix.
 
-### [B-040] P3 — Convert docs/ARCHITECTURE.md/docs/ROADMAP.md to table-only format (remove all prose)
+### [B-040] P3 — Convert docs/ARCHITECTURE.md/docs/ROADMAP.md to table-only format (remove all prose) — RESOLVED
 
 Found: 2026-08-22, Metadata/ID Layer `/spec` interview's closing
 independence check, originally tracked under `[B-037]` (an entry
@@ -1575,24 +1575,42 @@ a cell). `docs/ROADMAP.md`'s "Current pointer" section and dependency-
 chain diagram are prose/ASCII-art, not tables, by design as written
 today.
 
-- [ ] Needs its own `/spec` interview if the owner wants to pursue it —
-      a significant, separate architectural change, not a sub-step of
-      anything already built. Do NOT bundle with `[B-036]`/`[B-039]` —
-      different scope, different risk profile (this touches the actual
-      shape of `docs/ARCHITECTURE.md`/`docs/ROADMAP.md`'s content, not
-      spec-file format or component-discovery logic).
+- [x] Needs its own `/spec` interview if the owner wants to pursue it —
+      **superseded.** Resolved directly, 2026-08-28, without an
+      interview: `mikkiola/tooltempest`'s
+      `docs/reference/documentation-rules.md` (added 2026-08-26,
+      refined by its own ADR-0009, 2026-08-28) already settled this
+      question ecosystem-wide, cross-checked externally (3 independent
+      AI research passes plus Google's technical-writing guidance and
+      Open Knowledge Format) — "remove ALL prose" is not supported
+      practice; the resolved design is table/frontmatter for facts,
+      brief prose reserved for advisory/causal content a table can't
+      losslessly represent. This project's own `docs/ROADMAP.md` was
+      brought into compliance the same session: the "Dependency chain"
+      section (already a table as of commit `5969106`, this session,
+      per the Bible's ADR-0009) and the "Current pointer" section
+      (restructured into discrete state-fact bullets, with exactly one
+      closing advisory sentence kept as prose, per the Bible's explicit
+      "do not force an advisory sentence into a table cell" rule).
+      `docs/ARCHITECTURE.md` was checked, not edited — already
+      compliant with its own "every fact is a table cell" principle (a
+      5-line preamble is the Bible's one permitted prose exception,
+      already satisfied).
+
+Original framing note: this entry's own title ("remove all prose") was
+the pre-research framing carried over from the lost "Neutron Star
+Protocol" draft (see `[B-037]`'s resolution note) — not what was
+actually implemented. What shipped is the Bible's own, more nuanced
+resolution, not a literal all-prose removal.
 
 **Source.** Metadata/ID Layer `/spec` interview, 2026-08-22, closing
 independence check (originally `[B-037]`). Split out 2026-08-24,
 during the ROADMAP.md Phase 3 contradiction fix that gave this entry
-a concrete live example.
+a concrete live example. Resolved 2026-08-28, directly, per
+`mikkiola/tooltempest`'s `docs/reference/documentation-rules.md` and
+its ADR-0009.
 
-**Pre-`/spec` fact prep:** see `docs/spec-prep/B-040-B-041-facts.md`
-(2026-08-24) — internal fact inventory, external research synthesis,
-and `finding-unknowns`/`phrase-decomposer` sensor output. No BLOCKING
-findings; ready for `/spec` interview.
-
-### [B-041] P2 — "Mechanical Verification Rule" principle needed in docs/CONSTITUTION.md
+### [B-041] P2 — "Mechanical Verification Rule" principle needed in docs/CONSTITUTION.md — RESOLVED
 
 Found: 2026-08-22, Metadata/ID Layer `/spec` interview's closing
 independence check, originally tracked under `[B-037]` (see that
@@ -1611,31 +1629,41 @@ about the ADR-citation pre-push check, a single already-implemented
 mechanism, not a general principle — and zero hits for "prose rule,"
 "format rule," or "structural rule." No existing section covers this.
 
-- [ ] Needs its own `/spec` interview if the owner wants to pursue it —
-      do not fold into `[B-036]` or any other spec; this is a
-      `docs/CONSTITUTION.md`-level principle, not a single mechanism.
+- [x] Needs its own `/spec` interview if the owner wants to pursue it —
+      **superseded.** The scope question was already fully resolved
+      (owner's narrow-scope decision, 2026-08-25 — see below); with no
+      remaining fork to interview for, this closed directly, 2026-08-28,
+      without a `/spec` session. `docs/CONSTITUTION.md` gained a new
+      "Mechanical verification scope" section stating the narrow
+      principle in full, plus `docs/adr/0041-mechanical-verification-
+      scope.md` recording it as an architectural decision (this
+      project's own ADR sequence, not ToolTempest's) — Claude Code
+      judged this met the "sufficient basis to choose one outcome over
+      genuine alternatives" bar `docs/CONSTITUTION.md`'s own ADR
+      -discipline section sets for autonomous ADR authorship, since the
+      narrow-vs-broad alternatives and the owner's rationale were
+      already fully articulated and only needed formalizing, not fresh
+      elicitation.
 
 **Source.** Metadata/ID Layer `/spec` interview, 2026-08-22, closing
 independence check (originally `[B-037]`); cross-referenced with
 `[B-036]`'s own note on the same gap. Split out and re-confirmed open,
-2026-08-24.
-
-**Pre-`/spec` fact prep:** see `docs/spec-prep/B-040-B-041-facts.md`
-(2026-08-24) — internal fact inventory, external research synthesis,
-and `finding-unknowns`/`phrase-decomposer` sensor output.
-`phrase-decomposer`'s 1 BLOCKING finding (whether "format/structural
-requirement" means narrowly — document-content conventions only — or
-broadly — any prescriptive CONSTITUTION.md statement) is **resolved,
-2026-08-25: narrow.** Enforcement covers only what a script can
-mechanically verify (document format — headings, IDs, citation
-patterns, field presence); judgment-based/behavioral rules are
-explicitly out of scope for this principle, per the project's existing
-token/cost-consciousness principle (owner's decision — see
-`docs/spec-prep/B-040-B-041-facts.md`'s "Open decisions" section for
-the full rationale, quoted verbatim). This unblocks `/spec` for
-[B-041], per pre-spec's own merge rule — the actual new
-`docs/CONSTITUTION.md` principle text is still `/spec`'s job, not
-written here.
+2026-08-24. `phrase-decomposer`'s 1 BLOCKING finding (whether "format/
+structural requirement" means narrowly — document-content conventions
+only — or broadly — any prescriptive CONSTITUTION.md statement) was
+resolved by the owner, 2026-08-25: **narrow.** Enforcement covers only
+what a script can mechanically verify (document format — headings,
+IDs, citation patterns, field presence); judgment-based/behavioral
+rules are explicitly out of scope for this principle, per the
+project's existing token/cost-consciousness principle. Formalized
+2026-08-28 into `docs/CONSTITUTION.md`'s new section and
+`docs/adr/0041-mechanical-verification-scope.md` — the fact inventory
+and owner-quote this decision was based on originally lived in
+`docs/spec-prep/B-040-B-041-facts.md` (2026-08-24), now deleted per
+this same closing task; its content is fully carried forward into
+ADR-0041's Context/Alternatives sections and recoverable via
+`git log --follow -- docs/spec-prep/B-040-B-041-facts.md` if ever
+needed.
 
 ### [B-042] P3 — docs/ARCHITECTURE.md has no row for the session-end doc-sync auto-close mechanism (SPEC.md)
 
