@@ -345,6 +345,43 @@ matched the wrong pattern (a bare backtick-wrapped number, not the
 this session; the check's pattern and scope are fixed too — see
 `scripts/check-adr-citation.sh`.
 
+## Mechanical verification scope
+
+**What "mechanically enforceable" means in this project.** A rule is a
+candidate for a script-backed check (in `scripts/verify.py`,
+`scripts/check-adr-citation.sh`, or an equivalent) only when it is a
+document-format convention a script can cheaply and deterministically
+verify — headings, stable IDs, citation patterns, required-field
+presence. The existing ADR-citation check is the concrete precedent
+this principle generalizes from, not a one-off exception standing on
+its own.
+
+**What is explicitly out of scope for mechanical enforcement, and
+why.** Judgment-based, behavioral, or process rules — the TDD
+threshold ("required whenever the task's own risk profile justifies
+it"), the "verify no existing component covers this responsibility"
+search obligation, the codebase-wide-search-before-certain-diffs rule,
+the sensitive-ops execution-environment rule — are not candidates for
+a script check, in principle, not merely unenforced today for lack of
+tooling. Attempting to mechanically verify a judgment call would
+misrepresent a human/agent decision as a deterministic fact, the same
+failure mode `docs/ROADMAP.md`'s Current-pointer rule already rejects
+for advisory prose forced into a table cell.
+
+**Why narrow, not broad.** This project already has an established
+token/cost-consciousness principle: automate only what can actually be
+automated cheaply, rather than attempting exhaustive enforcement of
+everything prescriptive this file states. A broad reading (attempt to
+mechanically enforce any prescriptive statement in this file) would
+require inventing a tiered enforcement taxonomy for a fundamentally
+heterogeneous rule set, for marginal benefit over the case-by-case
+judgment already being applied.
+
+**Source.** Owner decision, 2026-08-25, resolving a `phrase-decomposer`
+BLOCKING finding on what "format/structural requirement" means — see
+`docs/BACKLOG.md`'s `[B-041]` for the full resolution record and cited
+owner rationale.
+
 ## Claude Code task discipline
 
 Every task given to Claude Code states: what's in scope (specific

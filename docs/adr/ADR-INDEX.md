@@ -48,3 +48,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0038](0038-local-fs-path-detection-gate.md) | Automated Detection Gate for Local Filesystem Path Leaks | Accepted | null | null |
 | [ADR-0039](0039-branch-protection-admin-bypass.md) | Branch Protection on `main` — Admin Bypass Enabled, Permanently | Accepted | null | null |
 | [ADR-0040](0040-adr-status-supersession-fields-move-to-frontmatter.md) | ADR Status/Supersession Fields Move to Frontmatter | Accepted | ADR-0036 | null |
+| [ADR-0041](0041-mechanical-verification-scope.md) | Mechanical Verification Scope — Document-Format Conventions Only | Accepted | null | null |
