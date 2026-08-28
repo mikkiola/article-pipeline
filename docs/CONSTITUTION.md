@@ -33,8 +33,8 @@ At the start of a session, read, in order: `docs/CONSTITUTION.md`
 (this file), `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
 `docs/BACKLOG.md`. Then state the session's plan before starting work.
 
-`docs/ROADMAP.md`'s "Next session" section lists tasks in priority
-order — the first one listed is the day's target unless it states
+`docs/ROADMAP.md`'s current-pointer section states what to work on
+next, in priority order — that's the day's target unless it states
 otherwise. End the session when that target is reached, or when
 blocked on a decision only the owner can make.
 
