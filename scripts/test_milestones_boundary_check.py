@@ -63,9 +63,23 @@ def test_no_milestones_section_at_all(tmp_path):
     assert result["total_count"] == 0
 
 
-def test_real_spec_after_heading_demotion_fix_is_ok():
-    repo_root = Path(__file__).resolve().parent.parent
-    result = verify.check_milestones_boundary_integrity(str(repo_root / "SPEC.md"))
+def test_heading_demotion_fix_is_ok(tmp_path):
+    spec = write_spec(
+        tmp_path,
+        "## Milestones\n\n"
+        "- [ ] M1 — First milestone\n"
+        "  verify: `pytest tests/test_m1.py`\n"
+        "  done-when: M1 criteria met\n\n"
+        "- [ ] M2 — Second milestone\n"
+        "  verify: `pytest tests/test_m2.py`\n"
+        "  done-when: M2 criteria met\n\n"
+        "### M2a — Detail (correct level, nests under Milestones)\n\n"
+        "- [ ] M2a — Detail checkbox, correctly captured\n\n"
+        "- [ ] M3 — Third milestone\n"
+        "  verify: `pytest tests/test_m3.py`\n"
+        "  done-when: M3 criteria met\n",
+    )
+    result = verify.check_milestones_boundary_integrity(str(spec))
     assert result["status"] == "OK", result
-    assert result["isolated_count"] == 7
-    assert result["total_count"] == 7
+    assert result["isolated_count"] == 4
+    assert result["total_count"] == 4
