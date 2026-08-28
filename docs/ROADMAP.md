@@ -45,14 +45,19 @@ decision to stop further monetization analysis and resume Phase 3
 
 ## Dependency chain
 
-```
-Claim Extraction
-  → Context/causal-structure layer (Phase 2.5, closed)
-    → Evidence Package reliability
-      → Strategy Layer / Author / Quality Gate (Phase 3, not started)
-        → Platform Adapter (Phase 4)
-          → Experiment Log, additional platforms (Phase 5+)
-```
+Derived from `docs/ARCHITECTURE.md`'s "Depends on" column — keep this
+table consistent with that source; do not edit dependency data here
+independently of it.
+
+| Component | Depends on |
+|---|---|
+| Context/causal-structure layer | Claim Extraction |
+| Evidence Package | Claim Extraction output |
+| Strategy Layer | Context/causal-structure layer |
+| Author | Strategy Layer |
+| Quality Gate | Author |
+| Platform Adapter | Quality Gate |
+| Experiment Log | Platform Adapter |
 
 ## Open decisions
 

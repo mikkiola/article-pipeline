@@ -2029,3 +2029,84 @@ separately.
 
 **Source.** Owner session, 2026-08-28, explicit systems-thinking
 rationale.
+
+### [B-053] P2 — Challenge to ToolTempest ADR-0008's ASCII-diagram exemption: found a live, undetected drift in this project's own diagram
+
+Found: 2026-08-28, pre-`/spec` verification session.
+
+`mikkiola/tooltempest`'s `docs/reference/documentation-rules.md`
+(ADR-0008, added 2026-08-26) classifies a fenced ASCII dependency-chain
+diagram as an "established, acceptable form" for `docs/ROADMAP.md`'s
+"Dependency chain" section — exempt from the table-only/no-prose
+principle applied elsewhere. This session tested that classification
+against this project's real automation and real data, rather than
+taking it on trust, and found two problems:
+
+1. **No automation actually maintains the diagram.** Read in full:
+   `.claude/skills/session-end/SKILL.md` (the M6 structural-fact-sync
+   mechanism) and `scripts/doc_sync.py`/`scripts/doc_sync_tier2.py`
+   (the vendored DocOps/Tier-2 write infrastructure). None of the
+   three parses, validates, or regenerates fenced code blocks in
+   `docs/ROADMAP.md` — `doc_sync.py`'s reconciliation logic is scoped
+   entirely to `CHECKPOINT.md`'s `## <heading>` blocks (confirmed by
+   direct read of its own module docstring: "carries no project- or
+   domain-specific logic of any kind"); `doc_sync_tier2.py` has zero
+   `re.compile`/heading-aware parsing anywhere in it (confirmed by
+   grep) and treats the whole file as opaque content supplied by
+   whoever authored it that session (ADR-0034's pattern). The diagram
+   survives only if a human or Claude Code happens to remember to
+   hand-edit it — the same drift risk ADR-0008 itself says prose has,
+   which is exactly the property the diagram-exemption was supposed to
+   avoid.
+2. **The diagram was, in fact, already wrong.** `docs/ROADMAP.md`'s
+   diagram (before this session's fix) drew one linear chain: `Claim
+   Extraction → Context/causal-structure layer → Evidence Package →
+   Strategy Layer / Author / Quality Gate → Platform Adapter →
+   Experiment Log`. Cross-checked against `docs/ARCHITECTURE.md`'s own
+   "Depends on" column (the acknowledged source of truth for this
+   fact) and found two concrete mismatches: Evidence Package's actual
+   dependency is "Claim Extraction output" directly, not the Context
+   layer; Strategy Layer's actual dependency is "Context/causal-
+   structure layer" directly, not Evidence Package. The real
+   relationship is two parallel branches off Claim Extraction
+   converging on Strategy Layer, not one linear sequence — confirmed
+   this was a real, live, previously undetected drift, not a
+   hypothetical risk. `git log -p -- docs/ROADMAP.md`'s full history
+   for this section shows every prior edit only ever updated the
+   phase-status labels inside existing nodes (e.g. "current" →
+   "closed"), never the graph's actual shape — the wrong dependency
+   data had been sitting there unnoticed since the diagram's original
+   commit.
+
+Fixed in this repo, same session: `docs/ROADMAP.md`'s "Dependency
+chain" section replaced with a `Component | Depends on` table, sourced
+directly from `docs/ARCHITECTURE.md`'s existing column values, plus a
+one-line note stating the table must be kept consistent with that
+source. Treated as an unambiguous fact update per
+`docs/CONSTITUTION.md`'s "Keeping documents current" rule —
+direct-write, no confirmation gate.
+
+**Not fixed here, and explicitly out of scope for this entry:**
+ToolTempest's own ADR-0008/`documentation-rules.md` — a different
+repository. This entry is filed as evidence for a future
+ToolTempest-side session to weigh, not an instruction to change
+ToolTempest unilaterally from here.
+
+**Recommendation for that future session (not implemented, not decided
+here):** revisit the diagram exemption. Anything expressing a
+dependency/state fact (which components depend on which — precisely
+the class of fact a table row already captures losslessly) should use
+a table, per the same reasoning ADR-0008/`documentation-rules.md`
+already applies everywhere else in this document set. Reserve diagram
+form only for content genuinely without a tabular equivalent (e.g. a
+process flow with branching/looping structure a table can't represent
+without becoming unreadable) — this project's dependency chain was
+never actually that kind of content; it was always a simple
+parent-list per component, which a table expresses more accurately and
+verifiably than ASCII art does.
+
+**Source.** Pre-`/spec` verification session, 2026-08-28 — direct
+reads of `.claude/skills/session-end/SKILL.md`,
+`scripts/doc_sync.py`, `scripts/doc_sync_tier2.py`, `git log -p --
+follow -- docs/ROADMAP.md`, and a line-by-line comparison against
+`docs/ARCHITECTURE.md`'s "Depends on" column.
