@@ -128,3 +128,20 @@ def test_m7_retrofit_structurally_ok(tmp_path):
     assert len(m7) == 1, f"expected exactly one M7 checkbox, found {len(m7)}"
     assert m7[0]["verify"] is not None
     assert m7[0]["done_when"] is not None
+
+
+# This test's pass/fail depends on whatever SPEC.md currently contains
+# structurally (not its milestone count/labels) -- if it ever fails, check
+# whether SPEC.md itself has a real structural problem before assuming the
+# test is stale.
+def test_verify_cli_exits_clean_on_live_repo():
+    repo_root = Path(__file__).resolve().parent.parent
+    import subprocess
+
+    proc = subprocess.run(
+        [sys.executable, str(repo_root / "scripts" / "verify.py")],
+        cwd=repo_root,
+        capture_output=True,
+        text=True,
+    )
+    assert proc.returncode == 0, f"verify.py exited {proc.returncode}: {proc.stderr}"
