@@ -35,6 +35,14 @@ architectural discussion but not yet started — Radar and Brain are
 mid-migration to GitHub as of this entry, and that work is explicitly
 paused pending migration completion.
 
+Extensive monetization-loop modeling for both the owner's own pipeline
+and a separate sellable client-template product was completed
+2026-08-27/28 (see `docs/BACKLOG.md`'s `[B-045]`/`[B-046]`/`[B-050]`/
+`[B-051]`) — full raw analysis lives in an external working document,
+not committed to this repo. The session concluded with an explicit
+decision to stop further monetization analysis and resume Phase 3
+(Strategy Layer `/spec`) as the next session's primary work.
+
 ## Dependency chain
 
 ```

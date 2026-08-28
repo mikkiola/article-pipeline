@@ -1912,3 +1912,101 @@ run `scripts/sync-tooling.sh` deliberately, not as an automatic side
 effect. Out of this entry's scope.
 
 **Source.** Pre-push hook warning, commit `f9d51d0`, 2026-08-27.
+
+### [B-050] P2 — H11 client-template monetization model, session 2026-08-28 findings (raw, not yet a committed design)
+
+Added: 2026-08-28, owner session.
+
+Full session output lives in a working document
+(`monetization_loops_model.md`), held by the owner outside the repo —
+not committed here. This entry is the pointer and summary.
+
+Key findings from this session, correcting an earlier session's H11
+framing (informal working assumption, never itself committed to this
+repo):
+
+- Article Pipeline itself (code + owner's Brain/Radar data) is never
+  distributed to clients — it stays private on the owner's GitHub.
+  What's sold is a template/starter through which the client runs
+  their own `/spec` process to build their own distinct automation
+  (own data sources, own topics, own prompts, own channel). This
+  corrects an earlier assumption that a working copy of the pipeline
+  itself would be distributed.
+- Two parallel, non-competing monetization loops for this template:
+  (a) a one-time guide/template sale (~1000 RUB), sold as a permanent
+  license to the method — not consumed per-channel; the client can
+  deploy unlimited channels and freely switch monetization loops on
+  it; (b) a percentage of the client's own channel revenue, collected
+  through a payment mechanism that is part of the template itself
+  (owner-controlled, not the client's independent invention) — the
+  client picks one monetization loop from a pre-built menu (see
+  `[B-051]`), not from arbitrary self-devised monetization.
+- Accepted, not-yet-solved risk: a client can technically edit out the
+  payment node from their own forked copy. Treated as an accepted
+  hypothesis test (honest clients pay, dishonest ones would not have
+  paid under any scheme), not a blocking problem.
+- Not designed yet: which payment provider, how the node is
+  technically embedded, and the line between a "minor fix" (given free
+  to existing buyers) and a "major update" (sold again) for the guide.
+- New idea, not yet built: an FAQ bot answering simple client
+  questions from the guide's own text (v1 scope: FAQ matching only, no
+  open-ended LLM answering beyond the guide's text), logging every
+  question asked. The logged data — not the bot's answers — is the
+  point: accumulated question patterns signal when the guide needs a
+  real update, replacing guesswork with a data-driven trigger. This
+  reuses the same telemetry pattern as `[B-045]`'s Experiment Log
+  (collect events, key them, aggregate, decide from data) — a second,
+  parallel implementation of the same pattern for a different domain,
+  not a new pattern to invent.
+
+**Source.** Owner session, 2026-08-28.
+
+### [B-051] P3 — Six-module monetization menu for client templates (structurally identical to owner's own H1/H2/H7/affiliate ideas)
+
+Added: 2026-08-28, owner session.
+
+For the client-template product (`[B-050]`), the first version lets
+the client choose exactly one monetization loop (decided 2026-08-28 —
+not multiple at once, for MVP simplicity) from:
+
+- Affiliate links (auto-inserted, tracked).
+- Donations/tips (Boosty/Ko-fi-style).
+- Paid subscription for part of the content.
+- Selling the client's own separate product/service through the
+  channel.
+- Sponsorship (requires an existing audience).
+- Referral program.
+
+Noted architectural observation: this list structurally overlaps with
+the owner's own article-pipeline monetization ideas (`[B-045]`/
+`[B-046]`) — suggests a single reusable monetization-module component
+should be designed once and used both in the owner's own pipeline and
+in the sold client template, rather than building and maintaining two
+separate implementations.
+
+**Source.** Owner session, 2026-08-28.
+
+### [B-052] P0 — Session decision: return to Phase 3 implementation, stop further monetization-loop analysis for now
+
+Added: 2026-08-28, owner session.
+
+After two full sessions (2026-08-27, 2026-08-28) generating and
+refining monetization hypotheses (H1 through H11b, plus ~30
+externally-sourced ideas, plus a client-template model), the owner
+made an explicit systems-thinking-based decision to stop further
+analysis and return to writing code.
+
+Reasoning recorded: the project has been running an open-loop planning
+process with zero real-world feedback — every further hour of analysis
+on unbuilt monetization loops has diminishing returns compared to the
+first hour of real Phase 3 implementation, which would answer several
+open questions at once (real article throughput per week, actual
+Experiment Log data volume, whether Loop 2's engineering cost is even
+justified at real observed volume).
+
+This entry is a marker, not a technical spec — the actual next-session
+work is a fresh `/spec` interview for Strategy Layer (Phase 3), scoped
+separately.
+
+**Source.** Owner session, 2026-08-28, explicit systems-thinking
+rationale.
