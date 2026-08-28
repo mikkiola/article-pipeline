@@ -1,0 +1,46 @@
+{
+  "run_id": "20260828T211939",
+  "created_at": "2026-08-28T21:19:39.200003+07:00",
+  "status": "normal",
+  "gates": {
+    "all_claims_unverifiable": false
+  },
+  "claim_treatments": [
+    {
+      "claim_id": "20260811T165911_01",
+      "pre_filter_classification": "exclude",
+      "final_classification": "exclude",
+      "framing": null,
+      "reason": "No evidence found; accuracy not established."
+    },
+    {
+      "claim_id": "20260811T165911_02",
+      "pre_filter_classification": "exclude",
+      "final_classification": "exclude",
+      "framing": null,
+      "reason": "No evidence found; accuracy not established."
+    },
+    {
+      "claim_id": "20260811T165911_03",
+      "pre_filter_classification": "exclude",
+      "final_classification": "exclude",
+      "framing": null,
+      "reason": "No evidence found; accuracy not established."
+    },
+    {
+      "claim_id": "20260811T165911_04",
+      "pre_filter_classification": "include",
+      "final_classification": "include",
+      "framing": "Anchor the claim in the AdIndex.ru-reported 2024 Facebook study (posting frequency shifted 17-34%, content 4-57% by personality trait once users knew they were observed) as the concrete evidence, not the general 'observer effect' analogy the atom's own basis leaned on. Voice: cautious, not breathless — the atom's own confidence is 0.4 and every field is tagged GIPOTEZA (hypothesis). Frame the actionable point the way the source itself frames it: minimize measurement-induced distortion (longer observation windows, automated collection, minimal experimenter contact), not claim it can be eliminated — matching both the atom's own desired_action and the source's stated mitigation practice.",
+      "reason": null
+    },
+    {
+      "claim_id": "20260811T165911_05",
+      "pre_filter_classification": "exclude",
+      "final_classification": "exclude",
+      "framing": null,
+      "reason": "No evidence found; accuracy not established."
+    }
+  ],
+  "overrides": []
+}
