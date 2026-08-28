@@ -1,5 +1,5 @@
-"""Tests for strategy_layer/pre_filter.py (SPEC.md Test Plan items 2-3,
-Milestone M1).
+"""Tests for strategy_layer/pre_filter.py (SPEC.md Test Plan items 1-3,
+Milestones M1-M2).
 """
 
 import sys
@@ -99,3 +99,53 @@ def test_full_run_mixed_statuses_no_exception_correct_classifications():
     assert by_claim_id["c1"]["reason"] is None
     for claim_id in ("c2", "c3", "c4"):
         assert by_claim_id[claim_id]["reason"] is not None
+
+
+def make_pairs(statuses: list[str]) -> list[tuple[dict, dict]]:
+    return [
+        (make_claim(f"c{i}"), make_evidence(f"c{i}", status))
+        for i, status in enumerate(statuses, start=1)
+    ]
+
+
+# Test Plan item 1 (SPEC.md, Milestone M2): the one v1 gate — all-Claims-
+# unverifiable. Gate fires if and only if every Claim's Evidence status is
+# "unverifiable"; "pending" alone must not satisfy it (Functional
+# Requirement #3's explicit note: "pending" means not yet resolved, a
+# materially different state from "resolved as unverifiable").
+
+
+def test_gate_fires_when_all_claims_unverifiable():
+    pairs = make_pairs(["unverifiable", "unverifiable", "unverifiable"])
+
+    result = pre_filter.check_all_claims_unverifiable_gate(pairs)
+
+    assert result["status"] == "gated"
+    assert result["gates"]["all_claims_unverifiable"] is True
+
+
+def test_gate_does_not_fire_with_one_verified_among_unverifiable():
+    pairs = make_pairs(["verified", "unverifiable", "unverifiable"])
+
+    result = pre_filter.check_all_claims_unverifiable_gate(pairs)
+
+    assert result["status"] == "normal"
+    assert result["gates"]["all_claims_unverifiable"] is False
+
+
+def test_gate_does_not_fire_with_one_disputed_among_unverifiable():
+    pairs = make_pairs(["disputed", "unverifiable", "unverifiable"])
+
+    result = pre_filter.check_all_claims_unverifiable_gate(pairs)
+
+    assert result["status"] == "normal"
+    assert result["gates"]["all_claims_unverifiable"] is False
+
+
+def test_gate_does_not_fire_when_all_pending():
+    pairs = make_pairs(["pending", "pending", "pending"])
+
+    result = pre_filter.check_all_claims_unverifiable_gate(pairs)
+
+    assert result["status"] == "normal"
+    assert result["gates"]["all_claims_unverifiable"] is False
