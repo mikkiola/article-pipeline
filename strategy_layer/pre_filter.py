@@ -9,9 +9,14 @@ non-null `context` field, means Strategy Layer is being run out of
 order — this module refuses to proceed for the whole run rather than
 silently skipping the affected Claim.
 
-Out of scope for this module (later milestones, per SPEC.md): the v1
-gate check (M2), Claude Code's framing pass and override mechanism
-(M3), verdict assembly and Immutable Lineage output writing (M4).
+Also computes SPEC.md's one v1 gate condition (Milestone M2,
+all-Claims-unverifiable) over the whole run's pairs — SPEC.md's
+Execution Model places this alongside the pre-filter table as part of
+Stage 1.
+
+Out of scope for this module (later milestones, per SPEC.md): Claude
+Code's framing pass and override mechanism (M3), verdict assembly and
+Immutable Lineage output writing (M4).
 """
 
 from __future__ import annotations
@@ -87,3 +92,24 @@ def run_pre_filter(claims: list[dict], evidence_records: list[dict]) -> list[dic
     """Joins Claims/Evidence and classifies every pair (Stage 1, full pass)."""
     pairs = join_claims_and_evidence(claims, evidence_records)
     return [classify_pair(claim, evidence) for claim, evidence in pairs]
+
+
+def check_all_claims_unverifiable_gate(pairs: list[tuple[dict, dict]]) -> dict:
+    """Evaluates SPEC.md's one v1 gate condition (Functional Requirement
+    #3) over a run's (Claim, Evidence) pairs.
+
+    Fires — `status: "gated"`, `gates.all_claims_unverifiable: True` —
+    if and only if every pair's Evidence `status` is `"unverifiable"`:
+    zero `verified` and zero `disputed` pairs exist in the run.
+    `pending` alone does not satisfy this condition: it means "not yet
+    resolved," a materially different state from "resolved as
+    unverifiable" — a run of all-`pending` pairs does not fire the gate.
+    """
+    statuses = [evidence["status"] for _, evidence in pairs]
+    all_unverifiable = bool(statuses) and all(
+        status == "unverifiable" for status in statuses
+    )
+    return {
+        "status": "gated" if all_unverifiable else "normal",
+        "gates": {"all_claims_unverifiable": all_unverifiable},
+    }
