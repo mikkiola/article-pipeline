@@ -1959,6 +1959,25 @@ repo):
   parallel implementation of the same pattern for a different domain,
   not a new pattern to invent.
 
+Open question, not resolved this session: how the client-template
+code should physically relate to this repository. Three options
+surfaced, none chosen yet:
+(a) a separate new public repository (e.g.
+`mikkiola/article-pipeline-template`), manually synced from this repo
+when the owner decides to update it — simplest to keep the owner's
+private data (BRAIN_REPO_DIR paths, API keys) from ever touching a
+public repo, since the two repos are never technically connected;
+(b) a dedicated, isolated directory inside this repo (e.g.
+`template/`), exported (via `git subtree` or manual copy) at
+publish/update time — single source of truth, but requires discipline
+to prevent private data leaking into that directory;
+(c) a generator/CLI tool that produces a fresh project from `/spec`
+answers rather than storing a static template at all — cleanest
+separation, most expensive to build, not a first-step option.
+Leaning toward (a) for the first version, mainly for its stronger
+isolation from the owner's private data, but this is not a final
+decision.
+
 **Source.** Owner session, 2026-08-28.
 
 ### [B-051] P3 — Six-module monetization menu for client templates (structurally identical to owner's own H1/H2/H7/affiliate ideas)
