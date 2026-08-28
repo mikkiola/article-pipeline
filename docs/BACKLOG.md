@@ -2138,3 +2138,46 @@ reads of `.claude/skills/session-end/SKILL.md`,
 `scripts/doc_sync.py`, `scripts/doc_sync_tier2.py`, `git log -p --
 follow -- docs/ROADMAP.md`, and a line-by-line comparison against
 `docs/ARCHITECTURE.md`'s "Depends on" column.
+
+### [B-054] P3 — Monitoring note: v1 gate's "100% of real runs" justification no longer holds; not yet a trigger for a v2 gate
+
+Found: 2026-08-28, Strategy Layer M5 real-data validation run (commit
+`df3fd91`).
+
+`SPEC.md`'s Functional Requirement #3 chose the all-Claims-unverifiable
+condition as Strategy Layer's one v1 gate specifically because it was
+"the one condition already observed on 100% of real runs to date" —
+grounded in Evidence Package's original 5/5 unverifiable pilot result
+(`evidence_run_20260813T114717.json`). M5's real-data run used the
+more current `evidence_run_20260815T150904.json` (a context_layer
+Milestone 4 rerun, commit `2b7c8a6` — see this entry's update to
+`docs/ARCHITECTURE.md`'s Evidence Package row) and produced a verdict
+with `status: "normal"`, not `"gated"`: one Claim
+(`20260811T165911_04`) is now `verified`, not `unverifiable`.
+
+The "100% of real runs" premise is therefore no longer literally true
+— there are now two real Evidence Package data points, and one of them
+is not all-unverifiable. This does **not** mean the v1 gate's design
+was wrong, and it is **not** a trigger for adding a v2 gate now.
+`SPEC.md`'s own Functional Requirement #3 is explicit that a second
+gate is justified only by "a concrete future trigger (real Claims
+filtered out for reasons other than blanket unverifiable evidence)" —
+a single non-unverifiable Claim in one real run is not that trigger;
+it is exactly the kind of ordinary, expected variation SPEC.md's own
+"not 100% anymore" framing already anticipated as insufficient cause
+on its own.
+
+**Filed as a non-blocking monitoring note, not a design decision:**
+watch future real Strategy Layer runs (each producing its own
+`strategy_layer/output/verdict_*.json`, per M4's Immutable Lineage
+writer) for an actual pattern — repeated non-unverifiable Claims
+clustering around a specific cause, or the gate firing on 0% of real
+runs going forward rather than occasionally not firing. Revisit gate
+design only if such a pattern emerges; this entry exists so a future
+session doesn't have to rediscover that the "100% of real runs" line
+in `SPEC.md` is now stale, without prematurely deciding what (if
+anything) should replace it.
+
+**Source.** Strategy Layer M5 real-data validation run, 2026-08-28
+(commit `df3fd91`), cross-referenced against `SPEC.md`'s Functional
+Requirement #3 and its own stated alternative-gate deferral condition.

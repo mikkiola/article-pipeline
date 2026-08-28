@@ -12,7 +12,7 @@ dependencies only.
 | `graph_reader.py` | Implemented | Atom Selector | Tested on real data | `brain.git: e7fbc45` (vendored copy; not migrated to single source) |
 | Claim Extraction | Implemented | Atom Selector, `graph_reader.py` | 4 immutable pilot runs, manually verified | `46d1a41` |
 | Context/causal-structure layer | Implemented | Claim Extraction | M1-M5 complete; context-loss hypothesis not established (see corrective ADR for this milestone) | `792feb0`..`d2050de` |
-| Evidence Package | Implemented | Claim Extraction output | 5 live Claims tested, 5/5 unverifiable | `2fe0aac..29f716f` |
+| Evidence Package | Implemented | Claim Extraction output | 5 live Claims tested, 4/5 unverifiable, 1 verified (context-enriched rerun; supersedes earlier 5/5 unverifiable result) | `2fe0aac..29f716f`; rerun `2b7c8a6` |
 | Strategy Layer | Not started | Context/causal-structure layer | — | — |
 | Author | Not started | Strategy Layer | — | — |
 | Quality Gate | Not started | Author | — | — |
