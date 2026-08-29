@@ -111,6 +111,36 @@ No open items remain — the isolated D-025 causal-question experiment
       on their own. Not started; explicitly deferred until the D-025
       paired experiment (both language runs) is fully synthesized and
       closed as an ADR — not to be worked in parallel with it.
+      **Update, 2026-08-29** (Strategy Layer M5 real-data run, commit
+      `df3fd91`, prompted a scoping investigation into this item; see
+      also `docs/ARCHITECTURE.md`'s Evidence Package row and
+      `[B-054]`): the tag's effect turns out not to be uniformly
+      harmful. The D-025 paired experiment's English run showed
+      "trust" drift the query away from a correct source for Claim
+      `_04` (Δ = -2, losing a CHI 2024 paper), but the real production
+      Russian rerun that produced M5's actual verified result for the
+      same Claim (`evidence_run_20260815T150904.json`) used the same
+      tag ("доверие") and its own log note states the context terms
+      "reinforced the correct thematic direction" rather than causing
+      drift — the effect is language/context-dependent, not a fixed
+      harm. **Stoplist rejected:** filtering "доверие"/"trust" out of
+      the query downstream, in `context_layer` or `evidence_package`,
+      was considered and rejected — it would trade the demonstrated
+      English-run harm for removing the demonstrated Russian
+      production benefit, and can't distinguish the two cases without
+      the same disambiguation problem it's meant to solve. **Resolved
+      fix direction:** the tag is ambiguous at the point it's assigned
+      in Brain itself — a bare "доверие" collapses interpersonal/
+      epistemic trust and IT-security/certification trust into one
+      string — so the fix belongs in Brain's own tagging convention
+      (rename to explicit, domain-qualified forms, e.g.
+      "доверие-социальное" instead of a bare "доверие"), not as a
+      filter downstream in this project's code. **BLOCKED on Brain
+      repo migration** (GitLab -> GitHub), per this project's existing
+      pause on cross-repo investigation — the actual tag-renaming work
+      happens in Brain's own vault, a separate repository this project
+      cannot write to today; cannot start until that migration is
+      confirmed complete.
 - [ ] [B-006] Harness result classification currently conflates "verification
       failed" with "verification's prerequisite/environment was
       unavailable". Found in Step 4 of the automation track
