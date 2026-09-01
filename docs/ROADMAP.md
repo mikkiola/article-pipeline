@@ -36,7 +36,7 @@ see `docs/adr/`.
   concluded with an explicit decision to stop further monetization
   analysis and resume Phase 3.
 - Collector (O1), a separate, standalone sibling initiative in its own
-  private repo, has started outside this repo's scope -- no
+  private repo, has started outside this repo's scope — no
   article-pipeline phase or component is affected; see
   `docs/BACKLOG.md`'s `[B-055]` for detail.
 
