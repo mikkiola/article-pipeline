@@ -228,6 +228,20 @@ repinning `.tooltempest.lock` in this repo (or any other consumer) to
 pick up the new file — that repin remains a deliberate, separate
 action, not automatic.
 
+## Cowork-layer practice boundary
+
+Six named working practices — `obsidian-notes`, `content-social`,
+`human-text`, `docops-swagger`, `ods-ecosystem`, `incident-escalation`
+— are real, actively used conventions of the owner's Cowork layer (the
+"Ольга_статьи_атомы" Claude.ai project's own `project_instructions.md`),
+not of this repository. None of the six exists as a `SKILL.md` or
+equivalent file in this repo, in `tooltempest`, or under
+`~/.claude/skills/`. This is a boundary acknowledgment, not a registry
+entry — this file does not track, version, or govern these six; their
+actual source of truth is the Cowork layer's own instructions. See
+`docs/adr/0042-cowork-layer-practice-boundary.md` for the rationale and
+for what would trigger revisiting this note.
+
 ## Conditional rules
 
 - When Claude Code needs to make a scoped decision mid-task and the
