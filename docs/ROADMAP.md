@@ -35,6 +35,10 @@ see `docs/adr/`.
   `[B-045]`/`[B-046]`/`[B-050]`/`[B-051]`/`[B-052]`. The session
   concluded with an explicit decision to stop further monetization
   analysis and resume Phase 3.
+- Collector (O1), a separate, standalone sibling initiative in its own
+  private repo, has started outside this repo's scope -- no
+  article-pipeline phase or component is affected; see
+  `docs/BACKLOG.md`'s `[B-055]` for detail.
 
 Next work can pull from P1 items or begin Phase 3 planning.
 

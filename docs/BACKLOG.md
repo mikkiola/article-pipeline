@@ -2211,3 +2211,35 @@ anything) should replace it.
 **Source.** Strategy Layer M5 real-data validation run, 2026-08-28
 (commit `df3fd91`), cross-referenced against `SPEC.md`'s Functional
 Requirement #3 and its own stated alternative-gate deferral condition.
+
+### [B-055] P3 — Collector (O1) kickoff: new, separate private-repo initiative, sibling to this repo
+
+Collector (O1) is a new, lightweight, standalone telemetry tool — a
+separate private repository from article-pipeline (O2), not a
+component of this repo and not a new phase in `docs/ROADMAP.md`'s
+phase sequence. It scans git history and doc changes across workspace
+repos, classifies each change value vs. service (three-way: `value` /
+`explicit_service` / `default_service`), and emits a JSON manifest
+plus a Russian-language human-readable Markdown digest, weekly.
+Deliberately lightweight by design: no DocOps protocol of its own, no
+ToolTempest, no ADR-per-decision — a different governance model from
+this repo's on purpose, not an oversight.
+
+The only thing that will eventually cross the O1/O2 boundary is Atom.
+O1's own code never lives inside article-pipeline, and no existing
+article-pipeline component — Strategy Layer, the Multi-Source Claim
+Layer discussion, or any other phase — changes as a result of
+Collector's existence.
+
+Brain-phase G1-G6 already done (commit `69452f9`, in `mikkiola/brain`).
+Next steps, in order: (1) this entry — article-pipeline doc
+acknowledgment that Collector exists as a sibling initiative; (2)
+Collector's own repo gets its own `SPEC.md`/`CONSTITUTION.md` as its
+first commit; (3) Collector v0 build.
+
+This entry is informational tracking of a sibling project's kickoff,
+not a task assigned to article-pipeline — no article-pipeline code,
+doc, or phase change follows from it beyond this acknowledgment.
+
+**Source.** Owner decision to kick off Collector (O1) as a new,
+separate initiative; Brain-phase G1-G6 completion, commit `69452f9`.
