@@ -14,7 +14,7 @@ dependencies only.
 | Context/causal-structure layer | Implemented | Claim Extraction | M1-M5 complete; context-loss hypothesis not established (see corrective ADR for this milestone) | `792feb0`..`d2050de` |
 | Evidence Package | Implemented | Claim Extraction output | 5 live Claims tested, 4/5 unverifiable, 1 verified (context-enriched rerun; supersedes earlier 5/5 unverifiable result) | `2fe0aac..29f716f`; rerun `2b7c8a6` |
 | Strategy Layer | Not started | Context/causal-structure layer | — | — |
-| Author | Not started | Strategy Layer | — | — |
+| Author | Implemented — MVP pilot, single-source only (Collector) | Collector (`collector/data/manifest_<date>.json`) — deliberately not Strategy Layer's verdict schema (Strategy Layer remains not started); a single-source pilot chosen to validate the publication channel itself before investing further in claim-source complexity, not a permanent architecture change — see `docs/adr/0043-author-mvp-single-source-pilot.md` | 5 plain-assert tests passing (`author/test_pipeline.py`); 2 real Markdown drafts generated (Habr RU, LinkedIn EN) from Collector's real manifest data, not synthetic | this commit |
 | Quality Gate | Not started | Author | — | — |
 | Platform Adapter | Not started | Quality Gate | — | — |
 | Experiment Log | Not started | Platform Adapter | — | — |

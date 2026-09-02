@@ -13,7 +13,7 @@ see `docs/adr/`.
 | 1 — Claim Extraction pilot | Closed |
 | 2 — Evidence Package | Closed |
 | 2.5 — Context/causal-structure layer | Closed — M1-M5 implemented; causal question resolved, partially confirmed: enrichment helps on-domain, harms via polysemous-tag collision, tracked as a non-blocking P1 fix. Phase 3 no longer blocked on this. |
-| 3 — Strategy Layer + Author + Quality Gate | Not started — no longer blocked (see Current pointer) |
+| 3 — Strategy Layer + Author + Quality Gate | Paused — Author has a separate, single-source MVP pilot (Collector-manifest-based, not fed by Strategy Layer); Strategy Layer and Quality Gate proper remain not started; see Current pointer |
 | 4 — Platform Adapter (Habr → LinkedIn) + Circuit Breaker | Not started |
 | 5+ — Experiment Log, remaining platforms | Not started |
 
@@ -39,8 +39,22 @@ see `docs/adr/`.
   private repo, has started outside this repo's scope — no
   article-pipeline phase or component is affected; see
   `docs/BACKLOG.md`'s `[B-055]` for detail.
+- **Priority shift, this session:** the active focus has moved from
+  Phase 3 planning (Multi-Source Claim Layer / Strategy Layer
+  expansion) to validating the publication channel itself — a
+  single-source pilot (Collector's manifest -> Author -> two drafts,
+  Habr RU + LinkedIn EN) built and reviewed this session (Author's
+  first implementation; see `docs/ARCHITECTURE.md`'s Author row and
+  `docs/adr/0043-author-mvp-single-source-pilot.md`). Multi-Source
+  Claim Layer / Strategy Layer Phase 3 work, and Radar/Brain as claim
+  sources, are **paused, not abandoned** — resume once the pilot
+  confirms publication mechanics actually work end-to-end. See
+  `docs/BACKLOG.md`'s `[B-056]` for the full record of what's paused
+  and why.
 
-Next work can pull from P1 items or begin Phase 3 planning.
+Next work continues the single-source pilot (owner review of the
+generated drafts, then whichever follow-up that review points to) —
+not Phase 3 planning, per the priority shift above.
 
 ## Dependency chain
 
@@ -53,7 +67,7 @@ independently of it.
 | Context/causal-structure layer | Claim Extraction |
 | Evidence Package | Claim Extraction output |
 | Strategy Layer | Context/causal-structure layer |
-| Author | Strategy Layer |
+| Author | Collector (pilot; not yet Strategy Layer) |
 | Quality Gate | Author |
 | Platform Adapter | Quality Gate |
 | Experiment Log | Platform Adapter |

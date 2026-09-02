@@ -2243,3 +2243,59 @@ doc, or phase change follows from it beyond this acknowledgment.
 
 **Source.** Owner decision to kick off Collector (O1) as a new,
 separate initiative; Brain-phase G1-G6 completion, commit `69452f9`.
+
+### [B-056] P1 — Priority pivot: validate publication channel via single-source pilot before further claim-source complexity; Phase 3 / Multi-Source Claim Layer explicitly paused
+
+Added: 2026-09-02, owner decision, same session as Author's first
+implementation.
+
+**Decision.** Rather than continue building Author against Strategy
+Layer's still-unimplemented, thinly-specified verdict schema (see
+`docs/adr/0007-strategy-layer-separate-from-platform-adapter.md`:
+"None of the three components has been implemented — all exist only
+as specification"), or wait for the Multi-Source Claim Layer expansion
+to mature, the owner chose to validate Author's actual publication
+mechanics first: a single-source pilot consuming Collector (O1)'s own
+weekly manifest, producing two real channel-specific drafts (Habr RU,
+LinkedIn EN) from one canonical story. See
+`docs/adr/0043-author-mvp-single-source-pilot.md` for the architecture
+this pilot is built on.
+
+**Reason.** Testing whether the publication channel itself works
+end-to-end — can two genuinely different, audience-appropriate drafts
+be produced from one shared, evidence-grounded story — is cheaper and
+faster to verify against one already-real data source (Collector) than
+against a claim pipeline (Strategy Layer, Multi-Source Claim Layer)
+that doesn't exist yet. No point investing further in claim-source
+sophistication before confirming the thing consuming those claims
+actually produces usable output.
+
+**Explicitly paused, not abandoned, by this decision:**
+- Multi-Source Claim Layer expansion (Brain + Radar + ODS + repos as
+  claim sources) — already paused pending Radar's/Brain's migration
+  (see `docs/ROADMAP.md`'s Current pointer); this decision extends
+  that pause for an additional, independent reason (publication-channel
+  validation takes priority now, not just a migration blocker).
+- Radar and Brain as claim sources generally — same pause, same
+  reason.
+- `[B-005]`'s tag-disambiguation fix — a separate investigation this
+  same session confirmed Brain's GitHub migration is complete for the
+  vault content `[B-005]` needs to write to, so this item is now
+  technically unblocked. Deliberately **not** being started yet: it's
+  downstream of the Multi-Source Claim Layer path this decision pauses,
+  and starting it now would be exactly the "more claim-source
+  complexity before validating publication" pattern this pivot exists
+  to avoid.
+
+**Resume condition.** Once the single-source pilot (Author consuming
+Collector's manifest) confirms publication mechanics work end-to-end —
+owner review of the generated drafts is satisfied that the four-stage
+architecture produces usable, channel-appropriate output — Phase 3
+planning (Strategy Layer, Multi-Source Claim Layer, and `[B-005]`)
+resumes. Not resumed by a timer or a fixed date; resumed by that
+review outcome specifically.
+
+**Source.** Owner decision, 2026-09-02, following the Author MVP
+pilot's build and review this session; `docs/adr/0007` (Strategy
+Layer's unimplemented status) and `docs/adr/0043` (the pilot's
+architecture) as the two ADRs this decision sits between.
