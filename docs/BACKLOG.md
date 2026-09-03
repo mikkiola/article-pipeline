@@ -2299,3 +2299,77 @@ review outcome specifically.
 pilot's build and review this session; `docs/adr/0007` (Strategy
 Layer's unimplemented status) and `docs/adr/0043` (the pilot's
 architecture) as the two ADRs this decision sits between.
+
+### [B-057] P1 — Daily LinkedIn pipeline: Collector mode-classifier + Author LLM branch (design complete, implementation starting)
+
+Added: 2026-09-03, owner decision, continuing `[B-056]`'s
+single-source-pilot validation — not a reopening of paused Phase 3
+work. This entry's own scope is Collector-side only; Author's LLM
+branch (the other half of the architecture below) is a separate,
+not-yet-filed follow-up task, deliberately deferred until this
+Collector-side step is reviewed.
+
+**Architecture decided 2026-09-03.** Collector (no LLM/API access
+anywhere in its own code) produces a `DailyBrief`: a heuristic
+`mode: "fact" | "idea_fallback"` decision, plus the raw metrics behind
+it, written once per day. Author (article-pipeline, a separate repo —
+the only component in this architecture that holds an LLM/API call)
+reads `mode` from `DailyBrief` and branches its prompt on it — it does
+not re-derive `mode` itself:
+
+- **`fact` path:** FACT -> EMERGENT PROPERTY -> INVERSION -> COMMERCIAL
+  HYPOTHESIS.
+- **`idea_fallback` path:** reimagine an existing product; zero new
+  code.
+
+Two modes only, deliberately — no third "silence" mode. A LinkedIn
+post is intended to go out every day regardless of which path fires.
+
+**Implemented this session (Collector side only, not yet committed —
+owner reviews the diff first, per this project's usual discipline for
+architecture-level changes):**
+- `collector/scripts/tier0_scan.py` gained a `--since` CLI argument
+  (default `7.days`, preserving the existing weekly-scan default
+  exactly when omitted) — one scanner, two cadences, not a second
+  scanner. `window_days` in its output now reflects the parsed `--since`
+  value (e.g. `1`, not `7`) rather than a hardcoded constant.
+- New `collector/scripts/daily_brief.py`: the heuristic mode-classifier
+  itself, consuming `tier0_scan.py`'s raw (not value/service-classified)
+  output directly, writing `daily_brief_<date>.json`. Supports an
+  explicit `--force-mode={fact,idea_fallback}` override, recorded via a
+  `decision_source` field (`"heuristic"` vs. `"manual_override"`) so a
+  forced day is never indistinguishable from a heuristic one after the
+  fact. `collector/scripts/test_daily_brief.py` added, 5/5 passing.
+- `collector/SPEC.md` gained a "Daily cadence — DailyBrief
+  mode-classifier" section documenting the mechanism; `collector/CONSTITUTION.md`'s
+  O1/O2 boundary section corrected to name `DailyBrief` (and the
+  already-crossing weekly manifest) as additional structured-output
+  artifacts crossing into article-pipeline, not just Atom — see that
+  file's own 2026-09-03 correction note for detail.
+
+**Found and fixed, same session:** a real run against this workspace's
+own commit history found the completion-keyword list
+`daily_brief.py`'s heuristic used (`feat:`, `fix:`, `done`, `closed`,
+`complete`) did not match this project's actual Conventional-Commits-
+with-scope style (`feat(scope): ...` — no bare `feat:` substring ever
+appears in a real commit here), so the keyword half of the `fact` gate
+failed to fire even on a high-diffstat, clearly-complete day
+(`total_diffstat=6364` still produced `idea_fallback`). Fixed same
+session: `feat`/`fix` are now matched via a regex anchored at the
+start of the subject line with an optional `(scope)` before the colon,
+case-insensitive — `done`/`closed`/`complete` unchanged (plain
+substring match, not Conventional Commits prefixes). Re-run against
+the same real data confirmed `mode` now correctly comes out `"fact"`.
+3 new regression tests added
+(`test_scoped_conventional_commit_prefix_is_detected`,
+`test_scoped_fix_prefix_is_detected`,
+`test_substring_inside_unrelated_word_not_falsely_matched`), all 8
+`test_daily_brief.py` tests passing (5 original + 3 new).
+
+**Superseded by this entry's design:** the earlier LinkedIn-voice
+prompt draft
+(`claude-code-prompt-author-linkedin-voice-and-cta.md`, 2026-09-02) was
+never sent and is now obsolete.
+
+**Source.** Owner decision, 2026-09-03, continuing `[B-056]`'s
+priority pivot.
