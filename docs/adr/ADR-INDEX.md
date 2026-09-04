@@ -51,3 +51,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0041](0041-mechanical-verification-scope.md) | Mechanical Verification Scope — Document-Format Conventions Only | Accepted | null | null |
 | [ADR-0042](0042-cowork-layer-practice-boundary.md) | Cowork-Layer Practice Boundary — Practice-Only, No-File Conventions | Accepted | null | null |
 | [ADR-0043](0043-author-mvp-single-source-pilot.md) | Author MVP — Source Adapter / Story Builder / Channel Profile / Channel Author, Single-Source Pilot via Collector | Accepted | null | null |
+| [ADR-0044](0044-linkedin-daily-post-voice-contract.md) | LinkedIn Daily Post Voice Contract | Accepted | null | null |

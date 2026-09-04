@@ -2373,3 +2373,41 @@ never sent and is now obsolete.
 
 **Source.** Owner decision, 2026-09-03, continuing `[B-056]`'s
 priority pivot.
+
+### [B-058] P1 — daily_linkedin_author.py's prompt builders must implement the ADR-0044 content-voice contract
+
+Found: 2026-09-04, owner decision, following `[B-057]`'s
+implementation of the Collector/Author daily LinkedIn branch.
+
+`author/daily_linkedin_author.py`'s `_build_fact_prompt` and
+`_build_idea_fallback_prompt` currently specify structure and register
+only via the file's own `STYLE_CONSTRAINTS` text, which is narrower
+than the accepted content-voice decision now recorded in
+`docs/adr/0044-linkedin-daily-post-voice-contract.md`. Neither prompt
+builder currently encodes: the Narrative Bridge 30/40/30 + hook + CTA
++ evidence-links structure; the 150-250 word / max-3-sentences-per-
+paragraph length constraint; the forbidden-vocabulary list
+(metadiscourse openers, empty abstractions, AI clichés,
+nominalizations, hedge words); the explicit numbered causal-chain
+requirement; the single-open-question CTA rule; or the three-tier
+evidence rule (L1 internal always, L2 public link gated on a live `gh
+repo view` check with silent omission, L3 market signal never
+fabricated).
+
+- [ ] Update `STYLE_CONSTRAINTS`, `_build_fact_prompt`, and
+      `_build_idea_fallback_prompt` to encode the full ADR-0044
+      specification, not a paraphrase of it.
+- [ ] Add the `gh repo view` live-check call needed for the L2
+      evidence tier (not present anywhere in `daily_linkedin_author.py`
+      today) and its silent-omission-on-failure path.
+- [ ] Add/extend `test_daily_linkedin_author.py` coverage for the new
+      constraints (length, forbidden vocabulary, causal-chain
+      presence, evidence-tier behavior) before treating this entry as
+      done, per this project's TDD threshold for a correctness-
+      sensitive prompt/gating change.
+- [ ] Re-validate `docs/ARCHITECTURE.md`'s Author row Validation
+      column once real generated posts have been checked against the
+      contract — it currently states this work is not yet done.
+
+**Source.** Owner decision, 2026-09-04, filed alongside
+`docs/adr/0044-linkedin-daily-post-voice-contract.md`.
