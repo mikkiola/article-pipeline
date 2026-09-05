@@ -21,6 +21,7 @@ only interprets it into a prompt branch.
 import argparse
 import json
 import os
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -64,6 +65,39 @@ Respond with a single JSON object only — no markdown code fences, no
 text before or after the JSON, no explanation outside the JSON object
 itself."""
 
+# Verbatim implementation of docs/adr/0044-linkedin-daily-post-voice-
+# contract.md's Decision block. Any future change to the contract
+# itself is a new, superseding ADR (Immutable Lineage) — this constant
+# should then be updated to match, not diverge from it.
+VOICE_CONTRACT = """\
+Voice contract (ADR-0044), apply these strictly and do not deviate:
+- Structure: Narrative Bridge 30/40/30 + hook + CTA + evidence links.
+- Length: 150-250 words, max 3 sentences/paragraph.
+- Voice: first person, active voice, concrete images, no hashtags,
+  0-1 emoji (self-deprecating only).
+- Forbidden in the observation and the mechanism description — state
+  both as plain fact, not a guess: metadiscourse openers, empty
+  abstractions (approach/framework/level/process/strategy), AI clichés
+  (delve/tapestry/revolutionize/game-changer/low-hanging fruit/etc),
+  nominalizations, hedge words ("I suspect", "I think", "perhaps", and
+  equivalents).
+- Hedging scope: hedge words like "I suspect"/"I think" are reserved
+  for the final commercial/speculative conclusion only — never used to
+  soften the observation or the mechanism description above it.
+- Causal chain rule: numbers must come from DailyBrief, never
+  invented, and never state a conclusion directly without showing the
+  steps that produced it. Diffstat and raw lines-changed counts may
+  appear only as brief factual color, never as the evidence doing the
+  persuasive work — commit counts, file counts, or a genuinely
+  inferable time saved are the reader-meaningful quantities to reach
+  for instead; if no real quantity fits naturally, the chain can stay
+  qualitative (the steps, without an invented number).
+- CTA: one open question, in-body, no direct pitch.
+- Evidence: L1 internal (always, from DailyBrief), L2 public link
+  (only if repo is public per live `gh repo view` check, silently
+  omitted if private/check fails — no apology line), L3 market signal
+  (emerges from reaction, never fabricated)."""
+
 
 def _get_api_key() -> str:
     key = os.environ.get("ANTHROPIC_API_KEY_DAILY_AUTHOR")
@@ -76,7 +110,66 @@ def _get_api_key() -> str:
     return key
 
 
+def _check_repo_visibility(repo_name: str) -> bool:
+    """L2 evidence tier (ADR-0044): a repo's link is only ever offered
+    to the model when a live check confirms it's public. Every failure
+    mode — `gh` missing, an auth error, a non-zero exit, a timeout, an
+    unparseable response — is treated as not-public, logged as a
+    warning, and never raised: a visibility-check failure must not
+    block post generation."""
+    try:
+        result = subprocess.run(
+            ["gh", "repo", "view", f"mikkiola/{repo_name}", "--json", "visibility"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if result.returncode != 0:
+            print(
+                f"WARNING: gh repo view exited {result.returncode} for "
+                f"{repo_name!r}: {result.stderr.strip()}",
+                file=sys.stderr,
+            )
+            return False
+        return json.loads(result.stdout).get("visibility") == "PUBLIC"
+    except Exception as e:
+        print(f"WARNING: gh repo view failed for {repo_name!r}: {e}", file=sys.stderr)
+        return False
+
+
+def _build_evidence_links(per_repo: list) -> list:
+    """L2 evidence tier (ADR-0044): a public GitHub link per repo,
+    included only for repos a live `_check_repo_visibility` call
+    confirms are public today. Computed once so both prompt builders
+    share identical link-gating logic."""
+    links = []
+    for repo in per_repo:
+        name = repo["name"]
+        if _check_repo_visibility(name):
+            links.append({"name": name, "url": f"https://github.com/mikkiola/{name}"})
+    return links
+
+
+def _evidence_links_block(links: list) -> str:
+    """Renders the L2 evidence tier's prompt text. Deliberately never
+    names or references an omitted repo — ADR-0044 requires silent
+    omission, with no apology line anywhere, including in the
+    generated post."""
+    if links:
+        return (
+            "L2 evidence — public repo links confirmed available today "
+            "(only these; never invent or guess a link for any other "
+            "repo):\n" + json.dumps(links, ensure_ascii=False)
+        )
+    return (
+        "L2 evidence — no public repo links are confirmed available "
+        "today. Do not mention this in the post; write it exactly as "
+        "if this evidence tier were never part of the instructions."
+    )
+
+
 def _build_fact_prompt(daily_brief: dict) -> str:
+    evidence_links = _build_evidence_links(daily_brief['per_repo'])
     return f"""\
 You are drafting one LinkedIn post from a single day's real engineering
 activity. Work through four internal steps before writing the post —
@@ -101,25 +194,43 @@ Internal steps:
    decision-point changes.
 3. INVERSION — invert the possibility found in step 2 (opposite goal,
    producer/consumer swap, absence instead of presence, prevent-X
-   instead of help-with-X). The inversion must have a causal link back
-   to the original mechanism from step 1 — not be an unrelated new idea.
+   instead of help-with-X). Connect step 1's mechanism to this
+   inversion through an explicit feedback loop, not a direct jump:
+   mechanism -> less manual effort -> cheaper/faster check -> more
+   checks possible -> fewer bad outcomes slip through -> compounding
+   effect. Use real DailyBrief quantities where they fit naturally
+   (commit count, number of files touched, a genuinely inferable time
+   saved) — never diffstat or raw lines-changed counts, which have no
+   reader-facing economic meaning. If no real quantity fits naturally,
+   state the loop qualitatively (the steps, without inventing a
+   number) rather than force one in.
 4. COMMERCIAL HYPOTHESIS — one concrete potential pain: who
    specifically feels it, what they do today instead, why that's bad,
    what outcome they'd want. If there is no real basis for this in the
    data, phrase it explicitly as a hypothesis ("I suspect that...").
    Never phrase it as a market assertion ("Companies want...").
 
-Post structure (three parts, no explicit step labels in the post text):
-1. What actually happened, citing a concrete evidence reference from
-   the data above (e.g. a repo name, a diffstat number, a file name) —
-   never invented specifics.
-2. What unexpectedly emerges, explicitly framed as an idea/possibility,
-   not as existing functionality.
-3. A "could someone pay for this?" close whose call-to-action asks for
-   market evidence (e.g. "if you run into this, I'd be curious how
-   common it actually is") — never a "hire me" / "DM me" ask.
+Post structure — Narrative Bridge 30/40/30 + hook + CTA + evidence
+links (see Voice contract below for the exact rules each part must
+follow):
+1. Hook — one opening line that earns the read.
+2. Setup (~30% of the post) — what actually happened, stated as plain
+   fact, citing a concrete evidence reference from the data above
+   (e.g. a repo name, a file name, a commit count) — never invented
+   specifics, and never a diffstat/lines-changed number used as
+   evidence of value (brief factual color only, if it appears at all).
+3. Bridge (~40% of the post) — what unexpectedly emerges, explicitly
+   framed as an idea/possibility, not as existing functionality,
+   stated as plain fact, not hedged; this is where step 3's feedback
+   loop applies.
+4. Close (~30% of the post) — the CTA plus any available evidence
+   links.
 
 {STYLE_CONSTRAINTS}
+
+{VOICE_CONTRACT}
+
+{_evidence_links_block(evidence_links)}
 
 {OUTPUT_FORMAT_INSTRUCTIONS}
 
@@ -137,6 +248,7 @@ publication — they will not be posted."""
 
 def _build_idea_fallback_prompt(daily_brief: dict) -> str:
     products = ", ".join(IDEA_FALLBACK_PRODUCTS)
+    evidence_links = _build_evidence_links(daily_brief['per_repo'])
     return f"""\
 Today's engineering activity was too quiet or inconclusive for a
 fact-based post (see DailyBrief's own metrics below, for context only
@@ -152,16 +264,30 @@ Context only, not required in the post itself:
 - total_diffstat: {daily_brief['total_diffstat']}
 - commit_messages: {json.dumps(daily_brief['commit_messages'], ensure_ascii=False)}
 
-Post structure (three parts, same shape as a fact-based post):
-1. What the chosen product actually is/does today — described
-   truthfully, not embellished.
-2. What it could become, explicitly framed as an idea, not existing
-   functionality.
-3. A "could someone pay for this?" close whose call-to-action asks for
-   market evidence (e.g. "if you run into this, I'd be curious how
-   common it actually is") — never a "hire me" / "DM me" ask.
+Post structure — Narrative Bridge 30/40/30 + hook + CTA + evidence
+links, same shape as a fact-based post (see Voice contract below for
+the exact rules each part must follow):
+1. Hook — one opening line that earns the read.
+2. Setup (~30% of the post) — what the chosen product actually
+   is/does today, stated as plain fact, described truthfully, not
+   embellished, not hedged.
+3. Bridge (~40% of the post) — what it could become, explicitly framed
+   as an idea, not existing functionality, stated as plain fact, not
+   hedged. Where a feedback loop genuinely applies to the reimagined
+   idea, connect it through the loop rather than a direct jump:
+   mechanism -> less manual effort -> cheaper/faster check -> more
+   checks possible -> fewer bad outcomes slip through -> compounding
+   effect, using real DailyBrief quantities where they fit naturally
+   (never diffstat or raw lines-changed counts); if none of this
+   applies to the chosen product/idea, this step doesn't force one in.
+4. Close (~30% of the post) — the CTA plus any available evidence
+   links.
 
 {STYLE_CONSTRAINTS}
+
+{VOICE_CONTRACT}
+
+{_evidence_links_block(evidence_links)}
 
 {OUTPUT_FORMAT_INSTRUCTIONS}
 
@@ -223,14 +349,28 @@ def _strip_markdown_fence(text: str) -> str:
     return text
 
 
+def _extract_text_block(content: list) -> str:
+    """`messages.create()`'s response.content can include a
+    ThinkingBlock ahead of the TextBlock when extended thinking is
+    involved — the text block is not reliably content[0], so it must
+    be found by its `.type`, not assumed by position."""
+    for block in content:
+        if getattr(block, "type", None) == "text":
+            return block.text
+    block_types = [getattr(block, "type", "<unknown>") for block in content]
+    raise AuthorLLMError(
+        f"Model response contained no text block. Block types found: {block_types!r}"
+    )
+
+
 def call_model(prompt: str) -> dict:
     client = anthropic.Anthropic(api_key=_get_api_key())
     response = client.messages.create(
         model=MODEL,
-        max_tokens=2048,
+        max_tokens=4096,
         messages=[{"role": "user", "content": prompt}],
     )
-    raw_text = response.content[0].text
+    raw_text = _extract_text_block(response.content)
     text = _strip_markdown_fence(raw_text)
     try:
         return json.loads(text)
