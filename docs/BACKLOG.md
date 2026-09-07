@@ -2411,3 +2411,51 @@ fabricated).
 
 **Source.** Owner decision, 2026-09-04, filed alongside
 `docs/adr/0044-linkedin-daily-post-voice-contract.md`.
+
+### [B-059] P2 — Collector CI: WORKSPACE_ROOT hardcoding + actions/checkout@v4 path failure — RESOLVED
+
+Filed and resolved together, 2026-09-07 — no separate open entry existed
+for this before now. `collector/scripts/tier0_scan.py` hardcoded
+`WORKSPACE_ROOT = Path.home() / "Dev" / "github.com" / "mikkiola"`, a
+single-machine path assumption that broke the first real run of
+`collector/.github/workflows/daily.yml` on a GitHub-hosted runner
+(run `34103315096`): `actions/checkout@v4` refused a `path:` outside
+`${{ github.workspace }}`, failing immediately at the first checkout
+step, before the daily cadence's freshness gate could even be
+exercised.
+
+**Fix (Collector repo, not this one — Collector is a separate,
+sibling private repo per `[B-055]`'s O1/O2 boundary, so these commits
+don't live in this repo's history):**
+- `collector/scripts/tier0_scan.py`'s `WORKSPACE_ROOT` now reads from
+  an env var, falling back to the prior hardcoded local-dev path only
+  when unset — single source of truth, portable to CI/Docker/other
+  users without a competing definition.
+- `collector/.github/workflows/daily.yml` and `weekly.yml`: every
+  cross-repo checkout now uses a bare `path: <repo>` under
+  `actions/checkout@v4`'s own default workspace, with `WORKSPACE_ROOT`
+  set to `${{ github.workspace }}` to match.
+- Commit: `dd1104f` (collector, pushed to its `origin/main`).
+
+**Validated end-to-end on a real GitHub-hosted runner** (collector run
+`34109955086`): all 7 cross-repo checkouts succeeded (collector,
+article-pipeline, tooltempest, archi-kg, brain, radar, radar-vault);
+the daily cadence's freshness gate (added the same session, compares
+the resolved `raw_scan` file's date against real UTC "today") passed
+its first real test — the dates matched, so the gate had nothing to
+reject; the final `data/` commit+push step ran and pushed a real new
+commit (`1a42006`), not the "no new data files" no-op branch.
+
+**Also checked, same session:** Collector's own `SPEC.md`/
+`CONSTITUTION.md` were reviewed for accidental DocOps/ADR propagation
+from this repo — found none. Both are Collector's own, deliberately
+lightweight governance layer (`CONSTITUTION.md`'s own text: "does not
+adopt ToolTempest, does not require an ADR per decision, and has no
+session-end doc-sync automation" — an explicit owner decision, not a
+gap), independent of this repo's `SPEC.md`/`CONSTITUTION.md`/ADRs.
+Nothing to change in either repo's docs as a result.
+
+**Source.** Owner-directed fix and validation, 2026-09-07, closing the
+gap left open from the 2026-09-05 session's Collector automation work
+(freshness gate + `daily.yml`/`weekly.yml`, written then but not yet
+committed or run against a real CI runner).
