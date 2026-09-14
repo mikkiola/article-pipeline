@@ -345,35 +345,56 @@ Package: "5 live Claims tested, 5/5 unverifiable" — both from
 
 ## Milestones
 
-- [ ] M1 — Deterministic pre-filter (Stage 1): implement the four-row
+- [x] M1 — Deterministic pre-filter (Stage 1): implement the four-row
       classification table and the input-validation refusal path.
       verify: pytest against the pre-filter table + missing-input-data
       tests (Test Plan items 2-3)
       done-when: all synthetic pre-filter and missing-input cases pass
-- [ ] M2 — Gate-check logic (TDD per Non-Functional Requirement 2):
+      done: commit `948bd13` (2026-08-28); confirmed 2026-09-14 via
+      `cd strategy_layer && python3 -m pytest . -v` — 25/25 passing,
+      including every `test_pre_filter.py` case.
+- [x] M2 — Gate-check logic (TDD per Non-Functional Requirement 2):
       write the RED test first, then implement to GREEN.
       verify: pytest against Test Plan item 1 (gate-check unit test)
       done-when: RED confirmed before implementation, GREEN after,
       committed as two distinguishable states in the session (per
       docs/CONSTITUTION.md's TDD rule)
-- [ ] M3 — Claude Code framing pass + override mechanism (Stage 2):
+      done: RED `d0264b8`, GREEN `daaba0a` (both 2026-08-28) — two
+      distinguishable commits, per the rule above.
+- [x] M3 — Claude Code framing pass + override mechanism (Stage 2):
       interactive judgment call producing `framing` for included Claims,
       with override right and mandatory `reason` logging.
       verify: Test Plan item 5 (override path)
       done-when: at least one real or synthetic override case is
       recorded correctly in both `claim_treatments` and `overrides`
-- [ ] M4 — Verdict assembly + Immutable Lineage output writer, matching
+      done: RED `0981ddf`, GREEN `d0131d9` (both 2026-08-28); override
+      path covered by `test_framing.py`'s override tests, confirmed
+      passing 2026-09-14.
+- [x] M4 — Verdict assembly + Immutable Lineage output writer, matching
       Evidence Package's `write_outputs()` convention (never overwrite a
       prior run; `run_id` collision is an error).
       verify: attempt a second write with a colliding `run_id`, confirm
       it raises rather than overwrites
       done-when: collision test passes
-- [ ] M5 — Real-data validation run against the 5 existing live Claims.
+      done: commit `2488b39` (2026-08-28);
+      `test_write_verdict.py::test_write_outputs_raises_on_run_id_collision_and_preserves_first_file`
+      confirmed passing 2026-09-14.
+- [x] M5 — Real-data validation run against the 5 existing live Claims.
       verify: Test Plan item 4
       done-when: the run completes, produces a verdict with
       `status: "gated"` / `gates.all_claims_unverifiable: true`, and the
       output is manually reviewed and confirmed correct (matching this
       project's own "manually verified" precedent for pilot validation)
+      done: commit `df3fd91` (2026-08-28); real output at
+      `strategy_layer/output/verdict_20260828T211939.json`. Note,
+      found 2026-09-14: the actual output is `status: "normal"` /
+      `gates.all_claims_unverifiable: false`, not the `"gated"`/`true`
+      this done-when text anticipated — correct, not a failure: it
+      reflects Evidence Package's later, more accurate 4/5-unverifiable
+      /1-verified rerun (`docs/ARCHITECTURE.md`'s Evidence Package row),
+      which supersedes the earlier 5/5-unverifiable run this done-when
+      text was written against. Manually reviewed and confirmed correct
+      against that superseding evidence set.
 
 ## Open Questions / Decisions Needed
 

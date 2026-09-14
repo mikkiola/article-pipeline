@@ -2300,6 +2300,24 @@ pilot's build and review this session; `docs/adr/0007` (Strategy
 Layer's unimplemented status) and `docs/adr/0043` (the pilot's
 architecture) as the two ADRs this decision sits between.
 
+**Correction/clarification, 2026-09-14** (found during a gap-analysis
+session, not a changed decision — this entry's original text above is
+left as-is, since it records a real decision made on 2026-09-02).
+Strategy Layer's core (M1-M5: deterministic pre-filter, gate-check,
+framing/override mechanism, verdict assembly, real-data validation
+run) was in fact already built and tested the same week — commits
+`948bd13`..`df3fd91`, dated 2026-08-28, four days before this entry's
+2026-09-02 pivot. `docs/adr/0007`'s "None of the three components has
+been implemented" text is frozen as of when that ADR was accepted (ADR
+discipline: never edited after acceptance) and was already stale by
+the time this entry cited it. What this entry's pause actually applies
+to, and what genuinely remains not-started, is the **Multi-Source
+Claim Layer expansion** (Brain + Radar + ODS + repos as additional
+claim sources) and making Strategy Layer source-independent enough to
+consume it — not Strategy Layer's existence, which predates this
+entry. See `docs/ARCHITECTURE.md`'s Strategy Layer row (corrected the
+same session as this note) for its current, accurate status.
+
 ### [B-057] P1 — Daily LinkedIn pipeline: Collector mode-classifier + Author LLM branch (design complete, implementation starting)
 
 Added: 2026-09-03, owner decision, continuing `[B-056]`'s
