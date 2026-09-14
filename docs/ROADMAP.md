@@ -13,7 +13,7 @@ see `docs/adr/`.
 | 1 — Claim Extraction pilot | Closed |
 | 2 — Evidence Package | Closed |
 | 2.5 — Context/causal-structure layer | Closed — M1-M5 implemented; causal question resolved, partially confirmed: enrichment helps on-domain, harms via polysemous-tag collision, tracked as a non-blocking P1 fix. Phase 3 no longer blocked on this. |
-| 3 — Strategy Layer + Author + Quality Gate | Paused — Author has a separate, single-source MVP pilot (Collector-manifest-based, not fed by Strategy Layer); Strategy Layer and Quality Gate proper remain not started; see Current pointer |
+| 3 — Strategy Layer + Author + Quality Gate | Paused — Author has a separate, single-source MVP pilot (Collector-manifest-based, not fed by Strategy Layer); Strategy Layer's core (M1-M5) is implemented but single-source only, not yet source-independent (see `docs/ARCHITECTURE.md`); Quality Gate proper remains not started; see Current pointer |
 | 4 — Platform Adapter (Habr → LinkedIn) + Circuit Breaker | Not started |
 | 5+ — Experiment Log, remaining platforms | Not started |
 
