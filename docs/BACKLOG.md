@@ -2459,3 +2459,37 @@ Nothing to change in either repo's docs as a result.
 gap left open from the 2026-09-05 session's Collector automation work
 (freshness gate + `daily.yml`/`weekly.yml`, written then but not yet
 committed or run against a real CI runner).
+
+### [B-060] P1 — Local collector clone can silently go stale behind CI-pushed data
+
+Found 2026-09-14, during a session investigating "missing" scheduled
+Collector reports for 2026-09-11 (Friday) and 2026-09-12 (Saturday).
+Nothing was actually broken: `collector/.github/workflows/daily.yml`
+and `weekly.yml` (see `[B-059]` for their WORKSPACE_ROOT/checkout-path
+history) both ran on schedule and succeeded, pushing
+`data/daily_brief_2026-09-11.json`, `data/daily_brief_2026-09-12.json`,
+and `data/manifest_2026-09-12.json` to the Collector repo's
+`origin/main` on time. The apparent gap was caused entirely by a stale
+local clone: 9 commits (`dd1104f..bd05c17`) sat unfetched on
+`origin/main`, so the local `collector/data/` directory only showed
+files through `2026-09-03` when it was inspected — indistinguishable,
+from the outside, from a genuinely missed run.
+
+There is currently no step, script, or notification that keeps a local
+Collector checkout in sync with what CI has already pushed, or that
+flags the checkout as stale before it's read from.
+
+- [ ] Add a `git pull --ff-only` (or an equivalent staleness check —
+      e.g. comparing local `HEAD` against `origin/main` via `git
+      fetch` + `git rev-list --count HEAD..origin/main`) as the first
+      step of any local workflow, script, or session that reads from
+      the Collector repo's `data/` directory (manifest/daily-brief
+      consumers in this repo — e.g. Author — included), so a stale
+      local clone can't be mistaken for a missed scheduled run again.
+      Not started. No specific implementation site chosen yet — first
+      picked up, decide whether this lives as a shared helper (this
+      repo, Collector, or a small script) or as a per-caller check.
+
+**Source.** article-pipeline session, 2026-09-14, investigating
+apparent missing Collector reports for the 2026-09-11/2026-09-12
+scheduled runs.
