@@ -2512,7 +2512,7 @@ flags the checkout as stale before it's read from.
 apparent missing Collector reports for the 2026-09-11/2026-09-12
 scheduled runs.
 
-### [B-061] P0 — `doc_sync_tier2.py` ImportError breaks `.github/scripts/reconcile.py` and `adr-0033-reconciliation.yml` right now
+### [B-061] P0 — `doc_sync_tier2.py` ImportError breaks `.github/scripts/reconcile.py` and `adr-0033-reconciliation.yml` right now — RESOLVED
 
 Found 2026-09-14, during a gap-analysis session, confirmed by literal
 execution, not inference:
@@ -2559,18 +2559,23 @@ investigated directly in `mikkiola/tooltempest`, not assumed:**
   directly inside the tooltempest checkout itself (not just here) —
   confirms the break lives in tooltempest's own source, not in how
   this repo vendors it.
-- Root cause traced to a specific commit: `d337fadcacdbffb22a034406c8d4f0d434d0e62e`
-  ("feat(docops): retire CHECKPOINT.md support from doc_sync.py
-  (ADR-0010)", 2026-09-11), whose own commit message states "RECONCILE,
-  find_checkpoint_missing_fields(), staged_blob_text(), and the
-  CHECKPOINT-specific constants are removed rather than left as dead
-  code." `git log --oneline -S "def restore_snapshots" -- scripts/doc_sync.py`
-  shows the immediately preceding commit (`d35ff68`) is the last one
-  where `restore_snapshots` still existed — this commit removed it,
-  apparently on the assumption it was CHECKPOINT/RECONCILE-specific,
-  without accounting for `doc_sync_tier2.py`'s separate, unrelated use
-  of the same function name for Tier 2's own gated-doc snapshot/
-  rollback mechanism.
+- Root cause traced to a specific commit: `d35ff6859fb35bbd0e598b94ec141c0b51412881`
+  ("fix(docops): stop RECONCILE auto-filling missing CHECKPOINT.md
+  fields with TODO", 2026-09-11 11:40:47) — confirmed directly via
+  `git show d35ff68 -- scripts/doc_sync.py` (shows the removal:
+  `-def restore_snapshots(...)`) and `git log --oneline -S "def
+  restore_snapshots" -- scripts/doc_sync.py`. At that point RECONCILE
+  no longer wrote a `TODO` placeholder to auto-fill a missing
+  CHECKPOINT.md field, so it had nothing left of its own to roll back,
+  and `restore_snapshots()` looked unreachable from inside
+  `doc_sync.py`'s own file — without accounting for
+  `doc_sync_tier2.py`'s separate, unrelated use of the same function
+  name for Tier 2's own gated-doc snapshot/rollback mechanism.
+  `d337fadcacdbffb22a034406c8d4f0d434d0e62e` ("retire CHECKPOINT.md
+  support from doc_sync.py (ADR-0010)") came 2h24m later the same day
+  and removed the rest of the CHECKPOINT/RECONCILE machinery, but by
+  then `restore_snapshots()` was already gone — its own diff
+  (`git show d337fad -- scripts/doc_sync.py`) never touches it.
 - Checked for an already-landed fix on any other branch:
   `git branch -a` shows only `main`/`feat/docops-protocol`;
   `git merge-base --is-ancestor feat/docops-protocol main` confirms
@@ -2591,21 +2596,41 @@ per this item's own header, not a routine P1/P2 fix-when-convenient:
 this is live, currently-broken production automation with a known
 trigger condition (any merged PR), not a hypothetical or cosmetic gap.
 
-- [ ] Not started. Blocked on an upstream fix landing in
-      `mikkiola/tooltempest` (`scripts/doc_sync_tier2.py` needs either
-      a restored `restore_snapshots()` in `doc_sync.py`, or its own
-      snapshot/rollback logic decoupled from that name/module) — this
-      repo's own `scripts/doc_sync.py`/`doc_sync_tier2.py` are vendored,
-      gitignored copies (`.gitignore`'s "so not tracked here. Source of
-      truth: ToolTempest ADR-0001" rule) and must not be patched
-      directly here, even temporarily: the next `.tooltempest.lock`
-      bump would silently revert any local patch, per this project's
-      existing vendoring model. Once fixed upstream: identify the
-      fixing commit, bump `.tooltempest.lock` to it via this repo's
-      existing sync procedure (`scripts/sync-tooling.sh`), re-vendor,
-      and re-run both commands above to confirm the `ImportError` is
-      gone before closing this item.
+- [x] Fixed upstream in `mikkiola/tooltempest`, commit
+      `0df1b05b413ae8caee65cdbb06f39bfc1b7c262e` ("fix(docops): restore
+      restore_snapshots() removed as a d35ff68 side effect"; see that
+      repo's `docs/adr/0011-restore-restore-snapshots-for-tier2.md`).
+      `.tooltempest.lock` bumped to that commit
+      (`scripts/doc_sync.py` sha256
+      `663f019d987669bd9afb7a66e1fac2c5eb0f647835849faadfd8cd5cc4e25d7a`),
+      `scripts/doc_sync.py`/`scripts/doc_sync_tier2.py` re-vendored
+      from it. Confirmed resolved by re-running the exact commands that
+      originally failed:
+      ```
+      $ cd .github/scripts && python3 test_reconcile_error_path.py
+      [reconcile] status=error written=[] error=RuntimeError: simulated mid-flow failure
+      OK: case 6 (exception mid-flow) -- clean 'error' evidence record, committed and pushed, exit 1.
+
+      $ bash test-reconcile.sh
+      OK: all reconcile.py scenarios passed (cases 1-5; case 6 in test_reconcile_error_path.py).
+      ```
+      Both exit 0, no `ImportError`.
+
+**Correction, 2026-09-14 (same session as the resolution above).** This
+entry originally attributed `restore_snapshots()`'s removal to
+`d337fadcacdbffb22a034406c8d4f0d434d0e62e` in the "Root cause traced to
+a specific commit" paragraph above. That was wrong — corrected in place
+above (not left standing with only a note pointing at the fix, since it
+was a factual/technical error in this entry's own analysis, not a
+historical decision worth preserving verbatim): the actual removing
+commit is `d35ff6859fb35bbd0e598b94ec141c0b51412881`, confirmed via
+`git show d337fad -- scripts/doc_sync.py` (no `restore_snapshots` lines
+appear in that commit's diff at all) and `git log --oneline -S "def
+restore_snapshots" -- scripts/doc_sync.py`. Noted here per this
+project's discipline of not silently rewriting a filed entry without a
+trace that a correction happened.
 
 **Source.** article-pipeline gap-analysis session, 2026-09-14. Confirmed
 by direct investigation in both this repo and a fresh fetch of
 `mikkiola/tooltempest` — not assumed from the error message alone.
+Resolved same-day, upstream fix confirmed working via the tests above.
