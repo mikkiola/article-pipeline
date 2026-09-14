@@ -2511,3 +2511,101 @@ flags the checkout as stale before it's read from.
 **Source.** article-pipeline session, 2026-09-14, investigating
 apparent missing Collector reports for the 2026-09-11/2026-09-12
 scheduled runs.
+
+### [B-061] P0 — `doc_sync_tier2.py` ImportError breaks `.github/scripts/reconcile.py` and `adr-0033-reconciliation.yml` right now
+
+Found 2026-09-14, during a gap-analysis session, confirmed by literal
+execution, not inference:
+
+```
+$ cd .github/scripts && python3 test_reconcile_error_path.py
+Traceback (most recent call last):
+  ...
+  File ".../reconcile.py", line 36, in <module>
+    from doc_sync_tier2 import apply_tier2_sync  # noqa: E402
+  File ".../doc_sync_tier2.py", line 42, in <module>
+    from doc_sync import relative_to_root, repo_root, restore_snapshots  # noqa: E402
+ImportError: cannot import name 'restore_snapshots' from 'doc_sync'
+
+$ bash test-reconcile.sh
+ImportError: cannot import name 'restore_snapshots' from 'doc_sync' (.../doc_sync.py)
+FAIL: case 1: exit code was 1, expected 0
+```
+
+**Root cause, confirmed by reading both files.** `scripts/doc_sync_tier2.py`
+(vendored) imports `restore_snapshots` from `scripts/doc_sync.py`
+(vendored) at lines 42, 50, 81, 84, 179, and 241 — it's load-bearing,
+not incidental (`restore_snapshots(root, snapshots, written)` is
+actually called at line 241). But `doc_sync.py`, at the commit this
+repo's `.tooltempest.lock` currently pins
+(`d337fadcacdbffb22a034406c8d4f0d434d0e62e`), defines no
+`restore_snapshots` function at all — confirmed via
+`grep -n "^def " scripts/doc_sync.py`, and its own line 22 comment
+states plainly: "there is nothing to snapshot or restore."
+
+**Confirmed this is an upstream bug, not a local vendoring problem —
+investigated directly in `mikkiola/tooltempest`, not assumed:**
+- `tooltempest`'s own checkout, `git fetch origin` then `git log
+  --oneline d337fadcacdbffb22a034406c8d4f0d434d0e62e..origin/main`:
+  zero commits — `origin/main` is at the exact same commit this
+  repo's lock is already pinned to. The bug is not "we're behind,"
+  it's "upstream's current tip is broken."
+- `shasum -a 256 scripts/doc_sync.py` in the tooltempest checkout at
+  that commit: `b53714c5a896c68ea688ea066be60d0b865185e8fae6903cc06ccd0edcb76320`
+  — matches this repo's `.tooltempest.lock` `sha256` field exactly, so
+  the vendored copy here is a faithful, current copy of upstream, not
+  stale or corrupted.
+- Reproduced the identical `ImportError` by importing `doc_sync_tier2`
+  directly inside the tooltempest checkout itself (not just here) —
+  confirms the break lives in tooltempest's own source, not in how
+  this repo vendors it.
+- Root cause traced to a specific commit: `d337fadcacdbffb22a034406c8d4f0d434d0e62e`
+  ("feat(docops): retire CHECKPOINT.md support from doc_sync.py
+  (ADR-0010)", 2026-09-11), whose own commit message states "RECONCILE,
+  find_checkpoint_missing_fields(), staged_blob_text(), and the
+  CHECKPOINT-specific constants are removed rather than left as dead
+  code." `git log --oneline -S "def restore_snapshots" -- scripts/doc_sync.py`
+  shows the immediately preceding commit (`d35ff68`) is the last one
+  where `restore_snapshots` still existed — this commit removed it,
+  apparently on the assumption it was CHECKPOINT/RECONCILE-specific,
+  without accounting for `doc_sync_tier2.py`'s separate, unrelated use
+  of the same function name for Tier 2's own gated-doc snapshot/
+  rollback mechanism.
+- Checked for an already-landed fix on any other branch:
+  `git branch -a` shows only `main`/`feat/docops-protocol`;
+  `git merge-base --is-ancestor feat/docops-protocol main` confirms
+  the latter is already a fully-merged ancestor of `main`, not
+  independent unmerged work. No fix exists anywhere in the tooltempest
+  repo as of this session.
+
+**Blast radius, right now, not hypothetical:** `.github/scripts/reconcile.py`
+imports `doc_sync_tier2` (line 36) and would raise this identical
+`ImportError` the moment it runs. `.github/workflows/adr-0033-reconciliation.yml`
+(triggered on `pull_request: types: [closed]`, gated on `merged ==
+true`) runs `scripts/sync-tooling.sh` — which vendors from this exact
+same pinned commit — immediately before calling `reconcile.py`. **The
+next PR merged into `main` that triggers this workflow will fail.**
+
+**Treated as P0 despite the fix needing to land upstream first** —
+per this item's own header, not a routine P1/P2 fix-when-convenient:
+this is live, currently-broken production automation with a known
+trigger condition (any merged PR), not a hypothetical or cosmetic gap.
+
+- [ ] Not started. Blocked on an upstream fix landing in
+      `mikkiola/tooltempest` (`scripts/doc_sync_tier2.py` needs either
+      a restored `restore_snapshots()` in `doc_sync.py`, or its own
+      snapshot/rollback logic decoupled from that name/module) — this
+      repo's own `scripts/doc_sync.py`/`doc_sync_tier2.py` are vendored,
+      gitignored copies (`.gitignore`'s "so not tracked here. Source of
+      truth: ToolTempest ADR-0001" rule) and must not be patched
+      directly here, even temporarily: the next `.tooltempest.lock`
+      bump would silently revert any local patch, per this project's
+      existing vendoring model. Once fixed upstream: identify the
+      fixing commit, bump `.tooltempest.lock` to it via this repo's
+      existing sync procedure (`scripts/sync-tooling.sh`), re-vendor,
+      and re-run both commands above to confirm the `ImportError` is
+      gone before closing this item.
+
+**Source.** article-pipeline gap-analysis session, 2026-09-14. Confirmed
+by direct investigation in both this repo and a fresh fetch of
+`mikkiola/tooltempest` — not assumed from the error message alone.
