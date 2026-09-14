@@ -249,6 +249,24 @@ No open items remain — the isolated D-025 causal-question experiment
       without going through this function, would silently break the
       invariant with nothing in the codebase to catch it — no test
       suite exists anywhere in this repo.
+
+      **Note, 2026-09-14** (this entry's underlying concern — whether
+      an explicit schema check/test is needed — is still open and
+      remains the owner's call; not resolved or closed by this note).
+      The incidental enforcement mechanism described above,
+      `write_evidence.py`'s dict-subscript access, no longer exists:
+      the file was deleted this session as confirmed dead/unused code
+      (commit `97407c3`). Checked directly whether anything else in
+      the codebase reads or writes `source_url`/`license` in a way
+      that has the same incidental effect — nothing does:
+      `evidence_package/driver.py`'s `run_searches()` never
+      constructs a `source_url` or `license` key at all (its own
+      docstring, line 8, states assigning them is explicitly out of
+      scope, left to the interactive M4 step); `strategy_layer/
+      pre_filter.py` and `run_pilot.py` only ever subscript
+      `evidence["status"]`, never `source_url`/`license`. The
+      invariant is now enforced nowhere in the codebase — not even
+      incidentally, as it was before.
 - [ ] [B-014] Add mechanical detection/prevention of modifications to accepted
       ADR files in docs/adr/ — the rule "an accepted ADR is never
       edited after acceptance" exists in docs/CONSTITUTION.md, but
