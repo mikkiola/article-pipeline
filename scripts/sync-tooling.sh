@@ -11,6 +11,12 @@
 # entry's top-level directory: skills/ and rules/ are Claude Code
 # client config, copied into ~/.claude/; scripts/ and schemas/ are
 # consumed directly by this repo's own tooling, copied into this repo.
+# docs/reference/ (ToolTempest ADR-0008) is neither: per ToolTempest's
+# README ("Reference documentation"), this category is consulted in
+# place, not installed as a rule -- this project's own convention
+# (docs/BACKLOG.md, docs/adr/0044) already cites documentation-rules.md
+# by its ToolTempest path rather than vendoring a local copy, so
+# sync-tooling.sh recognizes and skips it rather than copying it.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -58,6 +64,8 @@ while IFS= read -r line; do
 done < "$MANIFEST_FILE"
 [ "${#VENDORED_FILES[@]}" -gt 0 ] || fail "${MANIFEST_NAME} at ${PINNED_SHA} lists no files"
 
+INSTALLED_COUNT=0
+SKIPPED_COUNT=0
 for rel in "${VENDORED_FILES[@]}"; do
   case "$rel" in
     skills/*|rules/*)
@@ -66,13 +74,19 @@ for rel in "${VENDORED_FILES[@]}"; do
     scripts/*|schemas/*)
       dest="${REPO_ROOT}/${rel}"
       ;;
+    docs/reference/*)
+      echo "SKIP: ${rel} is reference documentation (ToolTempest ADR-0008) -- consulted in place, not vendored"
+      SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
+      continue
+      ;;
     *)
-      fail "MANIFEST.txt entry \"${rel}\" is outside the known skills/rules/scripts/schemas destinations -- update sync-tooling.sh's mapping before proceeding"
+      fail "MANIFEST.txt entry \"${rel}\" is outside the known skills/rules/scripts/schemas/docs-reference destinations -- update sync-tooling.sh's mapping before proceeding"
       ;;
   esac
   mkdir -p "$(dirname "$dest")"
   cp "${CACHE_DIR}/${rel}" "$dest" || fail "failed to copy ${rel}"
+  INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
 done
 
-echo "OK: installed ${#VENDORED_FILES[@]} ToolTempest file(s) (commit ${ACTUAL_SHA}) per ${MANIFEST_NAME} into ${REPO_ROOT} and ${CLAUDE_DIR}"
+echo "OK: installed ${INSTALLED_COUNT} ToolTempest file(s), skipped ${SKIPPED_COUNT} reference doc(s) (commit ${ACTUAL_SHA}) per ${MANIFEST_NAME} into ${REPO_ROOT} and ${CLAUDE_DIR}"
 exit 0
