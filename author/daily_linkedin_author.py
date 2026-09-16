@@ -11,11 +11,19 @@ system: exactly one LLM call per run, no retry, no multi-turn
 conversation, no self-correction pass. Any failure — missing API key,
 malformed model response — fails loudly; there is no fallback path.
 
-Input contract: a `DailyBrief` JSON object, produced by
-`collector/scripts/daily_brief.py` (a separate repo, sibling directory
-under the same workspace root). This file knows nothing about how
-`mode` was decided — it trusts `mode` as an already-decided fact and
-only interprets it into a prompt branch.
+Input contract: a `DailyBrief`-SHAPED JSON object — as of 2026-09-15
+(M4, ADR-0045), no longer read directly from Collector's own
+`daily_brief_<date>.json`. This file's CLI now expects a path to a
+JSON already in this shape, produced by
+`author/linkedin_verdict_reader.py` from a completed Strategy Layer
+run's `AuthoringContext` list (`author/authoring_context.py`) — the
+old direct read bypassed Strategy Layer's classification/gate/framing
+entirely, which is exactly the leaky abstraction this migration exists
+to close. This file still knows nothing about how `mode` was decided —
+it trusts `mode` as an already-decided fact and only interprets it
+into a prompt branch; `build_prompt()` and everything downstream of it
+are unchanged by this shift, since they only ever depended on the
+dict's shape, never its origin.
 """
 
 import argparse
@@ -380,35 +388,28 @@ def call_model(prompt: str) -> dict:
         ) from e
 
 
-def default_daily_brief_path() -> Path:
-    """Collector is a sibling repo under the same workspace root
-    (confirmed: article-pipeline/author/../.. == the workspace root
-    that also contains collector/, matching tier0_scan.py's own
-    WORKSPACE_ROOT layout) — not a subdirectory, not an env-configured
-    path."""
-    collector_data_dir = Path(__file__).resolve().parent.parent.parent / "collector" / "data"
-    candidates = sorted(collector_data_dir.glob("daily_brief_*.json"))
-    if not candidates:
-        print(f"No daily_brief_*.json found in {collector_data_dir}", file=sys.stderr)
-        sys.exit(1)
-    return candidates[-1]
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Author's daily LinkedIn post generator — one LLM call, branched on DailyBrief's mode."
+        description=(
+            "Author's daily LinkedIn post generator — one LLM call, branched "
+            "on DailyBrief's mode. Reads a DailyBrief-SHAPED JSON file "
+            "(produced by author/linkedin_verdict_reader.py from a Strategy "
+            "Layer run's AuthoringContext, per ADR-0045) — no longer reads "
+            "Collector's daily_brief_<date>.json directly (M4, 2026-09-15)."
+        )
     )
     parser.add_argument(
         "daily_brief_path",
-        nargs="?",
-        help="Path to a daily_brief_<date>.json (default: latest in the sibling collector/data/ directory)",
+        help="Path to a DailyBrief-shaped JSON file (required — no default; "
+        "the old fallback to Collector's raw file was the direct-read bypass "
+        "this migration closes).",
     )
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    daily_brief_path = Path(args.daily_brief_path) if args.daily_brief_path else default_daily_brief_path()
+    daily_brief_path = Path(args.daily_brief_path)
 
     daily_brief = json.loads(daily_brief_path.read_text())
     prompt = build_prompt(daily_brief)
