@@ -2652,3 +2652,58 @@ trace that a correction happened.
 by direct investigation in both this repo and a fresh fetch of
 `mikkiola/tooltempest` — not assumed from the error message alone.
 Resolved same-day, upstream fix confirmed working via the tests above.
+
+### [B-062] P3 — `docs/CONSTITUTION.md`'s own text hasn't caught up to two of this project's settled conventions
+
+Found: 2026-09-16, Documentation Rules Bible audit.
+
+The ecosystem-wide Documentation Rules Bible (`tooltempest`'s
+`docs/reference/documentation-rules.md`) states a generic reference
+template for two of `docs/CONSTITUTION.md`'s required sections.
+`docs/CONSTITUTION.md`'s own text, on direct read, doesn't match that
+template in either case — not because current practice is wrong, but
+because the file's prose was never reconciled against it:
+
+1. **§9 "Write/Delete/Move confirmation."** The Bible's generic
+   template requires a specific per-action prompt format —
+   `[ЗАПРОС] Действие: X. Путь: Y. Подтвердить? (Y/n)` — on every
+   write/delete/move, waiting for an answer each time.
+   `docs/CONSTITUTION.md`'s actual section describes a different,
+   already-settled mechanism: confirmation is per-*task*, not
+   per-action — a task's scope statement (files/paths that may be
+   created/modified/deleted) is confirmed once before the task starts,
+   with no per-file prompt and no Russian-bracket format anywhere in
+   the file. This project's actual practice matches the per-task model
+   already documented — the gap is textual/reconciliation, not a
+   behavior defect.
+2. **§14 "ADR discipline."** `docs/CONSTITUTION.md` still states
+   "Every ADR uses the same field set: Status, Decision, Options,
+   Chosen, Why, Constraints, Rejected, Consequences, Validation,
+   Reversal condition, Source" — the old 11-field format. Actual
+   practice, confirmed by direct read of every ADR from `0001` through
+   `0048`, uses the 6-block format the Bible itself documents (Status /
+   Context & Constraints / Decision / Alternatives & Rationale /
+   Consequences / Confirmation & Revisit / Source). This field-set
+   description in `docs/CONSTITUTION.md` was never updated when the
+   project's real convention settled on the 6-block shape.
+
+Priority basis: compared against `[B-048]` (`docs/ARCHITECTURE.md`'s
+stale `.tooltempest.lock` reference) — same class of finding, a
+canonical doc's own text describing an earlier state than the
+project's actual current practice, with no active trigger or blocking
+consequence. Filed at the same P3.
+
+- [ ] Reconcile `docs/CONSTITUTION.md`'s §9 text with the per-task
+      confirmation model this project actually uses (drop the Bible's
+      generic per-action template, or state explicitly why this
+      project's model diverges from the ecosystem default).
+- [ ] Update `docs/CONSTITUTION.md`'s §14 field-set description from
+      the 11-field list to the settled 6-block format
+      (Status/Context & Constraints/Decision/Alternatives & Rationale/
+      Consequences/Confirmation & Revisit/Source).
+
+Not fixed in this entry — registration of the gap only, per this
+session's explicit read-only-audit-then-file-separately instruction.
+
+**Source.** Documentation Rules Bible audit, architect-chat session,
+2026-09-16.
