@@ -58,7 +58,7 @@ see `docs/adr/`.
   yet pushed): the two-dimension `CanonicalUnit` contract, Collector's
   adapter, both LinkedIn and Habr routed through Strategy Layer's
   verdict, and CI enforcement of the Anti-Corruption-Layer boundary
-  (M1-M7, commits `c912c28`..`228d251`, ADR-0045 through ADR-0048; see
+  (M1-M7, commits `c912c28`..`228d251`; rationale in `docs/adr/`, see
   `docs/ARCHITECTURE.md`'s Strategy Layer and Author rows). `[B-056]`
   carries a dated note confirming this; see also `docs/BACKLOG.md`'s
   `[B-063]` for the sprint's own record. Phase 3 planning/
