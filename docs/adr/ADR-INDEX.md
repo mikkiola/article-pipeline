@@ -52,3 +52,7 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0042](0042-cowork-layer-practice-boundary.md) | Cowork-Layer Practice Boundary — Practice-Only, No-File Conventions | Accepted | null | null |
 | [ADR-0043](0043-author-mvp-single-source-pilot.md) | Author MVP — Source Adapter / Story Builder / Channel Profile / Channel Author, Single-Source Pilot via Collector | Accepted | null | null |
 | [ADR-0044](0044-linkedin-daily-post-voice-contract.md) | LinkedIn Daily Post Voice Contract | Accepted | null | null |
+| [ADR-0045](0045-post-classification-authoring-context.md) | Post-Classification Authoring Context | Accepted | null | null |
+| [ADR-0046](0046-habr-multi-claim-digest.md) | Habr Multi-Claim Digest | Accepted | null | null |
+| [ADR-0047](0047-two-dimension-verification-model.md) | Two-Dimension Verification Model (Integrity × Corroboration) | Accepted | null | null |
+| [ADR-0048](0048-source-independence-acl-architecture.md) | Source-Independence via Anti-Corruption Layer Architecture | Accepted | null | null |
