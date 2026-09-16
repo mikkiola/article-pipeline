@@ -1,0 +1,60 @@
+name: Strategy Layer Boundary CI
+
+# SPEC.md Milestone M6 / ADR-0048 (Source-Independence via Anti-
+# Corruption Layer Architecture): three independent mechanisms enforce
+# that strategy_layer/'s core decision logic (pre_filter.py,
+# framing.py, write_verdict.py, derivation_kind.py) never couples to a
+# specific source (Brain's claim_extraction/context_layer/
+# evidence_package chain, or author.source_adapter) --
+# import-linter catches a real `import` statement, the grep-based lint
+# catches a hardcoded source-specific path string import-linter can't
+# see, and the synthetic alien-source contract test proves a source
+# neither file has ever seen still flows through with zero special-
+# casing (R3: "adding a new source changes only its own adapter").
+
+on:
+  pull_request:
+    paths:
+      - "strategy_layer/**"
+      - "author/**"
+      - "pyproject.toml"
+      - "scripts/check-strategy-layer-boundary.sh"
+  push:
+    branches: [main]
+    paths:
+      - "strategy_layer/**"
+      - "author/**"
+      - "pyproject.toml"
+      - "scripts/check-strategy-layer-boundary.sh"
+
+permissions: {}
+
+jobs:
+  boundary-check:
+    name: Strategy Layer boundary enforcement
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install pinned dependencies
+        run: pip install pydantic==2.13.4 import-linter==2.15 grimp==3.17 pytest==9.1.1
+
+      - name: import-linter -- forbidden-import contract
+        run: lint-imports
+
+      - name: Grep-based path-hardcoding lint
+        run: bash scripts/check-strategy-layer-boundary.sh
+
+      - name: Regression test for the path-hardcoding lint itself
+        run: bash scripts/test-strategy-layer-boundary-check.sh
+
+      - name: Synthetic alien-source contract test
+        run: python3 -m pytest strategy_layer/test_alien_source_contract.py -v

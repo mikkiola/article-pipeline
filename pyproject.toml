@@ -14,7 +14,8 @@ dev = [
 ]
 
 [tool.importlinter]
-root_package = "strategy_layer"
+root_packages = ["strategy_layer", "author"]
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Strategy Layer stays behind its Anti-Corruption Layer boundary"
