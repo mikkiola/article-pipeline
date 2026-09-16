@@ -13,7 +13,7 @@ see `docs/adr/`.
 | 1 — Claim Extraction pilot | Closed |
 | 2 — Evidence Package | Closed |
 | 2.5 — Context/causal-structure layer | Closed — M1-M5 implemented; causal question resolved, partially confirmed: enrichment helps on-domain, harms via polysemous-tag collision, tracked as a non-blocking P1 fix. Phase 3 no longer blocked on this. |
-| 3 — Strategy Layer + Author + Quality Gate | Paused — Author has a separate, single-source MVP pilot (Collector-manifest-based, not fed by Strategy Layer); Strategy Layer's core (M1-M5) is implemented but single-source only, not yet source-independent (see `docs/ARCHITECTURE.md`); Quality Gate proper remains not started; see Current pointer |
+| 3 — Strategy Layer + Author + Quality Gate | In progress — Strategy Layer is now Collector-sourced and source-independent for Collector specifically (two-dimension `CanonicalUnit` contract, Collector adapter, CI-enforced ACL boundary; Brain's own adapter not yet built); Author (both LinkedIn and Habr) now consumes Strategy Layer's verdict, no longer reads Collector directly (see `docs/ARCHITECTURE.md`); Quality Gate proper remains not started; see Current pointer |
 | 4 — Platform Adapter (Habr → LinkedIn) + Circuit Breaker | Not started |
 | 5+ — Experiment Log, remaining platforms | Not started |
 
@@ -39,22 +39,36 @@ see `docs/adr/`.
   private repo, has started outside this repo's scope — no
   article-pipeline phase or component is affected; see
   `docs/BACKLOG.md`'s `[B-055]` for detail.
-- **Priority shift, this session:** the active focus has moved from
-  Phase 3 planning (Multi-Source Claim Layer / Strategy Layer
-  expansion) to validating the publication channel itself — a
-  single-source pilot (Collector's manifest -> Author -> two drafts,
-  Habr RU + LinkedIn EN) built and reviewed this session (Author's
-  first implementation; see `docs/ARCHITECTURE.md`'s Author row and
+- **Priority shift** (historical record, since resolved — see next
+  bullet): the active focus moved from Phase 3 planning (Multi-Source
+  Claim Layer / Strategy Layer expansion) to validating the
+  publication channel itself — a single-source pilot (Collector's
+  manifest -> Author -> two drafts, Habr RU + LinkedIn EN) built and
+  reviewed that session (Author's first implementation; see
+  `docs/ARCHITECTURE.md`'s Author row and
   `docs/adr/0043-author-mvp-single-source-pilot.md`). Multi-Source
   Claim Layer / Strategy Layer Phase 3 work, and Radar/Brain as claim
-  sources, are **paused, not abandoned** — resume once the pilot
-  confirms publication mechanics actually work end-to-end. See
-  `docs/BACKLOG.md`'s `[B-056]` for the full record of what's paused
+  sources, were **paused, not abandoned** — resume once the pilot
+  confirmed publication mechanics actually worked end-to-end. See
+  `docs/BACKLOG.md`'s `[B-056]` for the full record of what was paused
   and why.
+- **Resume condition met, 2026-09-16.** `[B-056]`'s own stated resume
+  condition — Strategy Layer becoming source-independent enough to
+  consume Collector — is built and committed to `main` (locally; not
+  yet pushed): the two-dimension `CanonicalUnit` contract, Collector's
+  adapter, both LinkedIn and Habr routed through Strategy Layer's
+  verdict, and CI enforcement of the Anti-Corruption-Layer boundary
+  (M1-M7, commits `c912c28`..`228d251`, ADR-0045 through ADR-0048; see
+  `docs/ARCHITECTURE.md`'s Strategy Layer and Author rows). `[B-056]`
+  carries a dated note confirming this; see also `docs/BACKLOG.md`'s
+  `[B-063]` for the sprint's own record. Phase 3 planning/
+  implementation has resumed on this basis, per the Status table
+  above ("In progress").
 
-Next work continues the single-source pilot (owner review of the
-generated drafts, then whichever follow-up that review points to) —
-not Phase 3 planning, per the priority shift above.
+Next work continues Phase 3 from Strategy Layer's now-Collector-sourced
+state — Brain's own adapter (deferred this sprint), the
+atom-tag-disambiguation follow-up (`[B-005]`, itself blocked on Brain's
+GitHub migration), and Quality Gate remain not started.
 
 ## Dependency chain
 
@@ -66,8 +80,8 @@ independently of it.
 |---|---|
 | Context/causal-structure layer | Claim Extraction |
 | Evidence Package | Claim Extraction output |
-| Strategy Layer | Context/causal-structure layer |
-| Author | Collector (pilot; not yet Strategy Layer) |
+| Strategy Layer | Context/causal-structure layer, Collector |
+| Author | Strategy Layer |
 | Quality Gate | Author |
 | Platform Adapter | Quality Gate |
 | Experiment Log | Platform Adapter |

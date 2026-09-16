@@ -2336,6 +2336,20 @@ consume it — not Strategy Layer's existence, which predates this
 entry. See `docs/ARCHITECTURE.md`'s Strategy Layer row (corrected the
 same session as this note) for its current, accurate status.
 
+**Resume condition met, 2026-09-16** (note only — this entry stays
+open; closing it is a separate, explicit owner decision, not made
+here). Per this entry's own 2026-09-14 correction above, the resume
+condition narrows to "making Strategy Layer source-independent enough
+to consume [Collector]." That condition is now built and committed to
+`main` (locally; not yet pushed): the two-dimension `CanonicalUnit`
+contract, a real Collector adapter, both LinkedIn and Habr routed
+through Strategy Layer's verdict instead of reading Collector
+directly, and CI enforcement of the resulting Anti-Corruption-Layer
+boundary — commits `c912c28`..`228d251` (M1-M7), ADR-0045 through
+ADR-0048. See `docs/BACKLOG.md`'s `[B-063]` for the sprint's own
+record and `docs/ARCHITECTURE.md`'s Strategy Layer/Author rows for
+current status.
+
 ### [B-057] P1 — Daily LinkedIn pipeline: Collector mode-classifier + Author LLM branch (design complete, implementation starting)
 
 Added: 2026-09-03, owner decision, continuing `[B-056]`'s
@@ -2707,3 +2721,75 @@ session's explicit read-only-audit-then-file-separately instruction.
 
 **Source.** Documentation Rules Bible audit, architect-chat session,
 2026-09-16.
+
+### [B-063] P1 — Strategy Layer source-independence sprint (M1-M7): Collector as first real non-Brain source
+
+Found: 2026-09-16, this session — recording completed work, not a new
+task to start.
+
+Strategy Layer extended from single-source (Brain/Claim-Extraction-only)
+to source-independent, via an Anti-Corruption-Layer-style Pydantic v2
+input contract, with Collector as the first real non-Brain source.
+Built and committed across seven milestones:
+
+- **M1** — `strategy_layer/contract.py`: `CanonicalUnit`, the two-
+  dimension (`integrity_status`/`corroboration_status`) inbound
+  contract every source adapter must produce, replacing the old
+  single `verified`/`disputed`/`unverifiable`/`pending` status.
+- **M2** — `pre_filter.py` rewritten: `join_claims_and_evidence()`
+  removed, classification keyed off both dimensions, gate condition
+  redefined (`zero_included_units`).
+- **M3** — `strategy_layer/adapters/collector.py`: a real (not static)
+  integrity check — repo+branch existence plus commit_count
+  reconciliation against Collector's actual on-disk data. Also
+  `derivation_kind.py` (declarative rule table guarding framing text
+  against overclaiming inferential weight) and `language_check.py`.
+- **M4** — `author/authoring_context.py` + `author/linkedin_verdict_
+  reader.py`: LinkedIn now consumes Strategy Layer's verdict via
+  `AuthoringContext`, built post-classification; the old direct
+  `collector/data/daily_brief_*.json` read removed from
+  `daily_linkedin_author.py`.
+- **M5** — `author/habr_verdict_to_story.py` + `author/habr_weekly_
+  author.py`: Habr's new entry point, rebuilt same-day from a
+  single-claim design to a multi-claim digest after a real run showed
+  5 included claims is the typical case, not an edge case.
+- **M6** — CI enforcement: an import-linter forbidden-import contract,
+  a grep-based path-hardcoding lint
+  (`scripts/check-strategy-layer-boundary.sh`), and a synthetic
+  alien-source contract test
+  (`strategy_layer/test_alien_source_contract.py`) — all three
+  independently mutation-tested — wired into
+  `.github/workflows/strategy-layer-boundary-ci.yml`.
+- **M7** — ADR-0047 (Two-Dimension Verification Model) and ADR-0048
+  (Source-Independence via Anti-Corruption Layer Architecture) filed;
+  ADR-0045 (Post-Classification Authoring Context) and ADR-0046 (Habr
+  Multi-Claim Digest) landed earlier as side effects of M4/M5.
+
+**Status.** All seven milestones done — see `SPEC.md`'s own Milestones
+section for full done-when/verify detail per milestone. Full
+`strategy_layer/`+`author/` suite: 137/137. Real end-to-end runs
+against live `manifest_*.json`/`daily_brief_*.json` data throughout,
+not synthetic fixtures. Committed to `main` across 8 commits,
+`c912c28`..`228d251` (plus `35a1d24`/`39fa3c1`/`b45fb6e` for SPEC.md
+housekeeping and this session's own doc work) — **local only, not yet
+pushed to `origin`**, per this project's unconditional sensitive-ops
+rule (`git push` is a deliberate, separate, owner-authorized action).
+
+**Explicitly deferred, not resolved by this sprint:** Brain's own
+adapter (the contract is designed with Brain's shape in view — see
+ADR-0048 — but only Collector's adapter is built); derived-claim
+synthesis from raw telemetry; multi-claim synthesis beyond the
+structural digest chosen for Habr; the `story_builder.py`/
+`channel_author.py` Collector-vocabulary leak (pre-existing, on the
+old `generate_drafts.py` path, untouched by this sprint).
+
+- [ ] Push commits `c912c28`..`228d251` to `origin/main` — owner
+      action, not automatic.
+- [ ] Owner reviews and authorizes closing this entry, per
+      `docs/CONSTITUTION.md`'s confirmation-gated `docs/BACKLOG.md`
+      closure rule — not closed here even though the work itself is
+      done.
+
+**Source.** Strategy Layer source-independence sprint, architect-chat
+session, 2026-09-15/16. `SPEC.md` (root) carries the full `/spec`
+interview record and per-milestone verify/done-when detail.
