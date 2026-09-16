@@ -185,3 +185,106 @@ def test_derive_overrides_empty_when_no_overrides():
     ]
 
     assert framing.derive_overrides(claim_treatments) == []
+
+
+# --- derivation_kind / source_status_snapshot integration (M3 Part 2) -----
+# New tests only — the 10 above are unaffected by design: derivation_kind
+# defaults to None, and the two new output keys are only added when a
+# caller actually supplies it, so every pre-existing call above still
+# produces the exact same 5-key dict it always did.
+
+
+def test_derivation_kind_not_supplied_preserves_old_five_key_shape():
+    result = framing.build_claim_treatment(
+        claim_id="c8",
+        pre_filter_classification="include",
+        pre_filter_reason=None,
+        framing="Bare include, no derivation_kind supplied.",
+    )
+    assert set(result.keys()) == {
+        "claim_id",
+        "pre_filter_classification",
+        "final_classification",
+        "framing",
+        "reason",
+    }
+
+
+def test_derivation_kind_warranted_attaches_kind_and_snapshot():
+    snapshot = {"integrity_status": "valid", "corroboration_status": "not_applicable"}
+    result = framing.build_claim_treatment(
+        claim_id="c9",
+        pre_filter_classification="include",
+        pre_filter_reason=None,
+        framing="6 commits landed in article-pipeline this week.",
+        derivation_kind="restatement",
+        source_status_snapshot=snapshot,
+    )
+    assert result["final_classification"] == "include"
+    assert result["framing"] == "6 commits landed in article-pipeline this week."
+    assert result["derivation_kind"] == "restatement"
+    assert result["source_status_snapshot"] == snapshot
+    assert result["reason"] is None
+
+
+def test_derivation_kind_unwarranted_forces_exclude_with_rule_table_reason():
+    snapshot = {"integrity_status": "valid", "corroboration_status": "not_applicable"}
+    result = framing.build_claim_treatment(
+        claim_id="c10",
+        pre_filter_classification="include",
+        pre_filter_reason=None,
+        framing="This caused the increase.",
+        derivation_kind="causal_claim",
+        source_status_snapshot=snapshot,
+    )
+    assert result["final_classification"] == "exclude"
+    assert result["framing"] is None
+    assert "never warranted" in result["reason"]
+    # derivation_kind/snapshot stay on the entry — framing WAS attempted,
+    # this records why it was then refused, per SPEC.md's own rule.
+    assert result["derivation_kind"] == "causal_claim"
+    assert result["source_status_snapshot"] == snapshot
+
+
+def test_derivation_kind_without_snapshot_raises():
+    with pytest.raises(ValueError, match="c11.*source_status_snapshot"):
+        framing.build_claim_treatment(
+            claim_id="c11",
+            pre_filter_classification="include",
+            pre_filter_reason=None,
+            framing="Some framing.",
+            derivation_kind="restatement",
+            source_status_snapshot=None,
+        )
+
+
+def test_derivation_kind_aggregation_respects_unit_count_in_run():
+    snapshot = {"integrity_status": "valid", "corroboration_status": "not_applicable"}
+    result = framing.build_claim_treatment(
+        claim_id="c12",
+        pre_filter_classification="include",
+        pre_filter_reason=None,
+        framing="Activity trended upward across the last few weeks.",
+        derivation_kind="aggregation",
+        source_status_snapshot=snapshot,
+        unit_count_in_run=1,
+    )
+    assert result["final_classification"] == "exclude"
+    assert "only one source unit" in result["reason"]
+
+
+def test_derivation_kind_on_bare_exclude_is_discarded_like_framing():
+    # Mirrors the existing "framing forced to None on exclude" invariant —
+    # derivation_kind/source_status_snapshot supplied for a Claim that
+    # isn't actually included get discarded too, not silently kept.
+    snapshot = {"integrity_status": "valid", "corroboration_status": "disputed"}
+    result = framing.build_claim_treatment(
+        claim_id="c13",
+        pre_filter_classification="exclude",
+        pre_filter_reason="No corroborating evidence found; accuracy not established.",
+        derivation_kind="restatement",
+        source_status_snapshot=snapshot,
+    )
+    assert result["final_classification"] == "exclude"
+    assert "derivation_kind" not in result
+    assert "source_status_snapshot" not in result

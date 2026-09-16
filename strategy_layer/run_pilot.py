@@ -1,6 +1,27 @@
 """One-shot orchestration script for Strategy Layer's M5 real-data
 validation run (SPEC.md Test Plan item 4, Milestone M5).
 
+**STALE, 2026-09-15 — kept as a historical record, not runnable as-is.**
+This script calls pre_filter.join_claims_and_evidence()/classify_pair(
+claim, evidence)/check_all_claims_unverifiable_gate() and
+framing.build_claim_treatment() without derivation_kind/
+source_status_snapshot — all part of the old single-status,
+dict-based Brain/Claim-Extraction API, removed from pre_filter.py by
+the two-dimension-model rewrite (source-independence SPEC.md,
+Milestone M2). Not migrated to CanonicalUnit: this script's whole job
+was validating the single-source (Brain-only) Strategy Layer pilot —
+already done, already recorded (the real verdict it produced,
+`strategy_layer/output/verdict_20260828T211939.json`, and
+`docs/ARCHITECTURE.md`'s Strategy Layer row) — and Brain's own adapter
+is explicitly deferred past this sprint, so there is nothing a
+migrated version of this script would run against. Left in place
+(git history precedent: this project preserves closed-pilot scripts
+rather than deleting them — see context_layer/enrich.py's and
+evidence_package/write_evidence.py's deletion commit, which explains
+why THOSE were deleted — confirmed dead, unlike this file, which is a
+recorded historical run, not unused code) — not deleted, not
+migrated, not maintained going forward.
+
 Loads the real Claim and Evidence records already used for Evidence
 Package's own pilot validation (docs/ARCHITECTURE.md's Evidence
 Package row), runs them through M1's join_claims_and_evidence +

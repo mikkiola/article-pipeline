@@ -1,0 +1,33 @@
+[project]
+name = "article-pipeline"
+version = "0.0.0"
+requires-python = ">=3.14"
+dependencies = [
+    "pydantic==2.13.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    "import-linter==2.15",
+    "grimp==3.17",
+    "pytest==9.1.1",
+]
+
+[tool.importlinter]
+root_package = "strategy_layer"
+
+[[tool.importlinter.contracts]]
+name = "Strategy Layer stays behind its Anti-Corruption Layer boundary"
+type = "forbidden"
+source_modules = [
+    "strategy_layer.pre_filter",
+    "strategy_layer.framing",
+    "strategy_layer.write_verdict",
+    "strategy_layer.derivation_kind",
+]
+forbidden_modules = [
+    "claim_extraction",
+    "context_layer",
+    "evidence_package",
+    "author.source_adapter",
+]
