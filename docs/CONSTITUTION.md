@@ -110,6 +110,39 @@ architectural and ask, rather than guessing it's unambiguous.
 are never edited after acceptance) — this section doesn't change
 that.
 
+## Commit trailer convention
+
+Every commit that closes a `docs/BACKLOG.md` item, or changes a fact
+stated in a canonical doc (`docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
+`README.md`), must carry the corresponding git trailer, added at
+commit time via `git commit --trailer "..."` — not left for a later
+session to reconstruct from the commit body, diff, or memory.
+
+- `Closes: B-NNN` — the commit closes that `docs/BACKLOG.md` entry
+  (see "Keeping documents current" above for when closure is direct
+  vs. the confirmation-gated mechanism).
+- `Syncs: <path>` — one trailer line per file — the commit changes a
+  fact one of the three doc-synced files states, so `/session-end`'s
+  structural fact-sync half has a trailer to find.
+
+Applies equally whether Claude Code commits autonomously (per this
+file's own judgment rules) or executes a commit prompt from the
+architect chat — neither party treats trailers as optional metadata.
+`/session-end`, and the confirmation-gated `docs/BACKLOG.md` closure
+mechanism above, can only act on what git's own trailer parser
+(`git log --format="%(trailers:key=Closes,valueonly)"`, never a naive
+text search — see `docs/BACKLOG.md`'s "How to maintain it" section for
+why) actually finds; a commit with no trailers is invisible to both,
+regardless of what the commit itself did. Found the hard way,
+2026-09-16: an 8-commit sprint (Strategy Layer source-independence,
+M1-M7) shipped with zero `Closes:`/`Syncs:` trailers, caught only when
+`/session-end` ran afterward and found nothing to act on.
+
+A mechanical process convention, not an architectural decision — no
+ADR needed for this rule itself, the same category as this project's
+existing commit-message format and structure, already followed in
+practice.
+
 ## The one stop-and-ask rule
 
 Four cases, not three — "stuck" and "no basis to choose" are
