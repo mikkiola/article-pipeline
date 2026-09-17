@@ -1636,19 +1636,19 @@ today.
       losslessly represent. This project's own `docs/ROADMAP.md` was
       brought into compliance the same session: the "Dependency chain"
       section (already a table as of commit `5969106`, this session,
-      per the Bible's ADR-0009) and the "Current pointer" section
+      per `documentation-rules.md`'s ADR-0009) and the "Current pointer" section
       (restructured into discrete state-fact bullets, with exactly one
-      closing advisory sentence kept as prose, per the Bible's explicit
+      closing advisory sentence kept as prose, per the Documentation Rules doc's explicit
       "do not force an advisory sentence into a table cell" rule).
       `docs/ARCHITECTURE.md` was checked, not edited — already
       compliant with its own "every fact is a table cell" principle (a
-      5-line preamble is the Bible's one permitted prose exception,
+      5-line preamble is the Documentation Rules doc's one permitted prose exception,
       already satisfied).
 
 Original framing note: this entry's own title ("remove all prose") was
 the pre-research framing carried over from the lost "Neutron Star
 Protocol" draft (see `[B-037]`'s resolution note) — not what was
-actually implemented. What shipped is the Bible's own, more nuanced
+actually implemented. What shipped is the Documentation Rules doc's own, more nuanced
 resolution, not a literal all-prose removal.
 
 **Source.** Metadata/ID Layer `/spec` interview, 2026-08-22, closing
@@ -2669,16 +2669,16 @@ Resolved same-day, upstream fix confirmed working via the tests above.
 
 ### [B-062] P3 — `docs/CONSTITUTION.md`'s own text hasn't caught up to two of this project's settled conventions
 
-Found: 2026-09-16, Documentation Rules Bible audit.
+Found: 2026-09-16, Documentation Rules doc audit.
 
-The ecosystem-wide Documentation Rules Bible (`tooltempest`'s
+The ecosystem-wide Documentation Rules doc (`tooltempest`'s
 `docs/reference/documentation-rules.md`) states a generic reference
 template for two of `docs/CONSTITUTION.md`'s required sections.
 `docs/CONSTITUTION.md`'s own text, on direct read, doesn't match that
 template in either case — not because current practice is wrong, but
 because the file's prose was never reconciled against it:
 
-1. **§9 "Write/Delete/Move confirmation."** The Bible's generic
+1. **§9 "Write/Delete/Move confirmation."** The Documentation Rules doc's generic
    template requires a specific per-action prompt format —
    `[ЗАПРОС] Действие: X. Путь: Y. Подтвердить? (Y/n)` — on every
    write/delete/move, waiting for an answer each time.
@@ -2695,7 +2695,7 @@ because the file's prose was never reconciled against it:
    Chosen, Why, Constraints, Rejected, Consequences, Validation,
    Reversal condition, Source" — the old 11-field format. Actual
    practice, confirmed by direct read of every ADR from `0001` through
-   `0048`, uses the 6-block format the Bible itself documents (Status /
+   `0048`, uses the 6-block format the Documentation Rules doc itself documents (Status /
    Context & Constraints / Decision / Alternatives & Rationale /
    Consequences / Confirmation & Revisit / Source). This field-set
    description in `docs/CONSTITUTION.md` was never updated when the
@@ -2708,7 +2708,7 @@ project's actual current practice, with no active trigger or blocking
 consequence. Filed at the same P3.
 
 - [ ] Reconcile `docs/CONSTITUTION.md`'s §9 text with the per-task
-      confirmation model this project actually uses (drop the Bible's
+      confirmation model this project actually uses (drop the Documentation Rules doc's
       generic per-action template, or state explicitly why this
       project's model diverges from the ecosystem default).
 - [ ] Update `docs/CONSTITUTION.md`'s §14 field-set description from
@@ -2719,7 +2719,7 @@ consequence. Filed at the same P3.
 Not fixed in this entry — registration of the gap only, per this
 session's explicit read-only-audit-then-file-separately instruction.
 
-**Source.** Documentation Rules Bible audit, architect-chat session,
+**Source.** Documentation Rules doc audit, architect-chat session,
 2026-09-16.
 
 ### [B-063] P1 — Strategy Layer source-independence sprint (M1-M7): Collector as first real non-Brain source
