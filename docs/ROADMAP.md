@@ -70,6 +70,44 @@ state — Brain's own adapter (deferred this sprint), the
 atom-tag-disambiguation follow-up (`[B-005]`, itself blocked on Brain's
 GitHub migration), and Quality Gate remain not started.
 
+## Committed phase order (confirmed 2026-09-18)
+
+Assembled here for the first time as one ordered sequence — the
+individual pieces were already scattered across this document,
+`docs/BACKLOG.md`, and `docs/PROJECT.md`; no document previously stated
+this order as a single plan.
+
+| Order | Phase | Status | Notes |
+|---|---|---|---|
+| 1 | Publication Core Loop — LinkedIn and Habr both publish automatically, end to end, on real data | COMMITTED | Per `docs/PROJECT.md`'s Definition of Done |
+| 2 | Cleanup / dead-code / obsolete-directory consolidation | COMMITTED | No dedicated `docs/BACKLOG.md` entry yet — see `[B-063]`'s "Explicitly deferred" note (`story_builder.py`/`channel_author.py` Collector-vocabulary leak) |
+| 3 | Additional sources via the existing adapter pattern — Brain | COMMITTED, paused | Brain already named above (paused, blocked on Brain's GitHub migration); Archi-kg is not recorded as a claim source anywhere in this repo's docs and is not included in this phase |
+| 4 | Source-independent architecture matured enough to add a new source without changing downstream logic | COMMITTED | The mechanism (per-source adapters, Anti-Corruption-Layer boundary) already exists today for Collector — see `docs/ARCHITECTURE.md`'s Strategy Layer row; this phase is about adding more sources through it, not building the mechanism itself |
+| 5 | Self-service / external-user source configuration | see `[B-046]` | Sequence position only — the item itself remains `[B-046]`'s own deferred hypothesis: "none to be implemented before `[B-045]` is built and produces real usage data" |
+
+## Committed content requirements (confirmed 2026-09-18, not yet built)
+
+| Channel | Requirement | Status | Notes |
+|---|---|---|---|
+| LinkedIn | Problem → search → solution narrative structure (not an activity list) | COMMITTED, not yet built | `docs/adr/0044-linkedin-daily-post-voice-contract.md`'s Decision specifies a different structure — "Narrative Bridge 30/40/30 + hook + CTA + evidence links" — not this problem→search→solution framing; this requirement is a distinct addition, not something ADR-0044 already covers |
+| Habr | At least one code/artifact fragment and at least one externally-sourced enrichment per article | COMMITTED, not yet designed | Confirmed absent from every canonical doc under any name (code snippet, artifact fragment, external source, web enrichment) |
+
+## Open questions — committed phase order (confirmed 2026-09-18)
+
+Unresolved — not scheduled work, matching `docs/BACKLOG.md`'s "Owner
+decisions needed" style:
+
+- Does R6's ≥1-verified-external-claim publish gate apply to the
+  Collector-only daily LinkedIn path the same way it applies to the
+  Brain/Strategy-Layer path? Not yet decided.
+- How does Habr's code/artifact-fragment requirement (above) get its
+  evidence — no source exists today for actual code/diff content. Not
+  yet decided.
+- Should Archi-kg be a claim source at all, and if so, on what basis?
+  Not previously decided anywhere.
+- Multi-week direction/trajectory capability — being defined in a
+  separate repository, `mikkiola/analyzer`; not described here.
+
 ## Dependency chain
 
 Derived from `docs/ARCHITECTURE.md`'s "Depends on" column — keep this
