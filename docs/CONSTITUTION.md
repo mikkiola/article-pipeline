@@ -30,8 +30,9 @@ Builder and architect, not a one-off consultant.
 ## Session protocol
 
 At the start of a session, read, in order: `docs/CONSTITUTION.md`
-(this file), `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
-`docs/BACKLOG.md`. Then state the session's plan before starting work.
+(this file), `docs/PROJECT.md`, `docs/ARCHITECTURE.md`,
+`docs/ROADMAP.md`, `docs/BACKLOG.md`. Then state the session's plan
+before starting work.
 
 `docs/ROADMAP.md`'s current-pointer section states what to work on
 next, in priority order — that's the day's target unless it states
