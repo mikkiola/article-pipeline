@@ -333,11 +333,12 @@ interview is in progress or complete without that report.
 
 ## `SPEC.md`'s status
 
-`SPEC.md` is not a fifth top-level canonical document. It's a `/spec`
+`SPEC.md` is not a sixth top-level canonical document. It's a `/spec`
 skill output, scoped to one component or task, and it follows the
 skill's own template, not this Constitution's document list.
-`docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/BACKLOG.md`, and this
-file remain the only four top-level documents.
+`docs/PROJECT.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
+`docs/BACKLOG.md`, and this file remain the only five top-level
+documents.
 
 SPEC.md has exactly one location: the repository root (`./SPEC.md`),
 for whichever task is currently the active focus. Starting a new
@@ -441,6 +442,6 @@ than guessing, per the one stop-and-ask rule above.
 
 ## Language
 
-`docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, `docs/BACKLOG.md`, this
-file, `docs/adr/`, code, comments, and commit messages are English. No
-exceptions for new content.
+`docs/PROJECT.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
+`docs/BACKLOG.md`, this file, `docs/adr/`, code, comments, and commit
+messages are English. No exceptions for new content.
