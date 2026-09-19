@@ -79,7 +79,7 @@ this order as a single plan.
 
 | Order | Phase | Status | Notes |
 |---|---|---|---|
-| 1 | Publication Core Loop — LinkedIn and Habr both publish automatically, end to end, on real data | COMMITTED | Per `docs/PROJECT.md`'s Definition of Done |
+| 1 | Publication Core Loop — LinkedIn and Habr both publish automatically, end to end, on real data | COMMITTED | Per `docs/PROJECT.md`'s Definition of Done. Requires a publication registry before the first automatic run — see `docs/BACKLOG.md`'s `[B-064]`. |
 | 2 | Cleanup / dead-code / obsolete-directory consolidation | COMMITTED | No dedicated `docs/BACKLOG.md` entry yet — see `[B-063]`'s "Explicitly deferred" note (`story_builder.py`/`channel_author.py` Collector-vocabulary leak) |
 | 3 | Additional sources via the existing adapter pattern — Brain | COMMITTED, paused | Brain already named above (paused, blocked on Brain's GitHub migration); Archi-kg is not recorded as a claim source anywhere in this repo's docs and is not included in this phase |
 | 4 | Source-independent architecture matured enough to add a new source without changing downstream logic | COMMITTED | The mechanism (per-source adapters, Anti-Corruption-Layer boundary) already exists today for Collector — see `docs/ARCHITECTURE.md`'s Strategy Layer row; this phase is about adding more sources through it, not building the mechanism itself |

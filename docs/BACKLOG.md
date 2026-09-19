@@ -2793,3 +2793,45 @@ old `generate_drafts.py` path, untouched by this sprint).
 **Source.** Strategy Layer source-independence sprint, architect-chat
 session, 2026-09-15/16. `SPEC.md` (root) carries the full `/spec`
 interview record and per-milestone verify/done-when detail.
+
+### [B-064] P1 — Publication Registry: record where and when each piece is published
+
+Added: 2026-09-19, owner task.
+
+Before the first automatic publication run on any declared platform, Article Pipeline
+has a publication registry. The registry links a published piece to its publication on a
+specific platform. It records at least the platform, the URL, and the publication time.
+The registry can later hold publication-level metrics, so metrics attach to a specific
+publication and not only to a piece of content.
+
+This entry states a requirement. It does not choose a storage format, a schema, an
+identifier format, or the parent entity of a publication (Claim, article, or publication).
+Those are open decisions, listed below.
+
+Verified before filing: no component today records platform, URL, or publication time.
+`platform_adapter/`, `experiment_log/`, and `quality_gate/` contain only `.gitkeep`.
+`author/generate_drafts.py` writes Markdown files named by channel and date.
+`author/daily_linkedin_author.py` writes a JSON file with the generated post fields.
+Neither writes a platform, a URL, or a publication time.
+
+Relationship to `[B-045]`: `[B-045]` defines per-article reader metrics, keyed by
+`claim_id`, in Experiment Log. It does not define a record of where and when a piece was
+published. This entry is compatible with `[B-045]` and does not replace it. Metrics
+collection depends on this registry existing.
+
+Open decisions, not resolved by this entry:
+- [ ] The parent entity of a publication: Claim, article, or publication.
+- [ ] Whether the registry key and `[B-045]`'s `claim_id` are one key or two linked keys.
+- [ ] The implementation order of the registry relative to Platform Adapter and
+      Experiment Log. `[B-045]` does not set this order.
+- [ ] Where the registry is stored and in what format.
+- [ ] Which platforms count as declared platforms. Today the declared platforms are
+      LinkedIn and Habr.
+
+**Depends on:** Platform Adapter design (currently Not started per
+`docs/ARCHITECTURE.md`). Related: `[B-045]`, `[B-056]`.
+
+**Source.** Owner task, 2026-09-19. Checked against `[B-045]`, `[B-046]`, `[B-050]`,
+`[B-051]`, `[B-052]`, `[B-056]`, `docs/adr/0003`, `0004`, `0005`, `0028`, `0043`, and the
+code under `author/`, `platform_adapter/`, `experiment_log/`. No conflict found. Prior art
+for registry design was not searched: this entry records a requirement, not a design.
