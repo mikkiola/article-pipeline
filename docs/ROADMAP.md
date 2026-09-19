@@ -89,7 +89,7 @@ this order as a single plan.
 
 | Channel | Requirement | Status | Notes |
 |---|---|---|---|
-| LinkedIn | Problem → search → solution narrative structure (not an activity list) | COMMITTED, not yet built | `docs/adr/0044-linkedin-daily-post-voice-contract.md`'s Decision specifies a different structure — "Narrative Bridge 30/40/30 + hook + CTA + evidence links" — not this problem→search→solution framing; this requirement is a distinct addition, not something ADR-0044 already covers |
+| LinkedIn | Problem → search → solution narrative structure (not an activity list) | COMMITTED, not yet built | The existing LinkedIn daily-post voice contract's Decision specifies a different structure — "Narrative Bridge 30/40/30 + hook + CTA + evidence links" — not this problem→search→solution framing; this requirement is a distinct addition, not something that contract already covers |
 | Habr | At least one code/artifact fragment and at least one externally-sourced enrichment per article | COMMITTED, not yet designed | Confirmed absent from every canonical doc under any name (code snippet, artifact fragment, external source, web enrichment) |
 
 ## Open questions — committed phase order (confirmed 2026-09-18)
