@@ -2722,7 +2722,7 @@ session's explicit read-only-audit-then-file-separately instruction.
 **Source.** Documentation Rules doc audit, architect-chat session,
 2026-09-16.
 
-### [B-063] P1 — Strategy Layer source-independence sprint (M1-M7): Collector as first real non-Brain source
+### [B-063] P1 — Strategy Layer source-independence sprint (M1-M7): Collector as first real non-Brain source — RESOLVED
 
 Found: 2026-09-16, this session — recording completed work, not a new
 task to start.
@@ -2783,16 +2783,25 @@ structural digest chosen for Habr; the `story_builder.py`/
 `channel_author.py` Collector-vocabulary leak (pre-existing, on the
 old `generate_drafts.py` path, untouched by this sprint).
 
-- [ ] Push commits `c912c28`..`228d251` to `origin/main` — owner
+- [x] Push commits `c912c28`..`228d251` to `origin/main` — owner
       action, not automatic.
-- [ ] Owner reviews and authorizes closing this entry, per
+      Already satisfied: commits c912c28..228d251 were on origin/main when this entry was
+      closed (verified 2026-09-19 with a fresh `git fetch origin main` and
+      `git merge-base --is-ancestor` for both ends of the range). The push happened in an
+      earlier session and was not recorded here.
+- [x] Owner reviews and authorizes closing this entry, per
       `docs/CONSTITUTION.md`'s confirmation-gated `docs/BACKLOG.md`
       closure rule — not closed here even though the work itself is
       done.
+      Closed by owner authorization, 2026-09-19.
 
 **Source.** Strategy Layer source-independence sprint, architect-chat
 session, 2026-09-15/16. `SPEC.md` (root) carries the full `/spec`
 interview record and per-milestone verify/done-when detail.
+
+**Closed, 2026-09-19.** Commit range c912c28..228d251 (M1-M7). The push statement in
+the Status paragraph above was true on 2026-09-16 and is superseded by the note under
+the first checklist item.
 
 ### [B-064] P1 — Publication Registry: record where and when each piece is published
 

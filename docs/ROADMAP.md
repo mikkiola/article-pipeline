@@ -54,8 +54,8 @@ see `docs/adr/`.
   and why.
 - **Resume condition met, 2026-09-16.** `[B-056]`'s own stated resume
   condition — Strategy Layer becoming source-independent enough to
-  consume Collector — is built and committed to `main` (locally; not
-  yet pushed): the two-dimension `CanonicalUnit` contract, Collector's
+  consume Collector — is built and committed to `main` (pushed to
+  `origin/main`): the two-dimension `CanonicalUnit` contract, Collector's
   adapter, both LinkedIn and Habr routed through Strategy Layer's
   verdict, and CI enforcement of the Anti-Corruption-Layer boundary
   (M1-M7, commits `c912c28`..`228d251`; rationale in `docs/adr/`, see
