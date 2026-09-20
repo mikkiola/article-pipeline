@@ -56,3 +56,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0046](0046-habr-multi-claim-digest.md) | Habr Multi-Claim Digest | Accepted | null | null |
 | [ADR-0047](0047-two-dimension-verification-model.md) | Two-Dimension Verification Model (Integrity × Corroboration) | Accepted | null | null |
 | [ADR-0048](0048-source-independence-acl-architecture.md) | Source-Independence via Anti-Corruption Layer Architecture | Accepted | null | null |
+| [ADR-0049](0049-publication-channel-order-linkedin-first.md) | Publication channel order — LinkedIn before Habr | Accepted | null | null |

@@ -14,7 +14,7 @@ see `docs/adr/`.
 | 2 — Evidence Package | Closed |
 | 2.5 — Context/causal-structure layer | Closed — M1-M5 implemented; causal question resolved, partially confirmed: enrichment helps on-domain, harms via polysemous-tag collision, tracked as a non-blocking P1 fix. Phase 3 no longer blocked on this. |
 | 3 — Strategy Layer + Author + Quality Gate | In progress — Strategy Layer is now Collector-sourced and source-independent for Collector specifically (two-dimension `CanonicalUnit` contract, Collector adapter, CI-enforced ACL boundary; Brain's own adapter not yet built); Author (both LinkedIn and Habr) now consumes Strategy Layer's verdict, no longer reads Collector directly (see `docs/ARCHITECTURE.md`); Quality Gate proper remains not started; see Current pointer |
-| 4 — Platform Adapter (Habr → LinkedIn) + Circuit Breaker | Not started |
+| 4 — Platform Adapter (LinkedIn → Habr) + Circuit Breaker | Not started |
 | 5+ — Experiment Log, remaining platforms | Not started |
 
 ## Current pointer
@@ -65,10 +65,12 @@ see `docs/adr/`.
   implementation has resumed on this basis, per the Status table
   above ("In progress").
 
-Next work continues Phase 3 from Strategy Layer's now-Collector-sourced
-state — Brain's own adapter (deferred this sprint), the
-atom-tag-disambiguation follow-up (`[B-005]`, itself blocked on Brain's
-GitHub migration), and Quality Gate remain not started.
+Next work is the Publication Core Loop (row 1 of the committed phase order below):
+the first automatic publication on LinkedIn, then Habr. Prerequisites are the R6
+decision (see the open questions below) and a publication registry — see
+`docs/BACKLOG.md`'s `[B-064]`. Brain's own adapter, the atom-tag-disambiguation
+follow-up (`[B-005]`), and Quality Gate remain not started and follow the committed
+phase order.
 
 ## Committed phase order (confirmed 2026-09-18)
 
@@ -79,7 +81,7 @@ this order as a single plan.
 
 | Order | Phase | Status | Notes |
 |---|---|---|---|
-| 1 | Publication Core Loop — LinkedIn and Habr both publish automatically, end to end, on real data | COMMITTED | Per `docs/PROJECT.md`'s Definition of Done. Requires a publication registry before the first automatic run — see `docs/BACKLOG.md`'s `[B-064]`. |
+| 1 | Publication Core Loop — LinkedIn and Habr both publish automatically, end to end, on real data | COMMITTED | Per `docs/PROJECT.md`'s Definition of Done. Requires a publication registry before the first automatic run — see `docs/BACKLOG.md`'s `[B-064]`. LinkedIn first, then Habr. |
 | 2 | Cleanup / dead-code / obsolete-directory consolidation | COMMITTED | No dedicated `docs/BACKLOG.md` entry yet — see `[B-063]`'s "Explicitly deferred" note (`story_builder.py`/`channel_author.py` Collector-vocabulary leak) |
 | 3 | Additional sources via the existing adapter pattern — Brain | COMMITTED, paused | Brain already named above (paused, blocked on Brain's GitHub migration); Archi-kg is not recorded as a claim source anywhere in this repo's docs and is not included in this phase |
 | 4 | Source-independent architecture matured enough to add a new source without changing downstream logic | COMMITTED | The mechanism (per-source adapters, Anti-Corruption-Layer boundary) already exists today for Collector — see `docs/ARCHITECTURE.md`'s Strategy Layer row; this phase is about adding more sources through it, not building the mechanism itself |
@@ -107,6 +109,9 @@ decisions needed" style:
   Not previously decided anywhere.
 - Multi-week direction/trajectory capability — being defined in a
   separate repository, `mikkiola/analyzer`; not described here.
+- Does Habr offer a supported way to publish an article without a manual step? An
+  unofficial client for an old Habr API and a 2017 browser-cookie method exist. Neither
+  is confirmed as current and supported. Not yet verified.
 
 ## Dependency chain
 
