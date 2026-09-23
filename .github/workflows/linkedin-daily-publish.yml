@@ -1,0 +1,96 @@
+name: Daily LinkedIn Auto-Publish
+
+# SPEC.md Milestone M2 (LinkedIn Auto-Publish, bootstrap-gated).
+#
+# Scheduled 30 minutes after Collector's own daily cadence job
+# (mikkiola/collector's .github/workflows/daily.yml, cron "0 23 * * *"
+# — read directly from that repo before choosing this time, not
+# guessed). Collector's job scans, classifies, and pushes
+# daily_brief_<date>.json; this job needs that file to already be on
+# collector's main before it runs. 30 minutes is a stated, conservative
+# buffer this task picked, not a measured duration — Collector's own
+# job's actual runtime wasn't benchmarked as part of this task.
+# 23:30 UTC is still the same UTC calendar day as Collector's 23:00 UTC
+# run, so both jobs resolve to the identical date_token — confirmed by
+# reading collector/scripts/daily_brief.py's own date-stamping logic
+# (it refuses to write if its own date_token doesn't match today's UTC
+# date), not assumed.
+
+on:
+  schedule:
+    - cron: "30 23 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve WORKSPACE_ROOT (matches strategy_layer/adapters/collector.py's own convention)
+        run: echo "WORKSPACE_ROOT=${{ github.workspace }}" >> "$GITHUB_ENV"
+
+      # Same cross-repo auth pattern as mikkiola/collector's own
+      # daily.yml: a short-lived installation token from the GitHub App
+      # already installed (Contents: Read-only) across this org's
+      # repos, including collector (a private repo, per docs/BACKLOG.md's
+      # [B-055]). Confirmed directly (gh secret list --repo
+      # mikkiola/article-pipeline, this task): GH_APP_ID and
+      # GH_APP_PRIVATE_KEY do NOT exist yet on this repo, even though
+      # they already exist on mikkiola/collector — the owner needs to
+      # add both here too before this job can check out collector's
+      # data. Flagged in this task's own report, not silently assumed
+      # to already work.
+      - name: Generate GitHub App installation token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: mikkiola
+          repositories: |
+            article-pipeline
+            collector
+
+      - name: Checkout article-pipeline
+        uses: actions/checkout@v4
+        with:
+          path: article-pipeline
+
+      - name: Checkout collector
+        uses: actions/checkout@v4
+        with:
+          repository: mikkiola/collector
+          ref: main
+          path: collector
+          token: ${{ steps.app-token.outputs.token }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install pinned dependencies
+        run: pip install pydantic==2.13.4 anthropic==0.105.2 requests==2.34.2
+
+      - name: Run daily LinkedIn publish
+        working-directory: ${{ env.WORKSPACE_ROOT }}/article-pipeline
+        env:
+          LINKEDIN_ACCESS_TOKEN: ${{ secrets.LINKEDIN_ACCESS_TOKEN }}
+          LINKEDIN_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.LINKEDIN_ACCESS_TOKEN_EXPIRES_AT }}
+          LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
+          ANTHROPIC_API_KEY_DAILY_AUTHOR: ${{ secrets.ANTHROPIC_API_KEY_DAILY_AUTHOR }}
+        run: python3 linkedin_publisher/daily_publish.py
+
+      - name: Commit and push Registry/verdict output
+        working-directory: ${{ env.WORKSPACE_ROOT }}/article-pipeline
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add publication_registry/output/ strategy_layer/output/
+          if git diff --cached --quiet; then
+            echo "No new output files to commit."
+            exit 0
+          fi
+          git commit -m "chore(publish): daily LinkedIn run $(date -u +%Y-%m-%d)"
+          git push
