@@ -2844,3 +2844,42 @@ Open decisions, not resolved by this entry:
 `[B-051]`, `[B-052]`, `[B-056]`, `docs/adr/0003`, `0004`, `0005`, `0028`, `0043`, and the
 code under `author/`, `platform_adapter/`, `experiment_log/`. No conflict found. Prior art
 for registry design was not searched: this entry records a requirement, not a design.
+
+### [B-065] P1 — [TOOLTEMPEST] Extract shared Telegram send/receive transport
+
+<!--
+  FILED HERE, NOT IN TOOLTEMPEST: same exception as [B-023] — ToolTempest has
+  no backlog/issue-tracking convention of its own. The [TOOLTEMPEST] tag marks
+  this as ToolTempest's own implementation work, not an article-pipeline task;
+  the actual extraction happens in the tooltempest repository.
+-->
+
+Found during the Publication Core Loop `/spec` pre-spec check (`finding-unknowns`,
+2026-09-23): a Telegram HITL bot for article-pipeline's verdict/approval flow would be
+the third independent copy of the same send/receive transport pattern already
+duplicated once (`mikkiola/radar/src/telegram_post.py` → `mikkiola/analyzer/scripts/
+telegram_bot.py`, the latter's own docstring confirming it reused the former's
+`TELEGRAM_BOT_TOKEN` convention verbatim).
+
+Owner decision, 2026-09-23 (see `docs/adr/0051-shared-telegram-transport-extracted-to-
+tooltempest.md`): extract only the transport primitives actually duplicated today —
+send via `sendMessage`, receive via cron-polling `getUpdates` with a persisted offset
+and chat_id filtering — into ToolTempest as shared, vendored tooling, the same role
+ToolTempest plays for `/spec`/`/verify`. Not a general-purpose Telegram framework;
+business logic (message formatting, reply parsing, approval semantics) stays
+per-project.
+
+- [ ] Design and implement the shared transport module in `mikkiola/tooltempest`
+      (function surface only — `send_message`, `get_updates`/offset handling, chat_id
+      filtering — matching what `analyzer/scripts/telegram_bot.py` already implements).
+- [ ] Vendor it into article-pipeline via the existing `.tooltempest.lock`/
+      `MANIFEST.txt` mechanism, once article-pipeline's Telegram HITL bot milestone
+      needs it.
+- [ ] Not scoped here: migrating `radar`'s or `analyzer`'s existing code to consume the
+      new shared version — a separate, later decision per ADR-0051.
+
+**Depends on:** none to start (ToolTempest-side work). Article-pipeline's Telegram HITL
+bot milestone (Publication Core Loop `/spec`) depends on this landing before that
+milestone can close.
+
+**Source.** ADR-0051, 2026-09-23.
