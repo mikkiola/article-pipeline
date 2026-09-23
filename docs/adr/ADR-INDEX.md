@@ -57,5 +57,6 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0047](0047-two-dimension-verification-model.md) | Two-Dimension Verification Model (Integrity × Corroboration) | Accepted | null | null |
 | [ADR-0048](0048-source-independence-acl-architecture.md) | Source-Independence via Anti-Corruption Layer Architecture | Accepted | null | null |
 | [ADR-0049](0049-publication-channel-order-linkedin-first.md) | Publication channel order — LinkedIn before Habr | Accepted | null | null |
-| [ADR-0050](0050-verdict-feedback-loop-async-events.md) | Verdict feedback loop as async events, not publication lifecycle | Accepted | null | null |
+| [ADR-0050](0050-verdict-feedback-loop-async-events.md) | Verdict feedback loop as async events, not publication lifecycle | Superseded | null | ADR-0052 |
 | [ADR-0051](0051-shared-telegram-transport-extracted-to-tooltempest.md) | Shared Telegram transport extracted to ToolTempest | Accepted | null | null |
+| [ADR-0052](0052-pattern-thresholds-start-unset-observe-only.md) | Pattern-detection thresholds start unset (OBSERVE_ONLY), not a placeholder number | Accepted | ADR-0050 | null |

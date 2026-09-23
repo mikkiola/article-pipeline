@@ -1,8 +1,8 @@
 ---
 id: ADR-0050
-status: Accepted
+status: Superseded
 supersedes: null
-superseded_by: null
+superseded_by: ADR-0052
 source_type: inferred
 ---
 
@@ -10,7 +10,12 @@ source_type: inferred
 
 ## Status
 
-Accepted.
+Superseded by ADR-0052 — narrowly, on one point only: the `N=7`
+prompt-fix-monitoring window named in this ADR's own Confirmation & Revisit
+section below was treated as a live default value with a caveat attached;
+ADR-0052 corrects this to start unset (`OBSERVE_ONLY`) instead, the same
+treatment given to Weekly's recurring-pattern threshold. Points 1-4 of this
+ADR's Decision section remain the operative design, unchanged.
 
 ## Context & Constraints
 
