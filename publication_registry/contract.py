@@ -2,10 +2,13 @@
 M1).
 
 One record per publication event (SPEC.md Functional Requirement #1),
-keyed by `content_id` — the Registry's own minted primary key, never
+keyed by `content_id` — caller-supplied, never minted here
+(docs/adr/0053-content-id-ownership-moves-to-caller.md), and never
 `claim_id` (Functional Requirement #3: the same Claim could in
 principle be published more than once, so `claim_id` cannot be the
-primary key). `block_reason` is the one conditional field: required
+primary key — this part of #3 is unchanged by ADR-0053, only the
+minting-location point is superseded). `block_reason` is the one
+conditional field: required
 when `gate_status="block"`, forbidden otherwise (Functional Requirement
 #5) — enforced here, at construction time, the same pattern
 strategy_layer/contract.py's CanonicalUnit already establishes in this
