@@ -1,837 +1,484 @@
-# Strategy Layer Source-Independence (Collector-First) — Specification
+# Publication Core Loop — Specification
 
 ## Overview
 
-Extends Strategy Layer (`strategy_layer/`) from single-source
-(Brain/Claim-Extraction-only) to source-independent, via an
-Anti-Corruption-Layer-style Pydantic v2 input contract, with Collector
-as the first real non-Brain source this sprint. Replaces the single
-`verified/disputed/unverifiable/pending` status with two independent
-verification dimensions (`integrity_status`, `corroboration_status`).
-Routes Collector's data through Strategy Layer instead of bypassing it
-directly to Author, for both LinkedIn (rewiring an existing entry
-point) and Habr (a new entry point). Brain's own adapter is explicitly
-deferred past this sprint — the contract is designed with Brain's
-shape in view, but only Collector's adapter is built and wired.
+Original problem statement (quoted verbatim, Step 3.5 check): "Run `/spec`
+for the full Publication Core Loop: LinkedIn auto-publish, Habr manual
+outbox, the new Telegram HITL bot, the weekly verdict/report mechanism
+(including the four points recorded in the ADR above), and Quality Gate —
+as one interview with an internal milestone structure (M1..Mn), not several
+fragmented specs."
 
-Sprint boundary (owner-confirmed): "publication working" means Author
-produces evidence-enriched, publication-ready Markdown drafts, posted
-manually. Real automated posting (Platform Adapter) is out of scope.
+Builds the first end-to-end, zero-manual-step publication loop
+(`docs/PROJECT.md`'s Definition of Done): LinkedIn publishes automatically
+first (ADR-0049), Habr stays a manual-outbox hand-off (no confirmed
+automatic Habr route exists), a Telegram bot is the owner's only manual
+touchpoint (Owner Verdicts, Change Proposal approval, Weekly reports,
+alerts — never gating a publish decision), and a weekly job turns
+accumulated feedback into monitored, owner-approved Author prompt changes
+(ADR-0050, ADR-0052).
+
+**Glossary (resolves a real naming collision found in this repo's `/spec`
+pre-spec check):**
+- **Owner Verdict** — the owner's post-publication feedback
+  (`good`/`trash`/`style-off`), an async event per ADR-0050 point 1. This
+  spec always uses this full term, never bare "verdict."
+- **Strategy Verdict** — the pre-existing, unrelated concept:
+  Strategy Layer's own output artifact (`strategy_layer/output/verdict_*.json`,
+  consumed by Author via `AuthoringContext`). Untouched by this spec.
 
 ## Goals
 
-- [ ] Define the two-dimension canonical Pydantic contract
-      (`integrity_status` + `corroboration_status`), replacing the old
-      single-status Claim/Evidence pair shape.
-- [ ] Build Collector's adapter, including a real (not static)
-      integrity check.
-- [ ] Update Strategy Layer's pre-filter classification table and gate
-      condition to key off both dimensions.
-- [ ] Route Collector's data through Strategy Layer for both LinkedIn
-      (rewired) and Habr (new entry point) — remove the old direct
-      bypass once the new path is confirmed working.
-- [ ] Add CI enforcement: an import-linter forbidden-import contract, a
-      grep-based path-hardcoding lint (import-linter cannot police
-      hardcoded path strings), and a synthetic alien-source contract
-      test.
-- [ ] Write two ADRs (two-dimension verification model; broader
-      source-independence/ACL architecture).
-- [ ] Restate R6, ratify R8, in wording compatible with the
-      two-dimension model.
+- [ ] M1 — Publication Registry exists; every publication event is
+      recorded with platform, URL, publication time, and gate metadata.
+- [ ] M2 — LinkedIn publishes at least one real post fully automatically
+      (no manual step), gated by a named bootstrap gate.
+- [ ] M3 — Owner Verdict capture exists for LinkedIn as an async,
+      never-expiring event stream.
+- [ ] M4 — Habr's draft reaches the owner via Telegram; her final edited
+      text is captured as Evidence via her existing per-article Google
+      Docs folder convention.
+- [ ] M5 — A Telegram HITL bot delivers Owner Verdict prompts, Change
+      Proposal approvals, Weekly reports, and alerts, in Russian.
+- [ ] M6 — Weekly takes immutable snapshots, tracks `verdict_status`, and
+      detects recurring patterns in `OBSERVE_ONLY` mode (ADR-0052).
+- [ ] M7 — Change Proposals are version-targeted with optimistic
+      concurrency; approved proposals apply, stale ones are discarded.
+- [ ] M8 — Quality Gate enforces the full formal R6 rule, replacing M2's
+      bootstrap gate for new publications, without retroactively
+      reclassifying M2-M7's history.
 
-## Restated/Ratified Requirements (owner-confirmed, this interview)
+## Tech Stack
 
-**R6 (restated — corrects pre-two-dimension-model wording, not a
-silent reinterpretation):** Every published piece must contain a
-minimum of 1 unit with `integrity_status=valid`, AND if the piece
-includes any unit that makes a falsifiable assertion
-(`corroboration_status` applicable, i.e. not `not_applicable`), that
-assertion must be corroborated — not `unsubstantiated` or `pending`.
-No partial/disclosed-unverified fallback for assertions specifically.
-This lets Collector-only drafts (all units `corroboration_status=
-not_applicable`) satisfy R6 on integrity alone, since they contain no
-disputable assertion to begin with.
+No new language/runtime: Python, matching every existing component
+(`author/`, `strategy_layer/`, `evidence_package/`). New external
+integrations, each net-new to this repo's own code (verified by direct
+grep — none exist here today):
 
-**R8 (ratified, restated in two-dimension terms):** Every unit with
-`corroboration_status=corroborated` must have non-empty `source_url`
-and `license` on its corroborating evidence, before it can be marked
-`corroborated`. Only constrains units that carry an applicable
-`corroboration_status` — no tension with `not_applicable` units, unlike
-R6. Enforced structurally by the Pydantic contract (see Data Model).
+- **LinkedIn API** — `w_member_social` scope, Share on LinkedIn product
+  (self-serve, no partner review per ADR-0049's research).
+- **Telegram Bot API** — `sendMessage` + cron-polling `getUpdates`,
+  consumed from ToolTempest's shared transport once ADR-0051/`[B-065]`
+  lands (named dependency of M5, not built in this spec).
+- **Google Drive/Docs API** — new service-account credential and client,
+  scoped to the owner's existing per-Habr-article Drive folders. This is
+  new code in this repo; the owner's existing Drive access is a
+  Cowork/architect-chat-layer capability today, not article-pipeline code
+  (confirmed directly with the owner during this interview).
+- **GitHub Actions** — scheduling for LinkedIn's daily run, Habr's
+  outbox check, and Weekly's cadence, matching Collector's existing
+  `daily.yml`/`weekly.yml` cron pattern.
 
-R1-R5, R7 apply as previously stated (source-agnostic input contract;
-evidence-gathering decoupled from source; Author source-agnostic;
-adding a source touches only its own adapter; full GitHub-Actions
-automation; Habr native-Russian-text quality) — not re-litigated this
-interview; R7's actual gap (story_builder.py's body text is still
-English per ADR-0043's known limitation) is unchanged by this task and
-out of scope here.
+## Detailed Requirements
 
-## Architecture
+### Functional Requirements — M1: Publication Registry
 
-**Pattern:** Anti-Corruption Layer / Ports-and-Adapters (owner-approved
-2026-09-14, 4-AI consensus). Strategy Layer defines its own inbound
-Pydantic contract; each source gets its own adapter translating into
-that contract. Strategy Layer's core decision logic (pre-filter, gate,
-framing, verdict assembly) does not read source-specific fields
-directly.
+1. One JSON record per publication event, under
+   `publication_registry/output/`, git-committed (Immutable Lineage,
+   matching every existing component's convention).
+2. Parent entity is the published piece itself, **not** the underlying
+   Claim — the same Claim could in principle be published more than once.
+3. `content_id` is the Registry's own minted primary key — the join key
+   Owner Verdict, Weekly, and Change Proposal streams all use, per
+   ADR-0050. It is **not** `claim_id`.
+4. Each record carries at minimum: `content_id`, `platform`
+   (`linkedin`/`habr`), `url`, `published_at`, `claim_id` (link back to
+   the source Claim), and the gate metadata below.
+5. Gate metadata, persisted per publication so history never loses which
+   gate a piece was actually evaluated under:
+   - `gate_policy`: `bootstrap` (M2-M7) or `R6` (M8+).
+   - `gate_version`.
+   - `gate_status`: `pass` / `block`.
+   - `block_reason` (present only when `gate_status = block`).
+   - `gate_evaluated_at`.
+6. M8's activation of the real R6 gate does **not** retroactively
+   reclassify M2-M7 publications — their recorded `gate_policy =
+   bootstrap` and its `gate_status` remain valid history for the
+   milestone that produced them.
 
-**Contract technology:** Pydantic v2, `model_config =
-ConfigDict(extra="forbid", frozen=True)` — current API confirmed via
-live search this session (not from cached knowledge): [Configuration |
-Pydantic Docs](https://docs.pydantic.dev/latest/api/config/). This
-repo already has Pydantic 2.13.4 installed; no `pyproject.toml`/
-`setup.cfg` exists yet — this task creates the repo's first Python
-packaging config file (needed for import-linter's config section).
+### Functional Requirements — M2: LinkedIn Auto-Publish (bootstrap-gated)
 
-**Two-dimension verification model** (owner decision, this interview
-— full ADR text already drafted by the owner, filed verbatim as part
-of implementation, see ADR section below):
+7. A scheduled (daily, matching `daily_linkedin_author.py`'s existing
+   cadence) job generates a candidate LinkedIn post, evaluates it through
+   the **bootstrap gate**, and — on pass — publishes it via the LinkedIn
+   API with no manual step, then writes the Publication Registry record.
+8. **Bootstrap gate = the existing, already-implemented Strategy Layer
+   mechanism** — `strategy_layer/pre_filter.py`'s `classify_unit()` (the
+   two-dimension `integrity_status`/`corroboration_status` matrix,
+   ADR-0047) and `check_all_claims_unverifiable_gate()` (run-level
+   `status="gated"` when nothing survives). Confirmed by direct read
+   during this interview: this mechanism exists today, is already
+   139/137-tested, and covers exactly the bootstrap-gate responsibility
+   (block on invalid integrity or disputed/unsubstantiated/pending
+   corroboration). **This is explicitly weaker than R6** — it has no
+   `activity_anchor`, no per-predicate `proves_predicate` verifier, and
+   no `scope: external` distinction — and must never be presented to the
+   owner or in any report as R6. `gate_policy = bootstrap` on every
+   record it produces makes this structurally unambiguous.
+9. Bootstrap-gate block → no publish; a structured record still writes
+   to the Registry (`gate_status = block`, `block_reason` from
+   `pre_filter`'s own `_EXCLUDE_REASON`).
+10. **Circuit breaker — `SAFETY_PAUSE`.** One explicit `trash` Owner
+    Verdict on an already-published LinkedIn post opens the circuit:
+    future scheduled auto-publish runs are skipped while `SAFETY_PAUSE`
+    is active. This is a deterministic, evidence-based trigger — no
+    invented consecutive-failure count. `SAFETY_PAUSE` is a state
+    separate from an ordinary bootstrap/R6 `block` — a normal "no
+    eligible content today" block must never open the circuit.
+11. Recovery from `SAFETY_PAUSE` is manual: the owner explicitly lifts it
+    via Telegram once she's addressed the cause. She never generates or
+    publishes content herself — lifting the pause is her only action,
+    consistent with "no manual step" for the pipeline's own output.
+12. Known, accepted limitation (not a new open question): the delay
+    between a bad publish and the resulting `SAFETY_PAUSE` depends
+    entirely on how quickly the owner responds with a `trash` verdict in
+    Telegram, since Owner Verdict has no timeout (ADR-0050 point 1).
+13. LinkedIn token renewal: a scheduled check tracks the token's known
+    ~60-day expiry (ADR-0049) and sends a Telegram alert before it
+    expires; renewal itself is manual re-auth by the owner. No
+    refresh-token flow is built (not confirmed to exist for the
+    Share-on-LinkedIn product).
 
-1. `integrity_status` — every unit, every source, no exceptions.
-   Answers: is this record authentic/provenanced?
-2. `corroboration_status` — only units making a falsifiable assertion.
-   `not_applicable` is a first-class value for bare records (e.g.
-   Collector's raw telemetry — a commit either happened or it didn't,
-   nothing to corroborate).
+### Functional Requirements — M3: Owner Verdict (LinkedIn)
 
-A derived conclusion synthesized from raw records (e.g. "activity
-increased this week") does not automatically inherit its source
-records' statuses — recorded as a design principle for future
-implementers; derived-claim synthesis is explicitly **not** built this
-sprint (Collector's raw telemetry passes through as individual
-records, unsynthesized).
+14. Owner Verdict is an append-only event stream (ADR-0050 point 1),
+    stored as JSON records under `verdict/output/`, one record per
+    verdict, keyed by `content_id` (never `claim_id`).
+15. A verdict record: `content_id`, `verdict_type`
+    (`good`/`trash`/`style-off`), `received_at`, optional free-text
+    comment (owner may add context in her Telegram reply).
+16. No publication's lifecycle state depends on a verdict arriving. A
+    publication with no verdict is a complete, valid Registry record —
+    `verdict_status` is a Weekly-snapshot concept (M6), not a
+    Registry/publication field.
 
-## Data Model — Canonical Input Contract
+### Functional Requirements — M4: Habr Manual Outbox + Edit Capture
 
-```python
-# strategy_layer/contract.py
+17. Once Author generates a Habr draft, the pipeline sends it to the
+    owner via Telegram (draft text or a link to it) — no automatic Habr
+    posting exists or is attempted.
+18. Edit capture reuses the owner's **existing** per-Habr-article Google
+    Docs folder convention (confirmed net-new code for article-pipeline
+    itself, not net-new to the owner's workflow): each folder contains
+    `YYYY-MM-DD-draft` (Author's generated draft) and `YYYY-MM-DD-final`
+    (the owner's own edited, actually-published text). ISO date order,
+    not day-first, so filenames sort correctly across month/year
+    boundaries.
+19. A scheduled job watches for a new `-final` file, diffs it against the
+    matching `-draft` file in the same folder, and writes the diff as an
+    Evidence record (ADR-0050 point 4) — the same signal kind a `trash`/
+    `style-off` verdict produces, feeding the same Weekly aggregation.
+20. No Telegram round-trip and no Habr page scraping for this step —
+    scraping was explicitly rejected (no confirmed ToS permission, adds
+    an HTML-parsing dependency this build otherwise has no need for).
+21. New Google Drive API credential/client is real, net-new build scope
+    for this milestone (not "already there") — verified directly: no
+    Drive/Docs integration exists anywhere in this repo's code today.
 
-from datetime import datetime
-from typing import Any, Literal
+### Functional Requirements — M5: Telegram HITL Bot
 
-from pydantic import BaseModel, ConfigDict, model_validator
+22. Transport (send `sendMessage`, receive cron-polling `getUpdates` with
+    persisted offset and chat_id filtering) is consumed from ToolTempest
+    once `[B-065]`/ADR-0051 lands — **named dependency, not built here.**
+    Business logic (message formatting, reply parsing, approval
+    semantics) is article-pipeline's own, per ADR-0051's scope boundary.
+23. Bot responsibilities, confirmed exhaustively during this interview —
+    it is **never** a pre-publish approval gate:
+    - Deliver Owner Verdict prompts after a publication and parse the
+      owner's reply into a `verdict_type`.
+    - Deliver Change Proposals (M7) for approve/reject.
+    - Deliver Weekly reports (M6).
+    - Deliver `SYSTEM_FAILURE`/`SAFETY_PAUSE` alerts and recovery
+      messages (M8, M2).
+24. All owner-facing text from this bot is **Russian**
+    (`docs/CONSTITUTION.md`'s new named exception, this session),
+    matching `analyzer`'s and `radar`'s existing precedent.
 
+### Functional Requirements — M6: Weekly Snapshot & Pattern Detection
 
-class CanonicalUnit(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+25. Each Weekly run writes one immutable, timestamped snapshot record
+    under `weekly/output/` — never overwritten. A later verdict is
+    visible to the *next* snapshot, never rewrites a past one
+    (ADR-0050 point 2).
+26. Every eligible publication (published since the prior Weekly run's
+    cutoff — this project's usual JSON-file weekly-window convention,
+    matching `analyzer`'s own weekly cycle) appears in the snapshot with
+    `verdict_status: recorded | missing` — never silently omitted.
+27. Pattern detection produces `PatternCandidate` objects (ADR-0052):
+    `pattern_signature`, `occurrence_count`, `first_seen_at`,
+    `last_seen_at`, `activity_window_ids[]`, `evidence[]`,
+    `threshold_status: uncalibrated | calibrated`, `threshold: null |
+    <int>`, `action_policy: disabled | enabled`.
+28. Starting state is `OBSERVE_ONLY` (`action_policy: disabled`,
+    `threshold: null`) for every new `pattern_signature` — Weekly
+    accumulates and reports candidates but drafts no Change Proposal
+    automatically until the owner sets a real threshold from real data.
+29. The prompt-fix-confirmation window (originally ADR-0050's `N=7`) gets
+    the same treatment (ADR-0052): unset by default, reporting recurrence
+    counts per prompt version without asserting a fix is "confirmed"
+    until the owner sets a window value.
+30. Weekly's report content is specific to that cycle's own data
+    (publications, verdict_status, active PatternCandidates, any
+    STALE-from-last-week proposals, current `SAFETY_PAUSE` state) — not
+    a restatement of the project's general strategic goal.
 
-    unit_id: str
-    source: Literal["brain", "collector"]  # extensible; new sources add a value here, not a new field
-    created_at: datetime
+### Functional Requirements — M7: Change Proposal Mechanism
 
-    integrity_status: Literal["valid", "invalid"]
-    integrity_check_method: str  # e.g. "commit_count_reconciliation" — labels *what kind* of check ran, not a claim of full provenance
+31. Every Change Proposal carries `target_prompt_version` and a
+    **separate `prompt_version` track per channel** (LinkedIn vs. Habr —
+    confirmed during this interview: they are already different prompts,
+    ADR-0044 vs. ADR-0046, and must not share one version counter or one
+    STALE-ness check across channels).
+32. Approval: if `target_prompt_version` still equals the channel's
+    current live version, the proposal applies and creates a new
+    version. If the live version already moved, the proposal becomes
+    `STALE` and is never applied automatically.
+33. **STALE proposals are terminal** — discarded, no retargeting UI. If
+    the same pattern still recurs in a later Weekly run (per its
+    `PatternCandidate`, once `action_policy: enabled`), that run drafts a
+    fresh proposal targeting the then-current live version.
+34. A Change Proposal's content — the actual proposed prompt diff — is
+    LLM-drafted from the `PatternCandidate`'s accumulated evidence plus
+    the current live prompt text, once `action_policy` is `enabled` for
+    that pattern. The owner approves or rejects the drafted diff itself
+    via Telegram (M5); the LLM never applies a change unilaterally.
+35. Manual Habr edits (M4's Evidence records) feed the same
+    `PatternCandidate`/Weekly aggregation LinkedIn's Owner Verdicts feed
+    — one shared detection mechanism across both signal kinds, per
+    ADR-0050 point 4.
 
-    corroboration_status: Literal[
-        "corroborated", "disputed", "unsubstantiated", "pending", "not_applicable"
-    ]
-    assertion_text: str | None  # the falsifiable claim being made; required iff corroboration_status != "not_applicable"
+### Functional Requirements — M8: Quality Gate (Real R6)
 
-    source_url: str | None = None  # required non-empty when corroboration_status == "corroborated" (R8)
-    license: str | None = None     # required non-empty when corroboration_status == "corroborated" (R8)
+36. Quality Gate replaces the bootstrap gate for **new** publications
+    once activated; M2-M7 history keeps its `gate_policy = bootstrap`
+    records unchanged (see M1's requirement 6).
+37. **Formal R6 rule** (owner-specified verbatim during this interview —
+    a publication passes only if it contains ≥1 Claim meeting all five
+    jointly, within a defined Verification Run):
+    - `evidence.scope = external` — never
+      `source_of_record`/`first_party`/`platform`. Internal telemetry
+      re-read from the system that produced it never counts, however
+      reproducible.
+    - `evidence.provenance.independent_of_origin = true` — the source
+      establishes the fact from its own authoritative record, not by
+      repeating/paraphrasing/deriving from the claim's own origin.
+    - `evidence.proves_predicate = true` — the PASS result of the
+      specific verification procedure defined for that predicate type,
+      never a free LLM judgment call.
+    - `Claim.activity_anchor.valid = true` — causally/semantically
+      derived from real activity in the DailyBrief's stable
+      `activity_window_id`, not merely mentioned in commit text or
+      picked later for topical similarity. Reprocessing the same window
+      must preserve the same anchor.
+    - No qualifying contradictory Evidence for the same predicate was
+      found within that same Verification Run. `disputed` wins over one
+      qualifying supporting match.
+38. New data-model fields this rule requires: `evidence.scope`,
+    `evidence.proves_predicate`, `evidence.provenance.independent_of_origin`,
+    `Claim.activity_anchor` (keyed to `activity_window_id`). Keep
+    `retrieval_source` (e.g. Linkup, a retrieval mechanism) distinct from
+    `evidence_source` (the actual authority retrieved, e.g. an npm/OSV
+    page) — a search API is never itself the evidence or the verifier.
+39. **Named external prerequisite, not built in this spec:** "Path B
+    Claim Extraction" — deriving atomic Claims from real git/CI activity
+    with a genuine external anchor, separate from the existing DailyBrief
+    self-report format. Confirmed absent from `docs/ARCHITECTURE.md`
+    today via direct read. Owner decision (this interview): this gets
+    its own, separate `/spec` interview — M8 in this spec states it as a
+    blocking dependency, the same treatment ADR-0051 gives the Telegram
+    transport for M5.
+40. Quality Gate's three outcomes (owner-specified verbatim):
+    - **`QUALITY_BLOCK`** — R6 fails because no eligible Claim met all
+      five conditions this cycle. Expected and safe; no post, no alert,
+      recorded and surfaced in Weekly as `blocked_by_quality_gate`.
+    - **`SYSTEM_FAILURE`** — Linkup unavailable, a verifier crashed, the
+      Claim contract is invalid, Author produced claim IDs absent from
+      Evidence Package, or the publisher errored/returned unknown. No
+      post; **immediate Telegram alert**, because this is pipeline
+      breakage, not "no material today."
+    - Alerting is **state-transition-based**, not per-event: `HEALTHY →
+      DEGRADED/FAILED` fires one alert; repeated failures while still
+      degraded are aggregated silently (no daily repeat spam); `→
+      RECOVERED` fires one recovery message.
+    - This distinction matters especially early on, while Path B Claim
+      Extraction is new: R6 legitimately failing on "no external claim
+      found today" must never be conflated with real system breakage.
 
-    metadata: dict[str, Any]  # source-specific pass-through, preserved for Author, never read by Strategy Layer's core logic
+## UI/UX Specification
 
-    @model_validator(mode="after")
-    def _check_assertion_and_corroboration_consistency(self) -> "CanonicalUnit":
-        if self.corroboration_status == "not_applicable":
-            if self.assertion_text is not None:
-                raise ValueError("assertion_text must be null when corroboration_status is not_applicable")
-        else:
-            if not self.assertion_text:
-                raise ValueError(f"assertion_text is required when corroboration_status={self.corroboration_status!r}")
-        if self.corroboration_status == "corroborated":
-            if not self.source_url or not self.license:
-                raise ValueError("source_url and license are required when corroboration_status=corroborated (R8)")
-        return self
-```
+No traditional UI. The Telegram bot (M5) is the only owner-facing
+surface: Russian text, message-based (no inline buttons assumed —
+reply-text parsing, matching `analyzer/scripts/telegram_bot.py`'s
+existing pattern), covering Owner Verdict prompts, Change Proposal
+approve/reject, Weekly reports, and alerts.
 
-**Design notes:**
-- `unit_id` generalizes `claim_id` at the contract-input level (a
-  Brain Claim or a Collector telemetry record are both "units"). The
-  verdict *output* schema (`claim_treatments`) keeps the field name
-  `claim_id` unchanged — see Output Schema below — to avoid
-  gratuitous churn in Author-facing output and existing
-  `framing.py`/`write_verdict.py` code, which don't need to change.
-- No separate join step at the Strategy Layer boundary. The old
-  `join_claims_and_evidence()` (joining Claim + Evidence 1:1 on
-  `claim_id`, raising on a missing match or null `context`) is
-  **removed from `pre_filter.py` entirely**. Each adapter is now
-  responsible for producing one complete, valid `CanonicalUnit` per
-  meaningful raw record — Pydantic's own construction-time validation
-  (`extra="forbid"`, required fields, the `model_validator` above)
-  *is* the input-validation gate. An adapter that cannot produce a
-  complete unit from a raw record raises before Strategy Layer ever
-  sees it — this generalizes the old "missing input data = pipeline-
-  ordering error, refuse the whole run" principle to the ACL boundary,
-  which is the architecturally correct place for it under this
-  pattern (validation happens at the boundary, not inside the core).
-- `context` (the old Claim/Evidence field, tags/wiki_links from the
-  Context layer) is Brain-specific and does not generalize to
-  Collector. It becomes part of `metadata` for Brain's future adapter,
-  not a top-level contract field.
-- Collector's `metadata` carries whatever's useful for Author
-  downstream (e.g. `commit_messages`, `diffstat`, `per_repo`) — never
-  read by `pre_filter.py`/`framing.py`/`write_verdict.py`.
+## API Design
 
-## Collector's Integrity Check (owner decision, this interview)
+- **LinkedIn**: `w_member_social` scope, personal-profile posting via the
+  Share on LinkedIn product (ADR-0049). No partner review needed.
+- **Telegram Bot API**: `sendMessage`, cron-polling `getUpdates` (no
+  webhook, matching this ecosystem's GitHub-Actions-cron pattern) — via
+  the shared ToolTempest transport once `[B-065]` lands.
+- **Google Drive/Docs API**: read-only access to the owner's existing
+  per-Habr-article folders, via a new service-account credential scoped
+  to article-pipeline specifically (net-new, per requirement 21).
 
-**Finding, confirmed live this session:** Collector's data (both
-`daily_brief_*.json` and `manifest_*.json`) contains **no commit
-hashes anywhere** — `per_repo` entries are `{name, commit_count,
-diffstat, files_touched}`; `manifest`'s `repos` entries are `{name,
-branch, commit_count, counts}`. A hash-based provenance check is not
-buildable from this data without first adding a hash field to
-Collector's own data model — explicitly out of this sprint's scope.
+## Data Model
 
-**Chosen check — repo+branch existence AND commit_count
-reconciliation:** for each Collector record, verify (a) the named repo
-exists as a local checkout and the named branch exists in it (`git
-rev-parse --verify <branch>`), and (b) `git rev-list --count` for the
-reported window roughly matches the reported `commit_count`. Labeled
-in the contract as `integrity_check_method="commit_count_
-reconciliation"` — explicitly not a claim of full cryptographic
-provenance, a single-metric reconciliation check with bounded
-coverage, stated plainly so a future reader doesn't mistake it for
-more than it is.
+New JSON-file-backed stores, one directory per component, matching this
+project's existing convention (`evidence_package/output/`,
+`strategy_layer/output/`) — no database introduced:
 
-## Pre-Filter Classification (replaces the old single-status table)
-
-| `integrity_status` | `corroboration_status` | `pre_filter_classification` |
+| Directory | Written by | Key fields |
 |---|---|---|
-| `invalid` | *(any)* | `exclude` — integrity is a hard floor, checked first, overrides everything else |
-| `valid` | `corroborated` | `include` |
-| `valid` | `not_applicable` | `include` — an authentic raw fact with nothing to dispute stands on its own (matches restated R6) |
-| `valid` | `disputed` | `exclude` (override available, same mechanism as before) |
-| `valid` | `unsubstantiated` | `exclude` |
-| `valid` | `pending` | `exclude` |
+| `publication_registry/output/` | M2/M4 | `content_id`, `platform`, `url`, `published_at`, `claim_id`, `gate_policy`, `gate_version`, `gate_status`, `block_reason`, `gate_evaluated_at` |
+| `verdict/output/` | M3 | `content_id`, `verdict_type`, `received_at`, comment |
+| `weekly/output/` | M6 | immutable per-run snapshot; `verdict_status` per publication; `PatternCandidate[]` |
+| `change_proposals/output/` | M7 | `target_prompt_version`, per-channel `prompt_version`, proposed diff, `status` (`pending`/`applied`/`STALE`/`rejected`) |
 
-`classify_pair()`/`classify_unit()`'s function signature changes to
-take one `CanonicalUnit` instead of a `(claim, evidence)` dict pair —
-its output shape (`{"claim_id", "pre_filter_classification",
-"reason"}`) is unchanged, so `framing.py` and `write_verdict.py`
-require **no changes** to their own APIs.
+## Security Considerations
 
-## Gate Condition (redefined — owner decision, this interview)
+- LinkedIn token, Telegram bot token, and the new Google Drive
+  service-account key are secrets — stored as GitHub Actions secrets,
+  matching Collector's existing CI credential pattern. No credential is
+  committed to the repo.
+- Telegram `getUpdates` must filter to the owner's configured `chat_id`
+  only, silently dropping any other sender — the same protection
+  `analyzer/scripts/telegram_bot.py` already implements, since a bot
+  token alone gives no per-bot allowlist on Telegram's side.
+- Google Drive access is read-only and scoped to the owner's existing
+  Habr-article folders — no write/delete capability needed by this
+  pipeline.
 
-Old: `status="gated"` when every pair's Evidence `status ==
-"unverifiable"`. **New: `status="gated"` when zero units in the run
-classify `include`** — generalizes "nothing survived the filter" and
-works identically whether the run is Collector-only, Brain-only, or
-mixed. `gates` object's key renamed from `all_claims_unverifiable` to
-`zero_included_units` — **a real output-schema change, flagged
-explicitly** per the owner's instruction not to silently absorb such
-changes.
+## Test Plan
 
-## Migration Sequence
+Per `docs/CONSTITUTION.md`'s TDD rule, the following are exactly the
+"confirmation/gating mechanism whose entire purpose is to trigger under
+specific conditions" class this project already learned (the hard way,
+per that rule's own note) needs a test written first, not after:
 
-1. **Wrap current input as `CanonicalUnit`, confirm existing tests
-   still pass — with explicitly flagged exceptions** (see Test Plan
-   below; not literally zero test changes, since the owner
-   pre-approved the two-dimension shape as the one deliberate change
-   to pre-filter's decision logic).
-2. **Build Collector's adapter** — `strategy_layer/adapters/
-   collector.py`. Reads `manifest_*.json`/`daily_brief_*.json`,
-   performs the real integrity check above, produces `list[
-   CanonicalUnit]` with `corroboration_status="not_applicable"` for
-   every unit (no derived-claim synthesis this sprint).
-3. **Route Collector's data through Strategy Layer** for both
-   channels:
-   - **LinkedIn:** `author/linkedin_verdict_reader.py` (new) — reads
-     Strategy Layer's verdict, produces a `daily_brief`-shaped (or
-     equivalent) object that `daily_linkedin_author.py`'s existing
-     `_build_fact_prompt`/`_build_idea_fallback_prompt` consume
-     **unchanged**. `daily_linkedin_author.py`'s own
-     `default_daily_brief_path()`/direct `daily_brief_*.json` read is
-     removed (step 4) once this path is confirmed working.
-   - **Habr (new):** `author/habr_verdict_to_story.py` (new) — builds
-     a `CanonicalStory` **directly from the verdict's single included
-     claim** (multi-claim synthesis explicitly deferred — this
-     sprint's Habr entry point handles exactly one included claim per
-     run; more than one is a refusal, clearly flagged, not silently
-     mangled). **Does not call `story_builder.py`'s `build_story()`**
-     (reads Collector-manifest-specific `commit_fact`/`class_fact` —
-     wrong input shape for a verdict). A new, self-contained Habr
-     entry point script (not `generate_drafts.py`, which stays
-     untouched) drives this — it does **not** reuse
-     `channel_author.py`'s `write_draft()` either, since that
-     function hardcodes a Collector-specific title
-     (`"Как Collector (O1) считает..."`) internally with no override
-     parameter; the new entry point has its own minimal, non-
-     source-specific rendering, reusing only `channel_profiles.HABR_RU`
-     (headings/structure_hint) and the `story_builder.CanonicalStory`
-     dataclass definition. `channel_author.py`'s existing title stays
-     unedited — it's still used by the untouched `generate_drafts.py`
-     path; not this task's file to own.
-4. **Remove the old direct bypass** in `daily_linkedin_author.py` once
-   step 3's new path is confirmed working (real run against real
-   Collector data, not just synthetic tests).
-5. **CI enforcement — three mechanisms, not one:**
-   - **import-linter** (new `pyproject.toml`, `[tool.importlinter]`
-     section): a `forbidden` contract — `source_modules =
-     ["strategy_layer"]`, `forbidden_modules = ["claim_extraction",
-     "context_layer", "evidence_package", "author.source_adapter"]`
-     (symmetric enforcement from day one, covering both the deferred
-     Brain chain and Collector-specific coupling, per owner decision).
-     Confirmed current config syntax via live search:
-     [import-linter docs](https://import-linter.readthedocs.io/en/stable/).
-   - **Grep-based path-hardcoding lint** (new script, e.g.
-     `scripts/check-strategy-layer-boundary.sh`, same precedent as
-     the existing `scripts/check-adr-citation.sh`): fails CI if
-     `strategy_layer/pre_filter.py`, `framing.py`, or
-     `write_verdict.py` contain literal strings like `collector/data`,
-     `daily_brief_`, `manifest_`, `claim_extraction/output` — import-
-     linter cannot catch hardcoded path strings (only real Python
-     `import` statements), so this closes that specific gap.
-   - **Synthetic alien-source contract test**
-     (`strategy_layer/test_alien_source_contract.py`): constructs a
-     `CanonicalUnit` with `source` extended to include a fabricated
-     `"source_x"` value (or, if `Literal` strictness is kept
-     symmetric, a structurally valid but semantically alien
-     `unit_id`/`metadata` combination under `source="collector"`) and
-     confirms `pre_filter.py`/`framing.py`/`write_verdict.py` process
-     it with no special-casing — proves genericity by construction.
-6. **Two ADRs**, both filed in `docs/adr/` with the next available
-   numbers:
-   - **Two-dimension verification model** — the owner's own draft,
-     filed verbatim (Context/Decision/Rationale/Precedent/
-     Consequences as provided in this interview), scoped specifically
-     to the `integrity_status`/`corroboration_status` split.
-   - **Source-independence / ACL architecture** — a second, separate
-     ADR covering the broader decision (Anti-Corruption-Layer pattern,
-     Pydantic v2 as contract technology, adapter-per-source,
-     import-linter + grep-lint + contract-test enforcement), per the
-     2026-09-14 architectural consensus. Distinct decision from the
-     two-dimension model even though both land in this sprint.
+- Quality Gate's three-outcome state machine (`QUALITY_BLOCK` vs.
+  `SYSTEM_FAILURE`, and the `HEALTHY→DEGRADED→RECOVERED` transition-only
+  alerting) — write the transition tests before the implementation.
+- `SAFETY_PAUSE`'s trigger (one `trash` verdict) and its independence
+  from ordinary `QUALITY_BLOCK`/bootstrap-block events — a test proving a
+  normal block never opens the circuit.
+- Change Proposal optimistic concurrency: a test proving a proposal whose
+  `target_prompt_version` has moved goes `STALE` and is never applied.
+- `PatternCandidate`'s `OBSERVE_ONLY` default: a test proving no Change
+  Proposal is drafted while `action_policy: disabled`, regardless of how
+  high `occurrence_count` climbs.
 
-## Output Schema (verdict — unchanged field names except `gates`)
-
-```json
-{
-  "run_id": "string",
-  "created_at": "ISO8601 string",
-  "status": "normal | gated",
-  "gates": {
-    "zero_included_units": "boolean"
-  },
-  "claim_treatments": [
-    {
-      "claim_id": "string",
-      "pre_filter_classification": "include | exclude",
-      "final_classification": "include | exclude",
-      "framing": "string | null",
-      "reason": "string"
-    }
-  ],
-  "overrides": [ "...unchanged..." ]
-}
-```
-
-Only change from the existing (already-implemented) schema: `gates`'s
-key, `all_claims_unverifiable` → `zero_included_units`. Everything
-else in `write_verdict.py`/`framing.py` is unaffected.
-
-## Functional Requirements
-
-1. Every raw record an adapter processes either becomes a complete,
-   valid `CanonicalUnit` (Pydantic-validated at construction) or the
-   adapter raises — no partial/malformed unit ever reaches
-   `pre_filter.py`.
-2. Pre-filter classification is computed per the two-dimension table
-   above, before any Claude Code judgment call — unchanged principle,
-   changed table.
-3. Gate: `status="gated"` / `gates.zero_included_units=true` iff zero
-   units in the run classify `include` after pre-filter (before
-   override).
-4. Claude Code framing pass and override mechanism: unchanged from the
-   existing, already-implemented `framing.py` — no behavior change.
-5. Collector's adapter performs the real integrity check (repo+branch
-   existence + commit_count reconciliation) for every unit it
-   produces; `corroboration_status="not_applicable"` for all Collector
-   units this sprint (no derived-claim synthesis).
-6. LinkedIn and Habr both consume Strategy Layer's verdict, not
-   Collector's raw files directly, once step 4 of the migration
-   sequence completes.
-7. CI blocks a merge if: (a) `strategy_layer/` imports a forbidden
-   module (import-linter), (b) `strategy_layer/`'s core files contain
-   a hardcoded source-specific path string (grep-lint), or (c) the
-   alien-source contract test fails.
-
-## Non-Functional Requirements
-
-1. **TDD applies to the gate-check logic and the Collector adapter's
-   integrity check** — both are "does this actually trigger under
-   specific conditions" mechanisms per `docs/CONSTITUTION.md`'s TDD
-   rule, same precedent as the original gate-check's M2. Write RED
-   tests first (gate fires at zero-included, doesn't fire otherwise;
-   integrity check fails on a nonexistent repo/branch, fails on a
-   commit_count mismatch beyond tolerance, passes on a real match),
-   then implement to GREEN, two distinguishable commits.
-2. TDD is not required for the classification table itself (a direct,
-   static lookup) or for the Habr/LinkedIn glue modules
-   (`linkedin_verdict_reader.py`, `habr_verdict_to_story.py`) — plain
-   data transformation, cheaply verified by inspection and a real-data
-   run, same reasoning the original SPEC applied to the pre-filter
-   table.
-3. Immutable Lineage continues to apply to verdict output files —
-   unchanged, already implemented in `write_verdict.py`.
-
-## Declarative Derivation-Kind Classification for Framing Text (extension, 2026-09-15)
-
-**Why, and why not deferred to BACKLOG:** two gaps were confirmed by
-direct code read before this extension was added: (1) framing text's
-output language is unconstrained anywhere in the pipeline — the one
-real framing string on disk
-(`strategy_layer/output/verdict_20260828T211939.json`) is English,
-purely incidentally; (2) nothing re-evaluates framing text against the
-underlying unit's actual `corroboration_status` — a `not_applicable`
-unit (bare Collector telemetry) can get framing text attached that
-reads as an evaluative or causal claim, with nothing distinguishing
-that from a bare, undisputed fact. Gap 2 is the same "don't let a
-status claim more verification than actually happened" principle the
-two-dimension model was built around, recurring one layer downstream
-(derivation/framing, not raw ingestion) — fixed directly, not deferred.
-
-**Mechanism — declarative, checked by a static rule table, no LLM
-call.** Framing text in this pipeline is never human-typed — it is
-produced entirely by an automated process (`decide_framing()`'s
-interactive seam, or future deterministic code). That same producing
-step must emit two additional fields alongside the framing text
-itself, at the moment it's created:
-
-- **`derivation_kind`** — one of `restatement` / `aggregation` /
-  `evaluation` / `causal_claim` (see
-  `strategy_layer/derivation_kind.py`'s module docstring for full
-  definitions).
-- **`source_status_snapshot`** — the framed unit's `integrity_status`
-  and `corroboration_status` **as they were at framing time**, a
-  snapshot, not a live reference — if the source record is later
-  re-evaluated, the framing's snapshot does not silently change.
-
-**Rule table** (implemented, TDD, `strategy_layer/derivation_kind.py`
-+ `strategy_layer/test_derivation_kind.py`, 20/20 passing — RED
-confirmed via `ModuleNotFoundError` before implementation existed,
-GREEN after):
-
-| `derivation_kind` | Warranted when |
-|---|---|
-| `restatement` | Always — adds nothing beyond what the source record states |
-| `aggregation` | `unit_count_in_run > 1` (a single-record run declaring `aggregation` is unwarranted by construction, regardless of status) |
-| `evaluation` | `corroboration_status == "corroborated"`, OR a defined, reproducible aggregation rule exists (`has_defined_aggregation_rule=True` — no such rule is defined anywhere this sprint, so `evaluation` from `not_applicable`/`disputed`/`unsubstantiated`/`pending` is unwarranted in practice today) |
-| `causal_claim` | Warranted **only** from `corroborated`; unconditionally **unwarranted** from every other status (`not_applicable`, `pending`, `disputed`, `unsubstantiated`) |
-
-**Correction, 2026-09-15 (same day, before M3 wiring):** an earlier
-version of this table named only `not_applicable`/`pending` as
-unconditionally unwarranted for `causal_claim`, leaving
-`disputed`/`unsubstantiated` silently warranted — flagged as an open
-question rather than resolved either way. Owner-confirmed correction:
-`disputed`/`unsubstantiated` are, if anything, weaker grounds for a
-causal claim than `not_applicable`/`pending`, not stronger — a source
-external evidence actively contradicts is not a safer basis than one
-merely awaiting evidence. `derivation_kind.py`'s `causal_claim` branch
-now inverts the check (`warranted` iff `corroboration_status ==
-"corroborated"`) instead of maintaining a growing exclusion set.
-`test_derivation_kind.py`'s two previously-flagged tests
-(`test_causal_claim_warranted_from_disputed/unsubstantiated_per_
-literal_spec_flagged_open_question`) were renamed to
-`test_causal_claim_unwarranted_from_disputed/unsubstantiated` with
-flipped assertions — RED confirmed against the pre-fix implementation
-(both failed: `assert True is False`), GREEN confirmed after (20/20,
-full `strategy_layer/` suite 51/51).
-
-**On `unwarranted` — refuse, don't silently mangle:** same principle
-already used for the Habr multi-claim case. A unit whose declared
-`derivation_kind` the rule table marks `unwarranted` does not get
-published as if it were warranted — `final_classification` is forced
-to `exclude`, `framing` discarded, with `check_derivation_warranted()`'s
-own `reason` string attached. **Integration point, not yet wired this
-task:** `build_claim_treatment()` (`framing.py`) is where this check
-belongs — called after `derivation_kind`/`source_status_snapshot` are
-supplied, before returning an `include`d entry. Not implemented in
-this task (only the standalone, tested rule-table function was); wiring
-belongs to M3's implementation pass.
-
-**Schema location (decided, this extension):** `derivation_kind` and
-`source_status_snapshot` are added to each verdict `claim_treatments`
-entry (not a separate top-level list, not on `CanonicalUnit` itself)
-— chosen because they describe a fact about *this framing event*, not
-about the source unit itself (the same unit's `corroboration_status`
-can differ between the moment it's framed and any later re-evaluation
-— that's the entire reason for a snapshot, not a live reference), and
-`claim_treatments` is already where `framing` and `reason` live at the
-same granularity. Updated verdict schema:
-
-```json
-{
-  "claim_treatments": [
-    {
-      "claim_id": "string",
-      "pre_filter_classification": "include | exclude",
-      "final_classification": "include | exclude",
-      "framing": "string | null",
-      "reason": "string",
-      "derivation_kind": "restatement | aggregation | evaluation | causal_claim | null",
-      "source_status_snapshot": {
-        "integrity_status": "valid | invalid",
-        "corroboration_status": "corroborated | disputed | unsubstantiated | pending | not_applicable"
-      }
-    }
-  ]
-}
-```
-
-`derivation_kind`/`source_status_snapshot` are `null`/absent on
-entries where framing was never attempted (a bare pre-filter
-`exclude` with no override) — present whenever framing was produced,
-including the case where the rule table then forces the entry back to
-`exclude`.
-
-**Gap 1 fix — framing language (resolved as documentation, not a new
-runtime check as the primary mechanism):** `strategy_layer/
-framing.py`'s `decide_framing()` docstring now states explicitly that
-Habr-bound framing must be written in Russian — an instruction to the
-automated producer, per the owner's own framing of the fix
-("specifying the requirement to the producer, not policing arbitrary
-text after the fact"). **Optional safety net, built this session since
-invited:** `strategy_layer/language_check.py`'s `looks_russian()` — a
-crude Cyrillic-character-ratio heuristic (TDD, 6/6 passing), explicitly
-not a language-quality check, available for the future Habr entry
-point (M5) to call before accepting a framing string. Not wired into
-any production path yet — M5 doesn't exist.
-
-## Dependency Pinning (this extension)
-
-`pyproject.toml` created (repo's first Python packaging config),
-exact versions pinned, not ranges:
-- `pydantic==2.13.4` (already installed this session, confirmed via
-  `pip3 show pydantic`)
-- `import-linter==2.15` (installed this session — latest available per
-  `pip3 index versions import-linter`; pulls in `grimp==3.17` as a
-  transitive dependency, pinned too)
-- `pytest==9.1.1` (already installed, confirmed via `pip3 show pytest`)
-
-`[tool.importlinter]` section added with the `forbidden` contract
-already specified in the Migration Sequence above (`strategy_layer`'s
-core modules forbidden from importing `claim_extraction`,
-`context_layer`, `evidence_package`, `author.source_adapter`) — not
-yet run against real code, since `strategy_layer/contract.py` and the
-Collector adapter (M1/M3) don't exist yet; the contract's
-`source_modules` list already includes `strategy_layer.derivation_kind`.
-
-## Test Plan — existing 25 tests, changes flagged explicitly
-
-**Unaffected, expected to pass unchanged (14 tests):**
-- `test_framing.py` (10 tests) — `framing.py`'s public API
-  (`build_claim_treatment`, `derive_overrides`) does not change.
-- `test_write_verdict.py` (4 tests) — `write_verdict.py`'s
-  `build_verdict`/`write_outputs` do not change, except the `gates`
-  key rename flows through automatically (verify assertions reference
-  the new key name, not a behavior change).
-
-**Requires rewriting (11 tests in `test_pre_filter.py`) — flagged
-explicitly, per owner instruction, not silently absorbed:**
-- The 4 `test_pre_filter_table[...]` parametrized cases (keyed by
-  single `status`) are replaced by cases over the
-  `(integrity_status, corroboration_status)` matrix above (6 rows,
-  not 4).
-- `test_missing_evidence_record_raises_naming_claim_id` and
-  `test_missing_context_field_raises_naming_claim_id_and_field` are
-  **removed from `test_pre_filter.py`** — the join they tested no
-  longer exists there. Equivalent coverage moves to a new
-  `test_collector_adapter.py` (adapter-level: a raw Collector record
-  missing an expected field fails to construct a `CanonicalUnit`,
-  named clearly).
-- `test_full_run_mixed_statuses_no_exception_correct_classifications`
-  is rewritten for the two-dimension shape.
-- The 4 gate tests (`test_gate_fires_when_all_claims_unverifiable`,
-  etc.) are rewritten for the "zero included units" condition and the
-  renamed `gates` key.
-
-**New tests, this task:**
-- `strategy_layer/test_derivation_kind.py` — the declarative
-  derivation-kind rule table (20/20 passing, TDD, RED→GREEN confirmed
-  this session — see the dedicated section above).
-- `strategy_layer/test_language_check.py` — the optional Habr
-  Russian-language safety net (6/6 passing, TDD, RED→GREEN confirmed
-  this session).
-- `strategy_layer/test_contract.py` — `CanonicalUnit` validation:
-  `extra="forbid"` rejects unknown fields, `frozen=True` blocks
-  mutation, the `model_validator` enforces
-  `assertion_text`/`source_url`/`license` consistency rules (R8).
-- `strategy_layer/test_collector_adapter.py` — real integrity check
-  (TDD, per Non-Functional Requirement 1): repo/branch existence,
-  commit_count reconciliation, both RED-before/GREEN-after.
-- `strategy_layer/test_alien_source_contract.py` — the synthetic
-  alien-source test (migration step 5).
-- A regression test for the grep-based lint script itself (confirms
-  it actually catches a synthetic hardcoded-path violation — same
-  mutation-testing discipline as this project's other lint scripts).
-- **Real-data run:** Collector's adapter against real, current
-  `manifest_*.json`/`daily_brief_*.json`, through Strategy Layer, to a
-  real verdict file, to a real LinkedIn draft (via
-  `linkedin_verdict_reader.py`) and a real Habr draft (via
-  `habr_verdict_to_story.py` + the new entry point) — not synthetic
-  fixtures, matching this project's established validation precedent.
-
-## Out of Scope (explicit)
-
-- REFLECT / Collector weekly-analysis feature.
-- Any Brain-side adapter, stub, or Brain-shaped code path.
-- `generate_drafts.py` — untouched.
-- `story_builder.py`'s existing Collector-vocabulary leak
-  (`value`/`explicit_service`/`default_service` literals) and
-  `channel_author.py`'s existing hardcoded Collector-specific title —
-  both left as-is; they belong to the old, still-live
-  `generate_drafts.py` path, not this task's new Habr entry point.
-  Filed as a future BACKLOG cleanup item, not fixed here.
-- Derived-claim synthesis from raw telemetry (the two-dimension
-  model's "a derived conclusion needs its own evidence basis"
-  principle is recorded but not implemented).
-- Multi-claim synthesis for the Habr entry point (single included
-  claim only, this sprint).
-- Platform Adapter / real Habr or LinkedIn posting automation.
-- Brain `gitlab` remote cleanup — separate BACKLOG item.
-- Any `git push`, token revocation, or destructive git operation —
-  this task's boundary is `SPEC.md`; no implementation code is written
-  here.
+Everything else follows this project's existing convention: real-data
+validation once each milestone's mechanism is implemented (matching
+every existing component's own "tested on real data" bar), not mocked
+end-to-end.
 
 ## Milestones
 
-- [x] M1 — `strategy_layer/contract.py`: `CanonicalUnit` Pydantic
-      model, two-dimension fields, validators.
-      verify: `strategy_layer/test_contract.py`
-      done-when: extra-field rejection, frozen mutation-block, and all
-      `model_validator` consistency rules pass
-      done: 2026-09-15, RED (`ModuleNotFoundError`) confirmed before
-      implementation, GREEN after — 10/10 passing
-- [x] M2 — Rewrite `pre_filter.py`: remove `join_claims_and_evidence`,
-      new two-dimension classification table, redefined gate
-      condition (`zero_included_units`).
-      verify: rewritten `test_pre_filter.py` (TDD for the gate
-      specifically, per Non-Functional Requirement 1)
-      done-when: RED-before/GREEN-after for the gate condition;
-      classification table matches the 6-row matrix exactly
-      done: 2026-09-15, RED (11 `AttributeError`s against the old
-      dict-based API) confirmed before rewrite, GREEN after — 11/11
-      passing. `run_pilot.py` (the pre-existing Brain-chain M5
-      validation script, found via the mandatory codebase-wide search
-      before this diff — not previously accounted for) calls the old
-      API directly; resolved as an ordinary technical decision, not
-      migrated: marked stale in its own docstring, kept as a
-      historical record (its job — the Brain-chain pilot — is already
-      done and recorded; Brain's adapter is deferred past this
-      sprint, so there's nothing to migrate it to).
-- [x] M3 — `strategy_layer/adapters/collector.py`: real integrity
-      check (repo/branch existence + commit_count reconciliation),
-      produces `list[CanonicalUnit]`. Also: `derivation_kind`/
-      `source_status_snapshot` wired into `build_claim_treatment()`
-      (new optional parameters, opt-in — old callers get the
-      unchanged 5-key dict shape, new callers get 7 keys; resolves the
-      schema-conflict flag from this section's earlier draft without
-      needing to touch `test_framing.py`'s original 10 tests).
-      verify: `strategy_layer/adapters/test_collector.py` (TDD,
-      mocked `subprocess.run`); `test_framing.py`'s new
-      `derivation_kind` cases (TDD)
-      done-when: RED-before/GREEN-after; real run against current
-      Collector data produces valid `CanonicalUnit`s
-      done: 2026-09-15, RED confirmed for both (`ModuleNotFoundError`;
-      `TypeError: unexpected keyword argument`), GREEN after — 12/12
-      and 16/16 respectively. Real run (`strategy_layer/
-      run_collector_pilot.py`, throwaway orchestration, same class as
-      `run_pilot.py`) against `manifest_2026-09-12.json` produced a
-      real verdict (`strategy_layer/output/verdict_20260915T191323
-      .json`) with `derivation_kind`/`source_status_snapshot` actually
-      populated.
+### M1: Publication Registry
+- [ ] Registry schema + writer, gate-metadata fields included from day one
+- verify: real Registry write from a real (even bootstrap-gated) M2 run
+- done-when: one real publication record exists with all required fields
+- status: not started
+- drift:
+  - goal: 0.0
+  - constraint: 0.0
+  - scope: 0.0
+  - combined: 0.0
 
-      **Two real findings from the real run, not caught by the mocked
-      unit tests:**
-      1. A genuine bug: `git`'s `--since=N.days` shorthand resolves
-         relative to actual wall-clock "now," not to `--until` —
-         combined with an explicit `--until` anchor, this silently
-         shifted the reconciliation window forward, undercounting (5
-         of 7 repos mismatched, reconciled consistently lower than
-         reported). Fixed: both bounds now computed as absolute
-         timestamps. Confirmed fixed — after the fix, 5 of 7 repos
-         reconcile exactly.
-      2. A structural limitation, not a bug, left unresolved
-         deliberately: 2 of 7 repos (`collector`, `radar-vault`) still
-         mismatch by ±1 after the fix. Traced `collector`'s case to a
-         commit (`b89008e`, "weekly Collector EMIT 2026-09-12")
-         timestamped exactly at `scan_timestamp` — almost certainly
-         the commit that records the manifest file itself, created
-         moments after the scan ran but stamped at effectively the
-         same instant; date-based `--until` filtering is inclusive at
-         that boundary. `radar-vault`'s cause wasn't individually
-         traced. Not adjusted to paper over this — the exact-match
-         tolerance choice was explicitly owner-confirmed with its own
-         stated reasoning; loosening it unilaterally would silently
-         override that decision. Flagged here for the owner, not
-         resolved.
-- [x] M4 — `author/linkedin_verdict_reader.py` +
-      `daily_linkedin_author.py`'s old direct-read bypass removed.
-      verify: real run, verdict → LinkedIn draft, no `daily_brief_
-      *.json` read anywhere in `daily_linkedin_author.py`
-      done-when: a real LinkedIn draft is produced from a real
-      Strategy Layer verdict, not a direct Collector read
-      done: 2026-09-15 (ADR-0045: `author/authoring_context.py`,
-      built post-classification directly from `CanonicalUnit` +
-      `claim_treatments`, never touching the verdict schema — closes
-      the gap that a persisted verdict alone can't carry raw per-repo
-      metadata). RED/GREEN confirmed for both `test_authoring_context.py`
-      (5/5) and `test_linkedin_verdict_reader.py` (4/4).
-      `default_daily_brief_path()` removed from `daily_linkedin_author.py`;
-      its CLI now requires an explicit path, no silent Collector-file
-      default. Real run (`strategy_layer/run_linkedin_pilot.py`)
-      against real `daily_brief_2026-09-14.json`: real Russian commit-
-      message text reached the constructed prompt's `commit_messages`
-      field, confirmed by literal output; the live `gh repo view` L2
-      check also ran for real.
-- [x] M5 — `author/habr_verdict_to_story.py` + new Habr entry point
-      script (`author/habr_weekly_author.py`, manifest/weekly-sourced
-      — SPEC.md never pinned this cadence explicitly; chosen to match
-      `generate_drafts.py`'s existing Habr precedent).
-      verify: real run, verdict (single included claim) → Habr RU
-      draft
-      done-when: a real Habr draft is produced from a real Strategy
-      Layer verdict; a run with >1 included claim refuses clearly,
-      does not silently mangle output
-      done: 2026-09-15/16, in two passes. First pass built exactly
-      this single-claim design (RED/GREEN, `test_habr_verdict_to_story.py`
-      6/6) — its own real end-to-end run against `manifest_2026-09-12
-      .json` then showed 5 included claims is what a typical real week
-      actually produces, not an edge case, and the single-claim design
-      correctly refused (`MultiClaimNotSupportedError`) rather than
-      fabricating a story — meaning Habr publication did not work
-      against real data at all. **Superseded same-session by
-      ADR-0046** (multi-claim digest: `HabrDigest`/`HabrDigestSection`,
-      structural juxtaposition of already-vetted per-claim framing
-      text under one shared Russian title, no LLM, per-claim
-      `looks_russian()` check with partial exclusion rather than
-      all-or-nothing refusal) — this `done-when` text itself describes
-      the now-superseded single-claim behavior; see ADR-0046 for the
-      accepted design. RED/GREEN confirmed for the rebuilt
-      `test_habr_verdict_to_story.py` (8/8) and `test_habr_weekly_author.py`
-      (5/5). Re-run against the same real `manifest_2026-09-12.json`
-      data: all 5 real claims represented (`HabrDigest sections: 5 of
-      5 included contexts`), zero truncation, full Russian text
-      confirmed throughout.
-- [x] M6 — CI enforcement: import-linter contract (`pyproject.toml`),
-      grep-based path-hardcoding lint script, alien-source contract
-      test, wired into a new GitHub Actions workflow.
-      verify: `test_alien_source_contract.py`; lint-script regression
-      test; a real PR touching `strategy_layer/` triggers the new
-      workflow
-      done-when: all three mechanisms independently confirmed to
-      catch a synthetic violation (mutation-tested, same discipline as
-      this project's other lint scripts)
-      done: 2026-09-16. Blocker resolved first: `strategy_layer/__init__.py`
-      and `author/__init__.py` added — mandatory codebase-wide search
-      (grep for every `sys.path.insert()` call, 29 found across
-      `strategy_layer/`+`author/`, zero dotted-package imports found
-      anywhere) confirmed no existing bare-import call site breaks;
-      131/131 reconfirmed unaffected immediately after. Two real
-      import-linter config gaps found only once run for real (never
-      run before this milestone): `include_external_packages = true`
-      required for external `forbidden_modules`; `author.source_adapter`
-      needed `root_packages = ["strategy_layer", "author"]` (not a
-      bare `root_package` string) since a subpackage of a purely
-      external package isn't a valid forbidden-module reference. All
-      three mechanisms independently mutation-tested: import-linter
-      (a real `import claim_extraction` planted in `pre_filter.py` —
-      contract went `BROKEN`, exit 1, exact line cited; reverted —
-      `KEPT`, exit 0); grep-lint
-      (`scripts/check-strategy-layer-boundary.sh` +
-      `scripts/test-strategy-layer-boundary-check.sh`, 6 cases, each of
-      SPEC.md's 4 named strings independently confirmed blocking, plus
-      a scope-boundary case; RED confirmed by breaking the check
-      script — `unbound variable`, test caught it — GREEN after
-      restore); alien-source contract test
-      (`strategy_layer/test_alien_source_contract.py`, 6/6, a
-      structurally-valid-but-alien `source="collector"` unit per
-      SPEC.md's own fallback design since the `source` Literal stayed
-      strict; RED confirmed by planting source-specific special-casing
-      in `pre_filter.py` — 5/6 failed — GREEN after revert).
-      `.github/workflows/strategy-layer-boundary-ci.yml` wired,
-      Python 3.14 (matching `pyproject.toml`'s `requires-python`, not
-      the older workflows' 3.11), all four steps dry-run locally in
-      workflow order. **Not verified**: the workflow actually firing on
-      a real GitHub PR — requires a real push, out of scope for a
-      working-tree-only session; first real PR touching
-      `strategy_layer/` after this lands is the actual confirmation.
-- [x] M7 — Two ADRs filed in `docs/adr/` with real numbers.
-      verify: `scripts/check_adr_numbering.py` (existing CI check)
-      done-when: both ADRs pass numbering/structural validation
-      done: 2026-09-16. Owner confirmed, resolving this milestone's own
-      prior open question: ADR-0045/0046 record different decisions
-      (post-classification authoring context; Habr multi-claim digest)
-      and do not satisfy M7 by extension — the originally-scoped pair
-      is filed separately as ADR-0047 (Two-Dimension Verification
-      Model) and ADR-0048 (Source-Independence via Anti-Corruption
-      Layer Architecture), both Accepted.
-      `scripts/check_adr_numbering.py`: `OK: all ADRs in docs/adr
-      numbered correctly.` `docs/adr/ADR-INDEX.md` regenerated (48
-      ADRs indexed).
+### M2: LinkedIn Auto-Publish (bootstrap-gated)
+- [ ] Bootstrap gate wiring (reuse `pre_filter.py`, `gate_policy=bootstrap`), LinkedIn API publish, token-expiry alert, `SAFETY_PAUSE` circuit breaker
+- verify: one real, fully automatic LinkedIn post on real data, no manual step
+- done-when: Registry shows one real `gate_policy=bootstrap`/`gate_status=pass` record with a live LinkedIn URL
+- status: not started
+- drift:
+  - goal: 0.0
+  - constraint: 0.0
+  - scope: 0.0
+  - combined: 0.0
 
-**Handoff, 2026-09-16 (sprint complete).** M1–M7 are all done — every
-milestone's own `done:` entry above carries its literal RED/GREEN
-test output and, where applicable, real-run evidence. Full
-`strategy_layer/` + `author/` suite: 137/137 (131 from M1–M5 plus 6
-new alien-source contract tests, M6). All work committed to git this
-session, split along milestone boundaries — see git log for the exact
-commit SHAs; nothing pushed to `origin`, per this project's
-unconditional sensitive-ops rule (pushing is a manual, owner-only
-action). Out of scope for this sprint and unchanged:
-`story_builder.py`/`channel_author.py`'s Collector-vocabulary leak
-(filed as a future cleanup item, not fixed), derived-claim synthesis
-from raw telemetry, Brain's own adapter (deferred past this sprint,
-per the Out of Scope section above).
+### M3: Owner Verdict Capture (LinkedIn)
+- [ ] Verdict event stream, `content_id`-keyed, no lifecycle coupling
+- verify: a verdict recorded for a real M2 publication, and a Weekly snapshot with no verdict yet for another
+- done-when: both a `recorded` and a `missing` `verdict_status` are demonstrated
+- status: not started
+- drift:
+  - goal: 0.0
+  - constraint: 0.0
+  - scope: 0.0
+  - combined: 0.0
+
+### M4: Habr Manual Outbox + Edit Capture
+- [ ] Telegram draft hand-off, Google Drive credential + client (new), draft/final diff → Evidence
+- verify: one real Habr draft delivered, one real owner edit captured as a diff-based Evidence record
+- done-when: an Evidence record exists linking a real `-draft`/`-final` pair
+- status: not started
+- drift:
+  - goal: 0.0
+  - constraint: 0.0
+  - scope: 0.0
+  - combined: 0.0
+
+### M5: Telegram HITL Bot
+- [ ] Consume ToolTempest shared transport (blocked on `[B-065]`/ADR-0051), Russian message formatting for all four responsibilities
+- verify: one real send + one real receive round-trip against the owner's real Telegram chat
+- done-when: an Owner Verdict, a Change Proposal approval, and a Weekly report have each been delivered and parsed correctly at least once
+- status: blocked on `[B-065]`
+- drift:
+  - goal: 0.0
+  - constraint: 0.0
+  - scope: 0.0
+  - combined: 0.0
+
+### M6: Weekly Snapshot & Pattern Detection
+- [ ] Immutable per-run snapshots, `verdict_status`, `PatternCandidate` in `OBSERVE_ONLY`
+- verify: two consecutive Weekly runs, confirming the first snapshot is never overwritten by the second
+- done-when: a `PatternCandidate` accumulates a real `occurrence_count` with no Change Proposal drafted while `action_policy: disabled`
+- status: not started
+- drift:
+  - goal: 0.0
+  - constraint: 0.0
+  - scope: 0.0
+  - combined: 0.0
+
+### M7: Change Proposal Mechanism
+- [ ] Per-channel `prompt_version` tracks, optimistic concurrency, LLM-drafted diffs, terminal STALE
+- verify: one proposal applies cleanly; one proposal (targeting an already-moved version) goes STALE and is confirmed never applied
+- done-when: both outcomes are demonstrated on real (not synthetic) prompt versions
+- status: not started
+- drift:
+  - goal: 0.0
+  - constraint: 0.0
+  - scope: 0.0
+  - combined: 0.0
+
+### M8: Quality Gate (Real R6)
+- [ ] Full 5-condition R6 rule, three-outcome state machine, transition-based alerting — blocked on Path B Claim Extraction (separate future `/spec`)
+- verify: R6 correctly passes a real Claim meeting all five conditions and blocks one missing any single condition
+- done-when: `gate_policy=R6` records appear in the Registry for new publications, with M2-M7's `bootstrap` records unchanged
+- status: blocked on Path B Claim Extraction (not yet spec'd)
+- drift:
+  - goal: 0.0
+  - constraint: 0.0
+  - scope: 0.0
+  - combined: 0.0
 
 ## Open Questions / Decisions Needed
 
-None blocking implementation of M1-M7 above — every fork raised by
-`pre-spec`'s sensor run and by this interview itself (R6/R8 wording,
-integrity-check method, Habr's verdict-to-story bridge, N-claims-to-
-5-slots handling, module naming/location, gate redefinition,
-import-linter scope, path-hardcoding enforcement) was resolved
-directly by the owner in this interview and is recorded in the
-relevant section above.
-
-One deferred, non-blocking note for a future session: the vocabulary-
-leak cleanup in `story_builder.py`/`channel_author.py` (Out of Scope,
-above) — not this SPEC's scope to resolve, flagged only so a future
-session doesn't assume it was overlooked. A second: multi-claim
-synthesis for Habr, deferred by explicit owner choice this interview,
-will need its own design once a real run produces more than one
-included claim.
-
-**Resolved, 2026-09-15 (was open in an earlier version of this
-section):** whether `causal_claim` should also be unconditionally
-unwarranted from `disputed`/`unsubstantiated` sources — yes, confirmed
-by the owner same-day. See the Rule Table section above for the
-correction and its RED→GREEN confirmation. No longer an open question.
-
-## Source
-
-`/spec` interview, 2026-09-15, following two prior sessions in this
-same thread: (1) a fresh-state verification pass re-confirming every
-factual claim from a 2026-09-14 gap-analysis session against live
-code/git history, and (2) a `pre-spec` pass (`finding-unknowns` +
-`phrase-decomposer`) that surfaced two BLOCKING findings — verification
-semantics for Collector's telemetry (no counterpart to Brain's
-Claim/Evidence status vocabulary existed), and the absence of any real
-Habr/LinkedIn posting mechanism anywhere in the codebase. Both resolved
-by the owner before this interview began (two-dimension model;
-sprint-scope boundary at manual-post-ready drafts). This interview
-itself surfaced and resolved several further forks not caught by
-pre-spec: R6/R8's wording under the two-dimension model, Collector's
-integrity-check method (no commit hashes exist in Collector's actual
-data — discovered live, this interview), the verdict-to-CanonicalStory
-structural mismatch for Habr (resolved after reading `channel_author.py`
-live and finding it does zero content-aware processing), and the
-two-ADR split (two-dimension model vs. broader ACL architecture, as
-distinct decisions). Current Pydantic v2 (`ConfigDict(extra="forbid",
-frozen=True)`) and import-linter (`[tool.importlinter]`, `forbidden`
-contract type) config syntax confirmed via live web search this
-session, not cached knowledge — see citations in the Architecture
-section above.
+- Habr-multiple-articles-per-day: the `YYYY-MM-DD-draft`/`-final`
+  naming convention assumes at most one Habr article per calendar day.
+  If the owner ever publishes more than one on the same date, the
+  convention needs a disambiguator (slug or sequence suffix) — flagged
+  by the owner herself during this interview, not yet confirmed as a
+  real scenario.
+- Path B Claim Extraction's own design (M8's blocking dependency) is
+  explicitly out of this spec's scope — a separate `/spec` interview,
+  per the owner's own decision this session.
+- ToolTempest's shared Telegram transport (M5's blocking dependency,
+  `[B-065]`/ADR-0051) is implementation work in a different repository,
+  tracked but not designed here.
+- The exact real threshold values for `PatternCandidate.threshold` and
+  the prompt-fix-confirmation window are deliberately not set anywhere
+  in this spec (ADR-0052) — they are owner policy, set later from real
+  operating data, not a default this spec should guess at.
