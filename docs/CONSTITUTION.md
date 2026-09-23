@@ -445,3 +445,18 @@ than guessing, per the one stop-and-ask rule above.
 `docs/PROJECT.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
 `docs/BACKLOG.md`, this file, `docs/adr/`, code, comments, and commit
 messages are English. No exceptions for new content.
+
+**Named exception, per the Documentation Rules doc's requirement that
+a product-output language exception be stated explicitly, not left
+implicit:** the Telegram HITL bot's owner-facing text — Owner Verdict
+prompts, Change Proposal approval/rejection messages, Weekly reports,
+and SYSTEM_FAILURE/SAFETY_PAUSE alerts (Publication Core Loop `/spec`)
+— is Russian, matching the owner's own conversational language and the
+precedent already established twice in this ecosystem
+(`mikkiola/analyzer/scripts/telegram_bot.py`'s question text,
+`mikkiola/radar/src/telegram_post.py`'s posting output). This is
+product output directed at the owner, not a governance artifact — the
+general rule above (English governs internal/governance documents;
+product-facing output follows its audience's language) already covers
+it; this note exists only so a future reader doesn't have to infer the
+exception.
