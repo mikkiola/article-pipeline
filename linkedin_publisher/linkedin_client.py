@@ -35,7 +35,18 @@ from datetime import datetime, timezone
 import requests
 
 _POSTS_ENDPOINT = "https://api.linkedin.com/rest/posts"
-_LINKEDIN_VERSION = "202509"  # LinkedIn's YYYYMM versioned-REST-API header value.
+
+# LinkedIn's YYYYMM versioned-REST-API header value. Must be reviewed
+# and bumped by hand roughly every 6 months — LinkedIn's own versions
+# fall out of support on a rolling ~12-month window, and a real
+# production run failed with 426 NONEXISTENT_VERSION once "202509"
+# aged out. Deliberately NOT computed from the current date at
+# runtime: a version LinkedIn hasn't released yet returns the exact
+# same 426 error as an expired one, so a clock-derived value is no
+# safer than a pinned one — only a value someone has actually
+# confirmed live is. "202608" confirmed working against /rest/posts
+# as of 2026-09-15: https://opentweet.io/answers/linkedin-api-426-nonexistent-version
+_LINKEDIN_VERSION = "202608"
 _RESTLI_PROTOCOL_VERSION = "2.0.0"
 
 
