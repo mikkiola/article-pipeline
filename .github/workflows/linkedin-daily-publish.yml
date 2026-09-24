@@ -82,15 +82,15 @@ jobs:
           ANTHROPIC_API_KEY_DAILY_AUTHOR: ${{ secrets.ANTHROPIC_API_KEY_DAILY_AUTHOR }}
         run: python3 linkedin_publisher/daily_publish.py
 
-      - name: Commit and push Registry/verdict output
+      - name: Commit and push Registry output
         working-directory: ${{ env.WORKSPACE_ROOT }}/article-pipeline
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add publication_registry/output/ strategy_layer/output/
+          git add publication_registry/output/
           if git diff --cached --quiet; then
             echo "No new output files to commit."
             exit 0
           fi
-          git commit -m "chore(publish): daily LinkedIn run $(date -u +%Y-%m-%d)"
+          git commit -m "chore(publish): daily LinkedIn Registry record $(date -u +%Y-%m-%d)"
           git push
