@@ -238,6 +238,20 @@ def main() -> None:
     print(f"gate_result: {gate_result}")
 
     content_id = build_content_id(daily_brief["date"])
+
+    # Read-before-publish guard: publish_post() has no client-side
+    # idempotency key, and write_record()'s own existing-file check only
+    # runs after a post is already live. A `pass` record means this
+    # content_id already published; a `block` record does not (nothing
+    # was posted). An unparseable record raises inside read_record().
+    existing_record = registry_writer.read_record(content_id)
+    if existing_record is not None and existing_record.gate_status == "pass":
+        print(
+            f"Registry already has a published record for {content_id} — "
+            f"skipping, no publish attempted."
+        )
+        return
+
     now = datetime.now(timezone.utc)
 
     if gate_result["status"] == "gated":

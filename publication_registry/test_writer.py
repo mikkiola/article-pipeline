@@ -206,3 +206,50 @@ def test_disagreement_on_block_reason_raises_and_preserves_bytes(tmp_path, monke
         writer.write_record(conflicting)
 
     assert Path(first_path).read_bytes() == original_bytes
+
+
+# --- read_record(): read-only lookup by content_id ------------------------
+
+
+def test_read_record_returns_none_when_no_file_and_creates_nothing(tmp_path, monkeypatch):
+    output_dir = tmp_path / "output"
+    monkeypatch.setattr(writer, "OUTPUT_DIR", str(output_dir))
+
+    assert writer.read_record("linkedin-2026-09-24") is None
+    assert not output_dir.exists()
+
+
+def test_read_record_returns_parsed_record_and_leaves_file_untouched(tmp_path, monkeypatch):
+    monkeypatch.setattr(writer, "OUTPUT_DIR", str(tmp_path))
+    record = make_record()
+    path = Path(writer.write_record(record))
+    original_bytes = path.read_bytes()
+    original_mtime_ns = path.stat().st_mtime_ns
+
+    result = writer.read_record(record.content_id)
+
+    assert result == record
+    assert path.read_bytes() == original_bytes
+    assert path.stat().st_mtime_ns == original_mtime_ns
+
+
+def test_read_record_raises_on_unreadable_file_instead_of_reporting_absent(tmp_path, monkeypatch):
+    monkeypatch.setattr(writer, "OUTPUT_DIR", str(tmp_path))
+    existing_path = tmp_path / "linkedin-2026-09-24.json"
+    existing_path.write_text("{not valid json", encoding="utf-8")
+    original_bytes = existing_path.read_bytes()
+
+    with pytest.raises(PublicationRegistryConflictError):
+        writer.read_record("linkedin-2026-09-24")
+
+    assert existing_path.read_bytes() == original_bytes
+
+
+def test_read_record_raises_on_valid_json_that_is_not_a_publication_record(tmp_path, monkeypatch):
+    monkeypatch.setattr(writer, "OUTPUT_DIR", str(tmp_path))
+    (tmp_path / "linkedin-2026-09-24.json").write_text(
+        json.dumps({"unrelated": "shape"}), encoding="utf-8"
+    )
+
+    with pytest.raises(PublicationRegistryConflictError):
+        writer.read_record("linkedin-2026-09-24")

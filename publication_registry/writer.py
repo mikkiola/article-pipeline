@@ -66,29 +66,64 @@ def _fields_agree(existing: PublicationRecord, incoming: PublicationRecord) -> b
     )
 
 
+def _record_path(content_id: str) -> str:
+    return os.path.join(OUTPUT_DIR, f"{content_id}.json")
+
+
+def _load_existing_record(record_path: str, consequence: str) -> PublicationRecord:
+    """Reads and parses an already-existing record file. `consequence`
+    is the tail of the error message, so each caller states what the
+    unreadable file blocks for it; the parse rule itself lives only
+    here."""
+    with open(record_path, "r", encoding="utf-8") as f:
+        raw_existing = f.read()
+
+    try:
+        return PublicationRecord(**json.loads(raw_existing))
+    except (json.JSONDecodeError, TypeError, ValidationError) as exc:
+        raise PublicationRegistryConflictError(
+            f"{record_path} already exists but could not be read as a "
+            f"valid PublicationRecord — {consequence}"
+        ) from exc
+
+
+def read_record(content_id: str) -> PublicationRecord | None:
+    """Read-only lookup of the record for `content_id` — a caller's
+    read-before-write check (e.g. daily_publish.py's pre-publish guard).
+
+    Returns None if no `{content_id}.json` exists, the parsed record if
+    one does. Keyed on `content_id` alone, never reconstructed from any
+    other field (ADR-0053). Never creates, modifies, or removes anything
+    (ADR-0011); in particular it does not create OUTPUT_DIR. An existing
+    file that can't be parsed as a PublicationRecord raises
+    PublicationRegistryConflictError rather than being reported as
+    absent — an unreadable record is not evidence that nothing was
+    published.
+    """
+    record_path = _record_path(content_id)
+    if not os.path.exists(record_path):
+        return None
+    return _load_existing_record(
+        record_path, "cannot tell whether this content_id was already recorded."
+    )
+
+
 def write_record(record: PublicationRecord) -> str:
     """Writes {content_id}.json (Immutable Lineage) — see module
     docstring for the four outcomes.
     """
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    record_path = os.path.join(OUTPUT_DIR, f"{record.content_id}.json")
+    record_path = _record_path(record.content_id)
 
     if not os.path.exists(record_path):
         with open(record_path, "w", encoding="utf-8") as f:
             f.write(record.model_dump_json(indent=2))
         return record_path
 
-    with open(record_path, "r", encoding="utf-8") as f:
-        raw_existing = f.read()
-
-    try:
-        existing = PublicationRecord(**json.loads(raw_existing))
-    except (json.JSONDecodeError, TypeError, ValidationError) as exc:
-        raise PublicationRegistryConflictError(
-            f"{record_path} already exists but could not be read as a "
-            f"valid PublicationRecord — cannot verify agreement with "
-            f"the incoming record. Not overwritten."
-        ) from exc
+    existing = _load_existing_record(
+        record_path,
+        "cannot verify agreement with the incoming record. Not overwritten.",
+    )
 
     if _fields_agree(existing, record):
         return record_path
