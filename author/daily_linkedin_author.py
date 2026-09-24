@@ -372,12 +372,23 @@ def _extract_text_block(content: list) -> str:
 
 
 def call_model(prompt: str) -> dict:
+    # thinking={"type": "disabled"} is required, not optional, on
+    # claude-sonnet-5: unlike earlier Sonnet models, a request with no
+    # `thinking` field runs with adaptive thinking (effort: high) by
+    # default (https://platform.claude.com/docs/en/models/sonnet-5/
+    # whats-new-sonnet-5). max_tokens is a hard limit on combined
+    # thinking + text output, so without this, the model can exhaust
+    # the entire budget on its thinking block before producing any
+    # text — confirmed as the actual cause of a real production
+    # failure (block_types: ['thinking'], 2026-09-24 workflow run).
     client = anthropic.Anthropic(api_key=_get_api_key())
     response = client.messages.create(
         model=MODEL,
         max_tokens=4096,
+        thinking={"type": "disabled"},
         messages=[{"role": "user", "content": prompt}],
     )
+    print(f"stop_reason: {response.stop_reason}")
     raw_text = _extract_text_block(response.content)
     text = _strip_markdown_fence(raw_text)
     try:

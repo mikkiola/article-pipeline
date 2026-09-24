@@ -8,6 +8,8 @@ asserts, no framework). No real API call is ever made — the Anthropic
 client is mocked in every test that reaches call_model().
 """
 
+import contextlib
+import io
 import os
 from unittest import mock
 
@@ -85,6 +87,7 @@ def test_fact_mode_builds_fact_prompt_and_parses_wellformed_response():
     mock_client.messages.create.assert_called_once()
     assert mock_client.messages.create.call_args.kwargs["model"] == author_llm.MODEL
     assert mock_client.messages.create.call_args.kwargs["max_tokens"] == 4096
+    assert mock_client.messages.create.call_args.kwargs["thinking"] == {"type": "disabled"}
 
 
 def test_idea_fallback_mode_builds_idea_prompt_and_parses_wellformed_response():
@@ -322,6 +325,38 @@ def test_call_model_raises_clear_error_when_no_text_block_present():
             assert "thinking" in str(e), f"error should name the block type(s) actually found, got: {e}"
 
 
+def test_call_model_disables_thinking_and_logs_stop_reason():
+    # Regression test: claude-sonnet-5 runs with adaptive thinking
+    # (effort: high) by default unless thinking={"type": "disabled"}
+    # is explicitly passed — a real production run omitted this and
+    # exhausted the entire max_tokens budget on a thinking block with
+    # zero text output (block_types: ['thinking'], 2026-09-24 workflow
+    # run). Also confirms stop_reason is now logged, closing the
+    # diagnostic gap that made that failure take three review rounds
+    # to actually root-cause (stop_reason was never visible anywhere).
+    fake_payload = {
+        "post": "some post",
+        "fact_or_product": "x",
+        "emergent_property": "x",
+        "inversion": "x",
+        "commercial_hypothesis": "x",
+    }
+    fake_response = _fake_response(fake_payload)
+    fake_response.stop_reason = "end_turn"
+
+    with mock.patch.object(author_llm, "_get_api_key", return_value="fake-key"), \
+            mock.patch("daily_linkedin_author.anthropic.Anthropic") as MockAnthropic:
+        mock_client = MockAnthropic.return_value
+        mock_client.messages.create.return_value = fake_response
+
+        captured = io.StringIO()
+        with contextlib.redirect_stdout(captured):
+            author_llm.call_model("irrelevant prompt")
+
+    assert mock_client.messages.create.call_args.kwargs["thinking"] == {"type": "disabled"}
+    assert "stop_reason: end_turn" in captured.getvalue()
+
+
 def test_unknown_mode_raises_clear_error():
     try:
         author_llm.build_prompt({"mode": "silence", "total_diffstat": 0})
@@ -349,6 +384,7 @@ if __name__ == "__main__":
         test_non_json_response_raises_clear_error_not_silent_fallback,
         test_call_model_skips_leading_thinking_block_and_extracts_text_block,
         test_call_model_raises_clear_error_when_no_text_block_present,
+        test_call_model_disables_thinking_and_logs_stop_reason,
         test_unknown_mode_raises_clear_error,
     ]
     failures = 0
