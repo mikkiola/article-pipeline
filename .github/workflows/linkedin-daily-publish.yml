@@ -70,27 +70,6 @@ jobs:
         with:
           python-version: "3.14"
 
-      # TEMPORARY diagnostic step — removed in a follow-up commit once
-      # LINKEDIN_PERSON_URN's stored format is confirmed. Prints only
-      # length/boolean/truncated-edge info, never the full secret
-      # value, to check whether it was saved with literal placeholder
-      # curly braces (e.g. "urn:li:person:{AbC123XyZ}") instead of a
-      # real id — a plausible cause of the live 403 this pipeline has
-      # been hitting, since publish_post() uses this value verbatim
-      # with no parsing or validation.
-      - name: TEMP diagnostic - inspect LINKEDIN_PERSON_URN format (no secret value printed)
-        env:
-          LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
-        run: |
-          python3 -c "
-          import os
-          urn = os.environ.get('LINKEDIN_PERSON_URN', '')
-          print('Length:', len(urn))
-          print('Contains curly braces:', ('{' in urn) or ('}' in urn))
-          print('First 15 chars:', repr(urn[:15]))
-          print('Last 10 chars:', repr(urn[-10:]))
-          "
-
       - name: Install pinned dependencies
         run: pip install pydantic==2.13.4 anthropic==0.105.2 requests==2.34.2
 
