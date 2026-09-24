@@ -2883,3 +2883,29 @@ bot milestone (Publication Core Loop `/spec`) depends on this landing before tha
 milestone can close.
 
 **Source.** ADR-0051, 2026-09-23.
+
+### [B-066] P2 — Recurring operational maintenance: LinkedIn credential renewal and API version review
+
+Standing operational fact about the LinkedIn Auto-Publish architecture (M2), not a
+one-time task — it does not get closed via the usual `[B-NNN]` closure convention
+(no `Closes:` trailer applies; this entry stays open indefinitely as long as this
+pipeline publishes to LinkedIn).
+
+`LINKEDIN_ACCESS_TOKEN` (GitHub secret on this repo) has a hard 60-day expiry and no
+refresh-token flow on LinkedIn's self-serve tier — renewal is a manual OAuth
+authorization-code flow the operator must run periodically.
+`linkedin_publisher/linkedin_client.py`'s `check_token_preflight()` fails closed (no
+publish attempt) once the token expires, rather than publishing on an invalid
+credential — but nothing proactively alerts the operator before that point yet (see
+`docs/adr/0054-m2-ships-core-linkedin-publishing-without-safety-pause-trigger-or-
+proactive-credential-alerting.md`'s named limitation: proactive alerting depends on
+M5's Telegram bot, not built).
+
+`linkedin_publisher/linkedin_client.py`'s `LinkedIn-Version` header constant also
+needs periodic manual review — LinkedIn retires API versions roughly 12 months after
+release. A real production run already hit this once (see that file's own code
+comment for the current pinned value and its stated ~6-month review cadence).
+
+**Source.** Owner task, 2026-09-24, following the real M2 production run that
+surfaced both facts directly (the token-expiry limitation already named in
+ADR-0054, and a live `426 NONEXISTENT_VERSION` failure fixed in commit `aa98497`).
