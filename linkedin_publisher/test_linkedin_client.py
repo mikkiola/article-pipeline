@@ -120,6 +120,23 @@ def test_publish_post_raises_on_non_201_status(monkeypatch):
             linkedin_client.publish_post("hello world")
 
 
+def test_publish_post_error_message_includes_response_headers(monkeypatch):
+    # Regression test: a real production 403 had an empty JSON body
+    # ({"message":"","status":403}) with no diagnostic detail —
+    # response headers are the only remaining place LinkedIn might put
+    # an explanation for an empty-body error, so they must appear in
+    # the raised error, not just response.text.
+    monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN", "fake-token")
+    monkeypatch.setenv("LINKEDIN_PERSON_URN", "urn:li:person:ABC123")
+
+    fake_resp = _fake_response(
+        403, {"x-restli-error-message": "insufficient scope"}, text='{"message":"","status":403}'
+    )
+    with mock.patch.object(linkedin_client.requests, "post", return_value=fake_resp):
+        with pytest.raises(linkedin_client.LinkedInPublisherError, match="insufficient scope"):
+            linkedin_client.publish_post("hello world")
+
+
 def test_publish_post_raises_when_201_but_no_id_header(monkeypatch):
     monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN", "fake-token")
     monkeypatch.setenv("LINKEDIN_PERSON_URN", "urn:li:person:ABC123")

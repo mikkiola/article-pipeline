@@ -167,9 +167,16 @@ def publish_post(text: str) -> str:
 
     response = requests.post(_POSTS_ENDPOINT, json=payload, headers=headers, timeout=30)
     if response.status_code != 201:
+        # response.text alone isn't enough to diagnose a failure —
+        # confirmed directly against a real production 403 whose body
+        # was empty ({"message":"","status":403}). LinkedIn sometimes
+        # puts the actual diagnostic detail in response headers
+        # instead of the body, especially for an empty-body error, so
+        # those are included here too — same pattern this function
+        # already uses below for the 201-but-no-id-header case.
         raise LinkedInPublisherError(
             f"LinkedIn API returned {response.status_code}, expected 201: "
-            f"{response.text}"
+            f"{response.text} headers={dict(response.headers)!r}"
         )
 
     post_id = response.headers.get("x-restli-id") or response.headers.get("X-RestLi-Id")
