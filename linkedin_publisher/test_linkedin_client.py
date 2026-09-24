@@ -60,6 +60,7 @@ def test_preflight_raises_when_token_expires_exactly_now(monkeypatch):
 def test_preflight_passes_when_token_present_and_not_expired(monkeypatch):
     monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN", "fake-token")
     monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN_EXPIRES_AT", "2026-11-01T00:00:00+00:00")
+    monkeypatch.setenv("LINKEDIN_PERSON_URN", "urn:li:person:ABC123")
     now = datetime(2026, 9, 24, tzinfo=timezone.utc)
     linkedin_client.check_token_preflight(now=now)  # must not raise
 
@@ -67,8 +68,63 @@ def test_preflight_passes_when_token_present_and_not_expired(monkeypatch):
 def test_preflight_treats_naive_expiry_as_utc(monkeypatch):
     monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN", "fake-token")
     monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN_EXPIRES_AT", "2026-11-01T00:00:00")
+    monkeypatch.setenv("LINKEDIN_PERSON_URN", "urn:li:person:ABC123")
     now = datetime(2026, 9, 24, tzinfo=timezone.utc)
     linkedin_client.check_token_preflight(now=now)  # must not raise
+
+
+# --- LINKEDIN_PERSON_URN format validation ------------------------------
+
+
+def test_person_urn_accepts_valid_value(monkeypatch):
+    monkeypatch.setenv("LINKEDIN_PERSON_URN", "urn:li:person:AbC_123-x")
+    assert linkedin_client._person_urn() == "urn:li:person:AbC_123-x"
+
+
+def test_person_urn_rejects_empty(monkeypatch):
+    monkeypatch.setenv("LINKEDIN_PERSON_URN", "")
+    with pytest.raises(linkedin_client.LinkedInPublisherError, match="LINKEDIN_PERSON_URN is not set"):
+        linkedin_client._person_urn()
+
+
+@pytest.mark.parametrize(
+    "bad_urn",
+    [
+        "{urn:li:person:abc}",  # curly braces — the real production failure
+        " urn:li:person:abc",  # leading whitespace
+        "urn:li:person:abc ",  # trailing whitespace
+        "urn:li:person:abc\n",  # trailing newline (would slip past a bare `$`)
+        "urn:li:organization:123",  # wrong entity type
+        "urn:li:person:",  # no id
+    ],
+)
+def test_person_urn_rejects_malformed_value(monkeypatch, bad_urn):
+    monkeypatch.setenv("LINKEDIN_PERSON_URN", bad_urn)
+    with pytest.raises(linkedin_client.LinkedInPublisherError) as excinfo:
+        linkedin_client._person_urn()
+    message = str(excinfo.value)
+    assert repr(bad_urn) in message
+    assert "urn:li:person:<id>" in message
+
+
+def test_preflight_raises_on_malformed_person_urn_before_any_network_call(monkeypatch):
+    monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN", "fake-token")
+    monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN_EXPIRES_AT", "2026-11-01T00:00:00+00:00")
+    monkeypatch.setenv("LINKEDIN_PERSON_URN", "{urn:li:person:abc}")
+    now = datetime(2026, 9, 24, tzinfo=timezone.utc)
+    with mock.patch.object(linkedin_client.requests, "post") as mock_post:
+        with pytest.raises(linkedin_client.LinkedInPublisherError, match="malformed"):
+            linkedin_client.check_token_preflight(now=now)
+    mock_post.assert_not_called()
+
+
+def test_preflight_raises_when_person_urn_missing(monkeypatch):
+    monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN", "fake-token")
+    monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN_EXPIRES_AT", "2026-11-01T00:00:00+00:00")
+    monkeypatch.delenv("LINKEDIN_PERSON_URN", raising=False)
+    now = datetime(2026, 9, 24, tzinfo=timezone.utc)
+    with pytest.raises(linkedin_client.LinkedInPublisherError, match="LINKEDIN_PERSON_URN is not set"):
+        linkedin_client.check_token_preflight(now=now)
 
 
 # --- publish_post -------------------------------------------------------

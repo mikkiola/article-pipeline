@@ -30,11 +30,18 @@ out of scope for this component — see the ADR's Consequences section):
 from __future__ import annotations
 
 import os
+import re
 from datetime import datetime, timezone
 
 import requests
 
 _POSTS_ENDPOINT = "https://api.linkedin.com/rest/posts"
+
+# Matched with re.fullmatch (not re.match), so a trailing newline can't
+# slip past `$`. Deliberately strict: a malformed value is rejected,
+# never stripped or repaired — a production 403 once came from a
+# LINKEDIN_PERSON_URN with stray curly braces around it.
+_PERSON_URN_PATTERN = re.compile(r"^urn:li:person:[A-Za-z0-9_-]+$")
 
 # LinkedIn's YYYYMM versioned-REST-API header value. Must be reviewed
 # and bumped by hand roughly every 6 months — LinkedIn's own versions
@@ -78,6 +85,9 @@ def check_token_preflight(now: datetime | None = None) -> None:
     - LINKEDIN_ACCESS_TOKEN is unset or empty.
     - LINKEDIN_ACCESS_TOKEN_EXPIRES_AT is unset, empty, or unparseable.
     - The parsed expiry timestamp is not in the future relative to `now`.
+    - LINKEDIN_PERSON_URN is unset or not shaped `urn:li:person:<id>`
+      (checked last, via _person_urn(), so a malformed URN fails here
+      rather than only inside publish_post()).
 
     `now` is injectable for deterministic tests; production callers omit it.
     """
@@ -116,6 +126,8 @@ def check_token_preflight(now: datetime | None = None) -> None:
             f"(now: {moment.isoformat()}) — cannot publish."
         )
 
+    _person_urn()
+
 
 def _person_urn() -> str:
     urn = os.environ.get("LINKEDIN_PERSON_URN")
@@ -123,6 +135,11 @@ def _person_urn() -> str:
         raise LinkedInPublisherError(
             "LINKEDIN_PERSON_URN is not set — cannot build a post payload "
             "without an author URN."
+        )
+    if not _PERSON_URN_PATTERN.fullmatch(urn):
+        raise LinkedInPublisherError(
+            f"LINKEDIN_PERSON_URN={urn!r} is malformed — expected the shape "
+            f"urn:li:person:<id>."
         )
     return urn
 
