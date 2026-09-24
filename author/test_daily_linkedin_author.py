@@ -60,10 +60,10 @@ def _fake_response(payload: dict):
 def test_fact_mode_builds_fact_prompt_and_parses_wellformed_response():
     with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
         prompt = author_llm.build_prompt(SAMPLE_FACT_DAILY_BRIEF)
-    assert "FACT" in prompt
-    assert "EMERGENT PROPERTY" in prompt
-    assert "INVERSION" in prompt
-    assert "COMMERCIAL HYPOTHESIS" in prompt
+    # Facts-only structure (temporary, 2026-09-24): the old FACT/EMERGENT
+    # PROPERTY/INVERSION/COMMERCIAL HYPOTHESIS steps are gone.
+    assert "Repo/context" in prompt
+    assert "EMERGENT PROPERTY" not in prompt
     # Real DailyBrief data must actually appear in the prompt, not be
     # dropped or replaced with a placeholder.
     assert "6364" in prompt
@@ -72,9 +72,6 @@ def test_fact_mode_builds_fact_prompt_and_parses_wellformed_response():
     fake_payload = {
         "post": "Saw something odd in today's diff...",
         "fact_or_product": "929-line diffstat in article-pipeline",
-        "emergent_property": "some emergent property",
-        "inversion": "some inversion",
-        "commercial_hypothesis": "I suspect that...",
     }
     with mock.patch.object(author_llm, "_get_api_key", return_value="fake-key"), \
             mock.patch("daily_linkedin_author.anthropic.Anthropic") as MockAnthropic:
@@ -113,52 +110,144 @@ def test_idea_fallback_mode_builds_idea_prompt_and_parses_wellformed_response():
     author_llm.validate_structured_response(response, "idea_fallback")  # must not raise
 
 
-def test_fact_prompt_contains_adr_0044_voice_contract():
-    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
-        prompt = author_llm.build_prompt(SAMPLE_FACT_DAILY_BRIEF)
+# --- Temporary facts-only fact prompt (owner request, 2026-09-24) ---------
+# Replaces test_fact_prompt_contains_adr_0044_voice_contract: the fact
+# prompt deliberately no longer implements ADR-0044's Narrative Bridge
+# structure. The fallback prompt still does — see its test below.
 
-    # Structure.
-    assert "Narrative Bridge 30/40/30" in prompt
-    assert "hook" in prompt.lower()
-    assert "CTA" in prompt
-    # Length.
-    assert "150-250 words" in prompt
-    assert "max 3 sentences/paragraph" in prompt
-    # Voice.
-    assert "first person" in prompt
-    assert "active voice" in prompt
-    assert "no hashtags" in prompt
-    assert "0-1 emoji" in prompt
-    assert "self-deprecating" in prompt
-    # Forbidden vocabulary.
-    for forbidden in ("metadiscourse", "nominalizations", "hedge words",
-                       "delve", "tapestry", "revolutionize", "game-changer",
-                       "low-hanging fruit"):
-        assert forbidden in prompt, f"expected forbidden-vocabulary term {forbidden!r} in prompt"
-    # Narrowed hedging scope (2026-09-04 content review): hedge words are
-    # reserved for the commercial/speculative conclusion only.
-    assert "Hedging scope" in prompt
-    assert "are reserved" in prompt
-    assert "for the final commercial/speculative conclusion only" in prompt
-    # Causal chain rule, and the diff-size-metrics-aren't-persuasive rule.
-    assert "Causal chain rule" in prompt
-    assert "Diffstat and raw lines-changed counts may" in prompt
-    assert "never as the evidence doing the" in prompt
-    assert "persuasive work" in prompt
-    # Explicit feedback-loop shape connecting mechanism to inversion
-    # (2026-09-04 content review, not a direct jump).
-    assert "explicit feedback loop, not a direct jump" in prompt
+SYNTHETIC_FACTS_BRIEF = {
+    "mode": "fact",
+    "date": "2026-09-24",
+    "window": "1.day",
+    "total_diffstat": 1000,
+    "files_touched": ["a.py", "b.py", "docs/x.md", "c/d.py", "e.txt"],
+    "commit_messages": [
+        "feat(publication_registry): content_id becomes caller-supplied (ADR-0053)",
+        "docs(architecture): add Publication Registry row",
+        "fix(linkedin_publisher): bump expired LinkedIn-Version header",
+    ],
+    "per_repo": [
+        {"name": "article-pipeline", "commit_count": 3, "diffstat": 1000,
+         "files_touched": ["a.py", "b.py", "docs/x.md", "c/d.py", "e.txt"]},
+        {"name": "radar", "commit_count": 0, "diffstat": 0, "files_touched": []},
+    ],
+    "decision_source": "heuristic",
+}
+
+
+def _facts_prompt():
+    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
+        return " ".join(author_llm.build_prompt(SYNTHETIC_FACTS_BRIEF).split())
+
+
+def test_fact_prompt_has_facts_only_shape_and_drops_removed_instructions():
+    prompt = _facts_prompt()
+    # Target shape, in order: repo/context -> change -> evidence -> question.
+    positions = [prompt.index(f"{n}. {name}") for n, name in
+                 ((1, "Repo/context"), (2, "Change"), (3, "Evidence"), (4, "Question"))]
+    assert positions == sorted(positions)
+    assert "exactly one open question" in prompt
+    assert "No greeting" in prompt
+    assert "100-200 words" in prompt
+    assert "Maximum 3 sentences per paragraph" in prompt
+    assert "First person, active voice" in prompt
+    assert "No hashtags" in prompt and "No emoji" in prompt
+    # Removed instruction texts must be gone.
+    for removed in (
+        "EMERGENT PROPERTY", "INVERSION", "COMMERCIAL HYPOTHESIS",
+        "Narrative Bridge", "30/40/30", "L3 market signal", "Bridge (~40%",
+        "feedback loop", "150-250", '"emergent_property"', '"inversion"',
+        '"commercial_hypothesis"',
+    ):
+        assert removed not in prompt, f"removed instruction text still present: {removed!r}"
+    # Real input still reaches the model, and counts are computed in code.
+    assert "1000" in prompt
+    assert "feat(publication_registry): content_id becomes caller-supplied" in prompt
+    assert 'repositories with commits: ["article-pipeline"]' in prompt
+    assert "total commits: 3" in prompt
+    assert "files touched: 5" in prompt
+
+
+def test_fact_prompt_says_no_reason_if_the_input_has_none():
+    prompt = _facts_prompt()
     assert (
-        "mechanism -> less manual effort -> cheaper/faster check -> more\n"
-        "   checks possible -> fewer bad outcomes slip through -> compounding\n"
-        "   effect" in prompt
+        "If the input does not contain a reason for a change, say nothing about a reason"
+        in prompt
     )
-    # CTA rule.
-    assert "one open question, in-body, no direct pitch" in prompt
-    # Evidence tiers.
-    assert "L1 internal" in prompt
-    assert "L3 market signal" in prompt
-    assert "never fabricated" in prompt
+    assert "If the data contains no reason, the post states none" in prompt
+    assert "ONLY source of facts" in prompt
+    assert "Never invent a number" in prompt
+
+
+def test_fact_prompt_forbids_naming_adr_numbers():
+    prompt = _facts_prompt()
+    assert "Do not name ADR numbers, even if a commit subject contains one" in prompt
+    assert "Do not name ADR numbers as evidence" in prompt
+
+
+def test_fact_prompt_keeps_the_l2_public_link_mechanism():
+    def fake_visibility(repo_name):
+        return repo_name == "article-pipeline"
+
+    with mock.patch.object(author_llm, "_check_repo_visibility", side_effect=fake_visibility):
+        prompt = author_llm.build_prompt(SYNTHETIC_FACTS_BRIEF)
+    assert "https://github.com/mikkiola/article-pipeline" in prompt
+    assert "https://github.com/mikkiola/radar" not in prompt
+
+
+def test_fact_response_requires_only_post_and_fact_or_product():
+    author_llm.validate_structured_response(
+        {"post": "I pushed 3 commits to article-pipeline.", "fact_or_product": "x"}, "fact"
+    )  # must not raise
+    try:
+        author_llm.validate_structured_response({"post": "text"}, "fact")
+        raise AssertionError("expected AuthorLLMError for a missing fact_or_product")
+    except author_llm.AuthorLLMError as e:
+        assert "fact_or_product" in str(e)
+
+
+PLAIN_FACTS_ONLY_POST = (
+    "I pushed 3 commits to article-pipeline today.\n\n"
+    "One made the Publication Registry accept a caller-supplied content_id. "
+    "One added a Registry row to the architecture doc. One updated an expired "
+    "LinkedIn API version header.\n\n"
+    "5 files changed in total.\n\n"
+    "When did you last find a header expiring in your own pipeline?"
+)
+
+
+def test_post_check_rejects_adr_number():
+    try:
+        author_llm.check_post_content("I changed content_id handling (ADR-0053) today.")
+        raise AssertionError("expected AuthorLLMError for a post naming an ADR number")
+    except author_llm.AuthorLLMError as e:
+        assert "ADR number" in str(e)
+
+
+def test_post_check_rejects_greeting():
+    for greeting_post in ("Hi everyone, today I pushed 3 commits.",
+                          "Hello! I pushed 3 commits.",
+                          "Hey there. I pushed 3 commits."):
+        try:
+            author_llm.check_post_content(greeting_post)
+            raise AssertionError(f"expected AuthorLLMError for {greeting_post!r}")
+        except author_llm.AuthorLLMError as e:
+            assert "greeting" in str(e)
+
+
+def test_post_check_accepts_plain_facts_only_post():
+    author_llm.check_post_content(PLAIN_FACTS_ONLY_POST)  # must not raise
+
+
+def test_post_check_is_applied_by_validate_structured_response_in_both_modes():
+    bad = {"post": "Hi all, I pushed commits.", "fact_or_product": "x", "emergent_property": "x",
+           "evidence_to_collect": "x"}
+    for mode in ("fact", "idea_fallback"):
+        try:
+            author_llm.validate_structured_response(bad, mode)
+            raise AssertionError(f"expected AuthorLLMError in mode={mode}")
+        except author_llm.AuthorLLMError as e:
+            assert "greeting" in str(e)
 
 
 def test_idea_fallback_prompt_contains_adr_0044_voice_contract():
@@ -170,6 +259,21 @@ def test_idea_fallback_prompt_contains_adr_0044_voice_contract():
     assert "Causal chain rule" in prompt
     assert "Hedging scope" in prompt
     assert "feedback loop genuinely applies to the reimagined" in prompt
+
+
+# sha256 of the fallback prompt built from SAMPLE_IDEA_FALLBACK_DAILY_BRIEF
+# (repo visibility mocked to False), captured from the code as it stood at
+# commit 61ee40d, BEFORE the temporary facts-only change. If this fails,
+# the fallback prompt (or STYLE_CONSTRAINTS/VOICE_CONTRACT it embeds)
+# changed — update the hash only if that change is intentional.
+ORIGINAL_FALLBACK_PROMPT_SHA256 = "21601201862ba5c35716c18ccc59ab81ec36203dc9bd2322a1aaa38c0921d52e"
+
+
+def test_idea_fallback_prompt_is_unchanged_by_the_facts_only_change():
+    import hashlib
+    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
+        prompt = author_llm.build_prompt(SAMPLE_IDEA_FALLBACK_DAILY_BRIEF)
+    assert hashlib.sha256(prompt.encode("utf-8")).hexdigest() == ORIGINAL_FALLBACK_PROMPT_SHA256
 
 
 def test_evidence_links_included_for_public_repo_only():
@@ -369,7 +473,16 @@ if __name__ == "__main__":
     tests = [
         test_fact_mode_builds_fact_prompt_and_parses_wellformed_response,
         test_idea_fallback_mode_builds_idea_prompt_and_parses_wellformed_response,
-        test_fact_prompt_contains_adr_0044_voice_contract,
+        test_fact_prompt_has_facts_only_shape_and_drops_removed_instructions,
+        test_fact_prompt_says_no_reason_if_the_input_has_none,
+        test_fact_prompt_forbids_naming_adr_numbers,
+        test_fact_prompt_keeps_the_l2_public_link_mechanism,
+        test_fact_response_requires_only_post_and_fact_or_product,
+        test_post_check_rejects_adr_number,
+        test_post_check_rejects_greeting,
+        test_post_check_accepts_plain_facts_only_post,
+        test_post_check_is_applied_by_validate_structured_response_in_both_modes,
+        test_idea_fallback_prompt_is_unchanged_by_the_facts_only_change,
         test_idea_fallback_prompt_contains_adr_0044_voice_contract,
         test_evidence_links_included_for_public_repo_only,
         test_evidence_links_block_omits_silently_when_no_repo_public,

@@ -29,6 +29,7 @@ dict's shape, never its origin.
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -176,67 +177,80 @@ def _evidence_links_block(links: list) -> str:
     )
 
 
+# TEMPORARY facts-only structure, requested by the owner on 2026-09-24.
+# It deviates from the Narrative Bridge structure fixed by ADR-0044
+# (no hook, no bridge/emergent-property step, no inversion, no
+# hypothesis, no L3 market-signal tier, 100-200 words instead of
+# 150-250) because the model was inventing a reason and a consequence
+# that the input never contained. The decision on whether to amend the
+# ADR is pending the first real post. Deliberately does not embed
+# STYLE_CONSTRAINTS/VOICE_CONTRACT, which still carry the Narrative
+# Bridge wording and remain in use by _build_idea_fallback_prompt.
 def _build_fact_prompt(daily_brief: dict) -> str:
     evidence_links = _build_evidence_links(daily_brief['per_repo'])
+    # Counts are computed here, not left to the model: a real post once
+    # reported 20 files touched when the input said 21.
+    active_repos = [r["name"] for r in daily_brief["per_repo"] if r["commit_count"] > 0]
+    total_commits = sum(r["commit_count"] for r in daily_brief["per_repo"])
+    files_touched_count = len(daily_brief["files_touched"])
     return f"""\
 You are drafting one LinkedIn post from a single day's real engineering
-activity. Work through four internal steps before writing the post —
-the post itself must surface only the strongest resulting line, not
-all four operations explicitly enumerated. The reader should see the
-insight, not the method.
+activity. The post reports what changed, using only the data below. It
+does not explain, interpret, or speculate.
 
 Today's real data (DailyBrief), this is your ONLY source of facts —
-never invent a fact, user, pain point, metric, or product state not
-present here:
+never invent a fact, user, reason, pain point, metric, or product state
+not present here:
 - total_diffstat: {daily_brief['total_diffstat']}
 - files_touched: {json.dumps(daily_brief['files_touched'], ensure_ascii=False)}
 - commit_messages: {json.dumps(daily_brief['commit_messages'], ensure_ascii=False)}
 - per_repo breakdown: {json.dumps(daily_brief['per_repo'], ensure_ascii=False)}
 
-Internal steps:
-1. FACT — identify the single most substantive fact of the day, drawn
-   only from the data above.
-2. EMERGENT PROPERTY — look at the mechanism actually built, separate
-   from its current intended product, and find what unexpected
-   property appears if the object, user, scale, context, or
-   decision-point changes.
-3. INVERSION — invert the possibility found in step 2 (opposite goal,
-   producer/consumer swap, absence instead of presence, prevent-X
-   instead of help-with-X). Connect step 1's mechanism to this
-   inversion through an explicit feedback loop, not a direct jump:
-   mechanism -> less manual effort -> cheaper/faster check -> more
-   checks possible -> fewer bad outcomes slip through -> compounding
-   effect. Use real DailyBrief quantities where they fit naturally
-   (commit count, number of files touched, a genuinely inferable time
-   saved) — never diffstat or raw lines-changed counts, which have no
-   reader-facing economic meaning. If no real quantity fits naturally,
-   state the loop qualitatively (the steps, without inventing a
-   number) rather than force one in.
-4. COMMERCIAL HYPOTHESIS — one concrete potential pain: who
-   specifically feels it, what they do today instead, why that's bad,
-   what outcome they'd want. If there is no real basis for this in the
-   data, phrase it explicitly as a hypothesis ("I suspect that...").
-   Never phrase it as a market assertion ("Companies want...").
+Counts computed from the data above — use these, do not count yourself:
+- repositories with commits: {json.dumps(active_repos, ensure_ascii=False)}
+- total commits: {total_commits}
+- files touched: {files_touched_count}
 
-Post structure — Narrative Bridge 30/40/30 + hook + CTA + evidence
-links (see Voice contract below for the exact rules each part must
-follow):
-1. Hook — one opening line that earns the read.
-2. Setup (~30% of the post) — what actually happened, stated as plain
-   fact, citing a concrete evidence reference from the data above
-   (e.g. a repo name, a file name, a commit count) — never invented
-   specifics, and never a diffstat/lines-changed number used as
-   evidence of value (brief factual color only, if it appears at all).
-3. Bridge (~40% of the post) — what unexpectedly emerges, explicitly
-   framed as an idea/possibility, not as existing functionality,
-   stated as plain fact, not hedged; this is where step 3's feedback
-   loop applies.
-4. Close (~30% of the post) — the CTA plus any available evidence
-   links.
+What the data does and does not contain:
+- commit_messages are subject lines only, and they are not attributed to
+  a repository. If more than one repository had commits, do not say
+  which repository a given change was in.
+- The data has no commit bodies, no reasons, no test results, and no
+  commit hashes. If the input does not contain a reason for a change,
+  say nothing about a reason.
 
-{STYLE_CONSTRAINTS}
+Write the post in exactly this order, as short paragraphs:
+1. Repo/context — one short line naming the repository (or
+   repositories) that had commits (commit_count > 0 in per_repo). No
+   greeting. No hook. No opening claim that is not in the data.
+2. Change — what changed, stated only from commit_messages,
+   files_touched, and the per_repo numbers. A subject line may be
+   paraphrased; do not embellish it. Do not name ADR numbers, even if a
+   commit subject contains one — describe the change in plain words
+   instead.
+3. Evidence — only facts actually in the data: commit counts, file
+   counts, repository names. Include a public repository link only if
+   the L2 block below lists it. Do not name ADR numbers as evidence.
+   Nothing else counts as evidence.
+4. Question — exactly one open question, at the end, in the body. No
+   pitch. It must not state or imply a reason, a consequence, or a
+   benefit.
 
-{VOICE_CONTRACT}
+Do not include a reason ("because..."), a consequence, a claim about
+what something matters for, an insight or lesson, a hypothesis, a
+prediction, or an idea of what something could become. If the data
+contains no reason, the post states none.
+
+Numbers: every number in the post must appear in the data above or be a
+direct count of items in it (use the computed counts). Never invent a
+number. Do not use total_diffstat or lines-changed counts as evidence.
+
+Style constraints, apply these strictly:
+- 100-200 words. Maximum 3 sentences per paragraph.
+- First person, active voice. No hashtags. No emoji.
+- No motivational language, no startup clichés ("game changer",
+  "revolutionary", "unlock", "supercharge"), no false certainty.
+- Write in English (LinkedIn audience).
 
 {_evidence_links_block(evidence_links)}
 
@@ -245,15 +259,13 @@ follow):
 The JSON object must have exactly these keys:
 - "post": the final LinkedIn post text (string). This is the only
   field intended for actual publication.
-- "fact_or_product": the step-1 FACT you identified (string).
-- "emergent_property": the step-2 result (string).
-- "inversion": the step-3 result (string).
-- "commercial_hypothesis": the step-4 result (string).
-
-The last four fields are for the owner's own Evidence review, not for
-publication — they will not be posted."""
+- "fact_or_product": the main change the post reports, in one line
+  (string). For the owner's own review, it will not be posted."""
 
 
+# NOTE: this fallback builder still uses the Narrative Bridge structure
+# (via STYLE_CONSTRAINTS/VOICE_CONTRACT) and has NOT been aligned with the
+# temporary facts-only change made to _build_fact_prompt on 2026-09-24.
 def _build_idea_fallback_prompt(daily_brief: dict) -> str:
     products = ", ".join(IDEA_FALLBACK_PRODUCTS)
     evidence_links = _build_evidence_links(daily_brief['per_repo'])
@@ -311,9 +323,11 @@ The last two fields are for the owner's own Evidence review, not for
 publication — they will not be posted."""
 
 
-FACT_REQUIRED_KEYS = {
-    "post", "fact_or_product", "emergent_property", "inversion", "commercial_hypothesis",
-}
+# emergent_property / inversion / commercial_hypothesis were dropped from
+# the fact response on 2026-09-24 (temporary facts-only structure): they
+# only existed to hold the removed emergent-property/inversion/hypothesis
+# steps. idea_fallback keeps its own keys, unchanged.
+FACT_REQUIRED_KEYS = {"post", "fact_or_product"}
 IDEA_FALLBACK_REQUIRED_KEYS = {
     "post", "fact_or_product", "emergent_property", "evidence_to_collect",
 }
@@ -326,6 +340,28 @@ def build_prompt(daily_brief: dict) -> str:
     if mode == "idea_fallback":
         return _build_idea_fallback_prompt(daily_brief)
     raise AuthorLLMError(f"Unknown DailyBrief mode: {mode!r} — expected 'fact' or 'idea_fallback'.")
+
+
+_ADR_NUMBER_RE = re.compile(r"\bADR-\d+", re.IGNORECASE)
+_GREETING_RE = re.compile(r"\b(?:Hi|Hello|Hey)\b")
+
+
+def check_post_content(post: str) -> None:
+    """Deterministic post check (temporary facts-only structure,
+    2026-09-24). Deliberately narrow: rejects only an ADR number and a
+    greeting word, and nothing else — no other content-quality or
+    duplicate-prevention check lives here. Raises AuthorLLMError, so a
+    rejected post fails the run before anything is published."""
+    if _ADR_NUMBER_RE.search(post):
+        raise AuthorLLMError(
+            f"Generated post names an ADR number, which the facts-only "
+            f"structure forbids. Post: {post!r}"
+        )
+    if _GREETING_RE.search(post):
+        raise AuthorLLMError(
+            f"Generated post contains a greeting (Hi/Hello/Hey), which the "
+            f"facts-only structure forbids. Post: {post!r}"
+        )
 
 
 def validate_structured_response(response: dict, mode: str) -> None:
@@ -341,6 +377,7 @@ def validate_structured_response(response: dict, mode: str) -> None:
             f"Model response's 'post' field must be a non-empty string, "
             f"got: {response.get('post')!r}"
         )
+    check_post_content(response["post"])
 
 
 def _strip_markdown_fence(text: str) -> str:
