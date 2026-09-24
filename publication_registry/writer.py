@@ -38,7 +38,12 @@ from pydantic import ValidationError
 
 from contract import PublicationRecord
 
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
+# REGISTRY_OUTPUT_DIR (when set and non-empty) points the Registry at a
+# directory outside this checkout — the scheduled workflow uses it to keep
+# Registry state on the registry-data branch. Read once, at import time.
+OUTPUT_DIR = os.environ.get("REGISTRY_OUTPUT_DIR") or os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "output"
+)
 
 _COMPARISON_EXCLUDED_FIELDS = ("published_at", "gate_evaluated_at")
 

@@ -16,7 +16,9 @@ is used, matching what a real caller (M2/M4, not yet built) will
 eventually supply.
 """
 
+import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -253,3 +255,55 @@ def test_read_record_raises_on_valid_json_that_is_not_a_publication_record(tmp_p
 
     with pytest.raises(PublicationRegistryConflictError):
         writer.read_record("linkedin-2026-09-24")
+
+
+# --- REGISTRY_OUTPUT_DIR: OUTPUT_DIR is read from the env at import time ---
+#
+# Each case loads a fresh, separately named copy of writer.py instead of
+# importlib.reload(writer): a reload re-executes the module body and so
+# rebinds PublicationRegistryConflictError to a new class, which would
+# make every `pytest.raises(PublicationRegistryConflictError)` above (bound
+# to the original class at import time) stop matching. A fresh copy under
+# another module name leaves the shared `writer` module untouched.
+
+_DEFAULT_OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(writer.__file__)), "output")
+
+
+def _load_writer_copy():
+    spec = importlib.util.spec_from_file_location("writer_output_dir_probe", writer.__file__)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_output_dir_uses_registry_output_dir_when_set(monkeypatch, tmp_path):
+    monkeypatch.setenv("REGISTRY_OUTPUT_DIR", str(tmp_path / "registry" / "output"))
+    assert _load_writer_copy().OUTPUT_DIR == str(tmp_path / "registry" / "output")
+
+
+def test_output_dir_defaults_when_registry_output_dir_unset(monkeypatch):
+    monkeypatch.delenv("REGISTRY_OUTPUT_DIR", raising=False)
+    assert _load_writer_copy().OUTPUT_DIR == _DEFAULT_OUTPUT_DIR
+
+
+def test_output_dir_defaults_when_registry_output_dir_empty(monkeypatch):
+    monkeypatch.setenv("REGISTRY_OUTPUT_DIR", "")
+    assert _load_writer_copy().OUTPUT_DIR == _DEFAULT_OUTPUT_DIR
+
+
+def test_env_output_dir_is_used_by_read_and_write(monkeypatch, tmp_path):
+    """The pre-publish read and the post-publish write must see the same
+    directory: a record written by one process is what read_record()
+    finds in the next."""
+    monkeypatch.setenv("REGISTRY_OUTPUT_DIR", str(tmp_path / "registry-out"))
+    probe = _load_writer_copy()
+    # Fail before any write, so a broken env-var wiring can't drop a record
+    # into the repo's real default output directory.
+    assert probe.OUTPUT_DIR == str(tmp_path / "registry-out")
+    record = make_record()
+
+    assert probe.read_record(record.content_id) is None
+    path = probe.write_record(record)
+
+    assert path == str(tmp_path / "registry-out" / f"{record.content_id}.json")
+    assert probe.read_record(record.content_id) == record

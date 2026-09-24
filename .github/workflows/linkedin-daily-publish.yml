@@ -24,6 +24,14 @@ on:
 permissions:
   contents: write
 
+# Two simultaneous runs must not both pass read_record() before either has
+# written the Registry, or both would publish. cancel-in-progress: false
+# queues a second run behind the first instead of cancelling a publish
+# that is already in progress.
+concurrency:
+  group: linkedin-daily-publish
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -66,6 +74,17 @@ jobs:
           path: collector
           token: ${{ steps.app-token.outputs.token }}
 
+      # Publication Registry state lives on the unprotected registry-data
+      # branch (main only accepts pull requests, so the bot can't push
+      # there). Default GITHUB_TOKEN; the job's contents: write covers the
+      # push at the end. Shallow checkout is enough: only the files and a
+      # fast-forward push are needed.
+      - name: Checkout registry-data
+        uses: actions/checkout@v4
+        with:
+          ref: registry-data
+          path: registry
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
@@ -80,17 +99,21 @@ jobs:
           LINKEDIN_ACCESS_TOKEN_EXPIRES_AT: ${{ secrets.LINKEDIN_ACCESS_TOKEN_EXPIRES_AT }}
           LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
           ANTHROPIC_API_KEY_DAILY_AUTHOR: ${{ secrets.ANTHROPIC_API_KEY_DAILY_AUTHOR }}
+          REGISTRY_OUTPUT_DIR: ${{ github.workspace }}/registry/output
         run: python3 linkedin_publisher/daily_publish.py
 
+      # Pushes only to registry-data, never to main. A failed push must fail
+      # the step loudly (no error suppression): a published post whose
+      # Registry record didn't persist is exactly what allowed a duplicate.
       - name: Commit and push Registry output
-        working-directory: ${{ env.WORKSPACE_ROOT }}/article-pipeline
+        working-directory: ${{ github.workspace }}/registry
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add -- publication_registry/output/
-          if git diff --cached --quiet -- publication_registry/output/; then
+          git add -- output/
+          if git diff --cached --quiet -- output/; then
             echo "No new output files to commit."
             exit 0
           fi
           git commit -m "chore(publish): daily LinkedIn Registry record $(date -u +%Y-%m-%d)"
-          git push
+          git push origin registry-data
