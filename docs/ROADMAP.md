@@ -13,8 +13,8 @@ see `docs/adr/`.
 | 1 — Claim Extraction pilot | Closed |
 | 2 — Evidence Package | Closed |
 | 2.5 — Context/causal-structure layer | Closed — M1-M5 implemented; causal question resolved, partially confirmed: enrichment helps on-domain, harms via polysemous-tag collision, tracked as a non-blocking P1 fix. Phase 3 no longer blocked on this. |
-| 3 — Strategy Layer + Author + Quality Gate | In progress — Strategy Layer is now Collector-sourced and source-independent for Collector specifically (two-dimension `CanonicalUnit` contract, Collector adapter, CI-enforced ACL boundary; Brain's own adapter not yet built); Author (both LinkedIn and Habr) now consumes Strategy Layer's verdict, no longer reads Collector directly (see `docs/ARCHITECTURE.md`); Quality Gate proper remains not started; see Current pointer |
-| 4 — Platform Adapter (LinkedIn → Habr) + Circuit Breaker | Not started |
+| 3 — Strategy Layer + Author + Quality Gate | In progress — Strategy Layer is now Collector-sourced and source-independent for Collector specifically (two-dimension `CanonicalUnit` contract, Collector adapter, CI-enforced ACL boundary; Brain's own adapter not yet built); Author (both LinkedIn and Habr) now consumes Strategy Layer's verdict, no longer reads Collector directly (see `docs/ARCHITECTURE.md`); Publication Registry M1 (schema + writer) and LinkedIn Auto-Publish M2 core are implemented, with real posts published by manual runs on 2026-09-24 and no scheduled run having published yet (see `docs/ARCHITECTURE.md`); Quality Gate proper remains not started; see Current pointer |
+| 4 — Platform Adapter (LinkedIn → Habr) + Circuit Breaker | Not started — the Platform Adapter component (see `docs/ARCHITECTURE.md`); LinkedIn publishing today is the separate LinkedIn Auto-Publish component, tracked under the Publication Core Loop in phase 3 |
 | 5+ — Experiment Log, remaining platforms | Not started |
 
 ## Current pointer
@@ -65,12 +65,14 @@ see `docs/adr/`.
   implementation has resumed on this basis, per the Status table
   above ("In progress").
 
-Next work is the Publication Core Loop (row 1 of the committed phase order below):
-the first automatic publication on LinkedIn, then Habr. Prerequisites are the R6
-decision (see the open questions below) and a publication registry — see
-`docs/BACKLOG.md`'s `[B-064]`. Brain's own adapter, the atom-tag-disambiguation
-follow-up (`[B-005]`), and Quality Gate remain not started and follow the committed
-phase order.
+The Publication Core Loop (row 1 of the committed phase order below) is in progress.
+Implemented: the Publication Registry's schema and writer (M1) and LinkedIn
+Auto-Publish's core (M2); real posts have been published by manual runs, and no
+scheduled run has published yet. Not built: the `SAFETY_PAUSE` trigger and proactive
+credential alerting (both depend on M3, Owner Verdict, and M5, the Telegram bot) and any
+Habr publication component. The R6 decision is still open (see the open questions
+below). Brain's own adapter, the atom-tag-disambiguation follow-up (`[B-005]`), and
+Quality Gate remain not started and follow the committed phase order.
 
 ## Committed phase order (confirmed 2026-09-18)
 
@@ -81,7 +83,7 @@ this order as a single plan.
 
 | Order | Phase | Status | Notes |
 |---|---|---|---|
-| 1 | Publication Core Loop — LinkedIn and Habr both publish automatically, end to end, on real data | COMMITTED | Per `docs/PROJECT.md`'s Definition of Done. Requires a publication registry before the first automatic run — see `docs/BACKLOG.md`'s `[B-064]`. LinkedIn first, then Habr. |
+| 1 | Publication Core Loop — LinkedIn and Habr both publish automatically, end to end, on real data | COMMITTED, in progress | Per `docs/PROJECT.md`'s Definition of Done. A publication registry is required before the first automatic run — see `docs/BACKLOG.md`'s `[B-064]`; its schema and writer are implemented. LinkedIn first, then Habr: LinkedIn publishing has run manually, no Habr publication component exists. |
 | 2 | Cleanup / dead-code / obsolete-directory consolidation | COMMITTED | No dedicated `docs/BACKLOG.md` entry yet — see `[B-063]`'s "Explicitly deferred" note (`story_builder.py`/`channel_author.py` Collector-vocabulary leak) |
 | 3 | Additional sources via the existing adapter pattern — Brain | COMMITTED, paused | Brain already named above (paused, blocked on Brain's GitHub migration); Archi-kg is not recorded as a claim source anywhere in this repo's docs and is not included in this phase |
 | 4 | Source-independent architecture matured enough to add a new source without changing downstream logic | COMMITTED | The mechanism (per-source adapters, Anti-Corruption-Layer boundary) already exists today for Collector — see `docs/ARCHITECTURE.md`'s Strategy Layer row; this phase is about adding more sources through it, not building the mechanism itself |
