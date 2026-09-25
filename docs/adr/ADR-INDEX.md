@@ -63,3 +63,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0053](0053-content-id-ownership-moves-to-caller.md) | content_id ownership moves from Registry to caller | Accepted | null | null |
 | [ADR-0054](0054-m2-ships-core-linkedin-publishing-without-safety-pause-trigger-or-proactive-credential-alerting.md) | M2 ships core LinkedIn publishing without SAFETY_PAUSE's trigger or proactive token-expiry alerting | Accepted | null | null |
 | [ADR-0055](0055-publication-registry-state-lives-on-registry-data-branch.md) | Publication Registry state lives on the `registry-data` branch | Accepted | null | null |
+| [ADR-0056](0056-collector-integrity-by-github-ancestry-and-per-repo-commit-messages.md) | Collector records are verified by GitHub ancestry, and commit messages are attributed per repository | Accepted | null | null |
