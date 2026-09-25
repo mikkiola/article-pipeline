@@ -358,9 +358,13 @@ cited here for precedent only, not as an adopted tool or dependency.
 
 One decision, one file, in `docs/adr/`, numbered sequentially. Never
 edited after acceptance — a changed decision becomes a new ADR that
-supersedes the old one. Every ADR uses the same field set: Status,
-Decision, Options, Chosen, Why, Constraints, Rejected, Consequences,
-Validation, Reversal condition, Source.
+supersedes the old one. Every ADR starts with YAML frontmatter (`id`,
+`status`, `supersedes`, `superseded_by`, `source_type`) and uses the
+same section set: Status, Context & Constraints, Decision,
+Alternatives & Rationale, Consequences, Confirmation & Revisit, plus a
+Source line (a `## Source` section or a closing `**Source.**`
+paragraph). An ADR may add a section its decision needs, such as
+Precedent Basis.
 
 `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and this file describe
 decisions in prose without citing a specific ADR number. If a future
