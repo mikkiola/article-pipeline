@@ -58,10 +58,10 @@ def test_manifest_sourced_context_has_no_raw_text_falls_back_to_idea_fallback_mo
     assert result["total_diffstat"] == 0
 
 
-def test_mixed_contexts_deduplicates_shared_commit_messages():
-    # Two daily_brief-sourced repos in the same run share the identical
-    # top-level commit_messages list (see collector.py's own docstring
-    # note on this) — must not appear duplicated in the merged output.
+def test_mixed_contexts_deduplicates_identical_subject_lines():
+    # Kept behavior: identical subject lines from two included repos
+    # collapse to one entry in the merged output. (Units no longer share a
+    # brief-wide list — each carries only its own repo's messages.)
     contexts = [
         AuthoringContext(
             claim_id="a", framing="f1", source_type="collector_daily_brief",

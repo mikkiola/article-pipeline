@@ -36,7 +36,7 @@ def _unit(unit_id, integrity_status, corroboration_status, **overrides):
         source="collector",
         created_at=datetime.now(timezone.utc),
         integrity_status=integrity_status,
-        integrity_check_method="commit_count_reconciliation",
+        integrity_check_method="ancestry_reconciliation",
         corroboration_status=corroboration_status,
         assertion_text=None if corroboration_status == "not_applicable" else "Some assertion.",
         metadata={},

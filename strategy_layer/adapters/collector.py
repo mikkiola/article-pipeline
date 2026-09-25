@@ -3,52 +3,69 @@
 Milestone M3, Part 1).
 
 Read-only against Collector, same convention as author/source_adapter.py:
-reads JSON files already on disk and (for the integrity check) runs
-read-only `git` commands against local workspace checkouts — never
-writes to Collector's own repository or scripts.
+reads JSON already on disk and (for the integrity check) makes read-only
+GitHub REST API calls — never writes to Collector's own repository or
+scripts, and never consults a local checkout of any scanned repository.
 
 Every unit this adapter produces has corroboration_status=
 "not_applicable" — Collector's raw telemetry (a commit happened, a
 file was touched) makes no falsifiable assertion to corroborate.
 Derived-claim synthesis (e.g. "activity increased this week") is out
-of scope this sprint (SPEC.md's Out of Scope section) — every raw
-record passes through as its own individual unit, unsynthesized.
+of scope (SPEC.md's Out of Scope section) — every raw record passes
+through as its own individual unit, unsynthesized.
 
-**Real integrity check, not static** (owner decision, SPEC.md's
-"Collector's Integrity Check" section): repo+branch existence
-(`git rev-parse --verify`) plus commit_count reconciliation
-(`git rev-list --count`, anchored to the same historical window
-Collector's own scan covered — see check_integrity()'s docstring for
-why the window must be explicitly anchored, not left to git's
-implicit "now"). Labeled `integrity_check_method=
-"commit_count_reconciliation"` — a single-metric reconciliation check
-with bounded coverage, not a claim of full cryptographic provenance
-(no commit hashes exist anywhere in Collector's data to check against
-— confirmed by direct inspection before this design was chosen).
+**Ancestry check, one shared code path for both record types**
+(docs/adr/0056-*.md): Collector records, for every repo it scans, the
+branch and the exact tip commit SHA (`head_sha`) it saw at scan time. The
+check asks GitHub whether that SHA is the branch's current tip or one of
+its ancestors — GET /repos/{owner}/{repo}/compare/{head_sha}...{branch},
+valid iff behind_by == 0 (status "identical" or "ahead"). Labeled
+`integrity_check_method="ancestry_reconciliation"`. It confirms the
+repository, the branch and that SHA are real and related; it does NOT
+confirm how many commits happened in the window (a zero-commit repo
+verifies exactly as strongly as a busy one) and does not verify
+individual commit messages. Stated plainly so the label isn't read as
+more than it is.
 
-**Two real gaps in daily_brief's own data, not filled in silently**
-(see adapt_daily_brief()'s docstring): no `branch` field (Collector's
-own daily_brief.py drops it), and no precise scan timestamp (only a
-date token). Both are documented approximations, not hidden defaults.
+**Attribution.** A daily brief (schema_version 2) attributes each commit
+message to its repository. Each unit receives only its own repository's
+messages, never the brief-wide list — an excluded unit's messages can
+therefore never reach the post prompt through an included unit.
 """
 
 from __future__ import annotations
 
-import re
-import subprocess
+import json
 import sys
-from datetime import datetime, timedelta, timezone
+import urllib.error
+import urllib.parse
+import urllib.request
+from datetime import datetime, timezone
 from os import environ
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from contract import CanonicalUnit  # noqa: E402
 
-WORKSPACE_ROOT = Path(
-    environ.get("WORKSPACE_ROOT", str(Path.home() / "Dev" / "github.com" / "mikkiola"))
-)
+INTEGRITY_CHECK_METHOD = "ancestry_reconciliation"
 
-INTEGRITY_CHECK_METHOD = "commit_count_reconciliation"
+# The only daily_brief schema this adapter understands (Collector's
+# daily_brief.py SCHEMA_VERSION). An unknown version is never guessed at:
+# every unit built from it is marked invalid.
+DAILY_BRIEF_SCHEMA_VERSION = 2
+
+GITHUB_API_BASE = "https://api.github.com"
+GITHUB_OWNER = "mikkiola"
+# Collector's `name` is the checkout DIRECTORY name. Two directories can be
+# the same GitHub repository on different branches (radar-vault is the
+# `vault` branch of mikkiola/radar). Applied to the API call only, nowhere
+# else.
+GITHUB_REPO_FOR_DIRECTORY = {"radar-vault": "radar"}
+# Deliberately not GH_TOKEN/GITHUB_TOKEN: the gh CLI (used by
+# daily_linkedin_author._check_repo_visibility) reads those, and enabling it
+# there would change the post prompt's public-link behavior as a side effect.
+TOKEN_ENV = "GITHUB_APP_TOKEN"
+GITHUB_TIMEOUT_SECONDS = 15
 
 # Anti-"junk drawer" safeguard (ADR-0045): the exact set of metadata
 # keys each source_type is allowed to produce. A future adapter (e.g.
@@ -59,6 +76,7 @@ METADATA_WHITELIST = {
         "source_type",
         "repo",
         "branch",
+        "head_sha",
         "commit_count",
         "counts",
         "window_days",
@@ -68,12 +86,12 @@ METADATA_WHITELIST = {
         "source_type",
         "repo",
         "branch",
+        "head_sha",
         "commit_count",
         "diffstat",
         "files_touched",
         "commit_messages",
         "mode",
-        "window_days",
         "integrity_check_detail",
     },
 }
@@ -96,132 +114,99 @@ def check_metadata_whitelist(source_type: str, metadata: dict) -> None:
             f"on its whitelist: {sorted(extra)} (allowed: {sorted(allowed)})"
         )
 
-_WINDOW_RE = re.compile(r"^(\d+)\.days?$")
-
-
-def parse_window_days(window: str) -> int:
-    """Parses a Collector `--since`-style window string ('1.day' /
-    '7.days', same format tier0_scan.py's own parse_window_days()
-    accepts) into an integer day count."""
-    match = _WINDOW_RE.match(window)
-    if not match:
-        raise ValueError(f"cannot parse a window day-count from {window!r}")
-    return int(match.group(1))
-
-
-def _repo_path(repo_name: str) -> Path:
-    return WORKSPACE_ROOT / repo_name
-
-
-def _run_git(repo_path: Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["git", "-C", str(repo_path), *args],
-        capture_output=True,
-        text=True,
+def _github_get(path: str, token: str) -> tuple[int, dict | None]:
+    """One authenticated, read-only GET against the GitHub REST API.
+    Returns (http_status, parsed_json_body_or_None). Network-level failures
+    (DNS, timeout, connection reset) propagate as exceptions — the caller
+    (check_integrity) treats any exception as fail-closed."""
+    request = urllib.request.Request(
+        GITHUB_API_BASE + path,
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "X-GitHub-Api-Version": "2022-11-28",
+            "User-Agent": "article-pipeline-collector-adapter",
+        },
     )
+    try:
+        with urllib.request.urlopen(request, timeout=GITHUB_TIMEOUT_SECONDS) as response:
+            return response.status, json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as error:
+        return error.code, None
 
 
-def resolve_current_branch(repo_name: str) -> str | None:
-    """Live HEAD branch for a repo — used only when the source record
-    doesn't carry its own branch (daily_brief's per_repo entries drop
-    it; manifest's repos entries carry branch directly and don't call
-    this). Assumes the branch hasn't changed since the record was
-    produced — a stated, not hidden, limitation. Returns None if the
-    repo isn't a local checkout at all."""
-    repo_path = _repo_path(repo_name)
-    if not repo_path.is_dir():
-        return None
-    result = _run_git(repo_path, "rev-parse", "--abbrev-ref", "HEAD")
-    if result.returncode != 0:
-        return None
-    return result.stdout.strip()
-
-
-def check_integrity(
-    repo_name: str,
-    branch: str,
-    reported_commit_count: int,
-    window_days: int,
-    anchor: datetime,
-) -> tuple[str, str]:
+def check_integrity(repo_name: str, branch: str | None, head_sha: str | None) -> tuple[str, str]:
     """Returns (integrity_status, detail) for one repo record.
 
-    Two checks, in order: (1) the named repo exists as a local
-    checkout and the named branch exists in it; (2) `git rev-list
-    --count` for the SAME historical window Collector's own scan
-    covered reconciles exactly against the reported commit_count.
+    Asks GitHub whether `head_sha` — the branch tip Collector recorded at
+    scan time — is the current tip of `branch`, or one of its ancestors:
+    GET /repos/{owner}/{repo}/compare/{head_sha}...{branch}. Valid iff the
+    response has behind_by == 0 (status "identical", or "ahead" when the
+    branch has moved on since the scan). Invalid for "behind", "diverged"
+    (the SHA lives on some other branch), 404 (SHA, repo or branch does not
+    exist — GitHub answers all three the same way), any other HTTP status
+    (e.g. 403 when the token cannot see the repo, or a rate limit), any
+    request failure, a missing token, or a record with no head_sha/branch.
+    Fail closed everywhere; there is no fallback to a local checkout.
 
-    The window must be explicitly anchored via --until=<anchor>, not
-    left to git's implicit "now": Collector's own tier0_scan.py always
-    scans relative to whenever IT runs (`--since=<window>` with no
-    upper bound) — re-running an equivalent check later without
-    pinning the same upper bound would compare a different absolute
-    time range, not reconstruct the original one. `anchor` is the
-    manifest's own `scan_timestamp` for manifest-sourced units, or an
-    end-of-day approximation for daily_brief-sourced units (see
-    adapt_daily_brief()).
-
-    Tolerance: exact match, not a fudge factor. Collector's own
-    commit_count (tier0_scan.py's `len(git log --since=...)` output)
-    and this reconciliation (`git rev-list --count --since=...
-    --until=...`) walk the same underlying git revision history via
-    the same machinery — given the correctly anchored window, they
-    should produce an identical count. A mismatch is itself a real
-    signal (history rewritten since the scan, or a repo/branch
-    mismatch), not measurement noise to average over.
+    Compared against the SHA Collector actually observed, not against
+    whatever HEAD is later: exact match, no tolerance.
     """
-    repo_path = _repo_path(repo_name)
-    if not repo_path.is_dir():
-        return "invalid", f"local checkout not found at {repo_path}"
-
-    verify = _run_git(repo_path, "rev-parse", "--verify", branch)
-    if verify.returncode != 0:
-        return "invalid", f"branch {branch!r} not found in {repo_path}"
-
-    # Absolute timestamps for BOTH bounds, not git's relative `--since=N.days`
-    # shorthand — that shorthand always resolves relative to actual
-    # wall-clock "now" when the command runs, not relative to `--until`.
-    # Combining it with an explicit --until anchor silently shifts the
-    # window forward by however much real time has passed since `anchor`,
-    # undercounting. Confirmed as a real bug via a live run against this
-    # workspace's actual repos (2026-09-15): 5 of 7 repos showed a
-    # commit_count mismatch, reconciled consistently LOWER than reported
-    # — the direction only this specific bug produces (a genuine history
-    # rewrite would go either way; a narrowed window only ever loses
-    # commits). Fixed by computing an absolute --since instead.
-    since = (anchor - timedelta(days=window_days)).isoformat()
-    until = anchor.isoformat()
-    count_result = _run_git(
-        repo_path, "rev-list", "--count", branch, f"--since={since}", f"--until={until}"
-    )
-    if count_result.returncode != 0:
-        return "invalid", f"git rev-list failed: {count_result.stderr.strip()}"
-
-    live_count = int(count_result.stdout.strip())
-    if live_count != reported_commit_count:
+    if not head_sha:
         return "invalid", (
-            f"commit_count mismatch: reported={reported_commit_count}, "
-            f"reconciled={live_count} (window: {since} until {until})"
+            f"no head_sha recorded for {repo_name!r} (a record written before "
+            f"Collector began recording it, or Collector could not resolve HEAD)"
         )
+    if not branch:
+        return "invalid", f"no branch recorded for {repo_name!r}; cannot verify head_sha"
 
-    return "valid", (
-        f"reconciled: {live_count} commits matched reported "
-        f"{reported_commit_count} (window: {since} until {until})"
+    token = environ.get(TOKEN_ENV)
+    if not token:
+        return "invalid", f"{TOKEN_ENV} is not set; cannot verify {repo_name!r} against GitHub"
+
+    github_repo = GITHUB_REPO_FOR_DIRECTORY.get(repo_name, repo_name)
+    path = (
+        f"/repos/{GITHUB_OWNER}/{github_repo}/compare/"
+        f"{urllib.parse.quote(head_sha, safe='')}...{urllib.parse.quote(branch, safe='/')}"
+        f"?per_page=1"
+    )
+    try:
+        http_status, body = _github_get(path, token)
+    except Exception as error:  # noqa: BLE001 — any failure to verify is invalid
+        return "invalid", f"GitHub API request failed for {github_repo}@{branch}: {error}"
+
+    if http_status == 404:
+        return "invalid", (
+            f"GitHub API returned 404 for {github_repo}@{branch} at {head_sha[:12]}: "
+            f"the repository, the branch or the commit does not exist (or the token cannot see it)"
+        )
+    if http_status != 200 or body is None:
+        return "invalid", f"GitHub API returned HTTP {http_status} for {github_repo}@{branch}"
+
+    compare_status = body.get("status")
+    if body.get("behind_by") == 0 and compare_status in ("identical", "ahead"):
+        return "valid", (
+            f"head_sha {head_sha[:12]} is on {github_repo}@{branch} "
+            f"(compare status={compare_status}, ahead_by={body.get('ahead_by')})"
+        )
+    return "invalid", (
+        f"head_sha {head_sha[:12]} is not an ancestor of {github_repo}@{branch} "
+        f"(compare status={compare_status}, behind_by={body.get('behind_by')})"
     )
 
 
 def adapt_manifest(manifest: dict) -> list[CanonicalUnit]:
     """Builds one CanonicalUnit per repo entry in a Collector
-    manifest_*.json. `branch` and `scan_timestamp` both come directly
-    from the manifest — no approximation needed here (unlike
-    adapt_daily_brief() below)."""
+    manifest_*.json. `branch` and `head_sha` both come from the manifest;
+    a manifest written before Collector recorded head_sha has none, and
+    its units are marked invalid (fail closed), not guessed at."""
     scan_timestamp = datetime.fromisoformat(manifest["scan_timestamp"])
     window_days = manifest["window_days"]
 
     units = []
     for repo in manifest["repos"]:
         integrity_status, detail = check_integrity(
-            repo["name"], repo["branch"], repo["commit_count"], window_days, scan_timestamp
+            repo["name"], repo.get("branch"), repo.get("head_sha")
         )
         units.append(
             CanonicalUnit(
@@ -235,7 +220,8 @@ def adapt_manifest(manifest: dict) -> list[CanonicalUnit]:
                 metadata={
                     "source_type": "collector_manifest",
                     "repo": repo["name"],
-                    "branch": repo["branch"],
+                    "branch": repo.get("branch"),
+                    "head_sha": repo.get("head_sha"),
                     "commit_count": repo["commit_count"],
                     "counts": repo.get("counts"),
                     "window_days": window_days,
@@ -246,52 +232,58 @@ def adapt_manifest(manifest: dict) -> list[CanonicalUnit]:
     return units
 
 
+def _messages_by_repo(commit_messages: list) -> dict[str, list[str]]:
+    """Groups a schema-2 brief's attributed commit_messages by repo,
+    keeping only the subject text. A malformed entry raises: an unattributable
+    message must never be guessed into some repo's slice."""
+    by_repo: dict[str, list[str]] = {}
+    for entry in commit_messages:
+        if (
+            not isinstance(entry, dict)
+            or not isinstance(entry.get("repo"), str)
+            or not isinstance(entry.get("subject"), str)
+        ):
+            raise ValueError(
+                f"commit_messages entry is not a {{repo, sha, subject}} object: {entry!r}"
+            )
+        by_repo.setdefault(entry["repo"], []).append(entry["subject"])
+    return by_repo
+
+
 def adapt_daily_brief(daily_brief: dict) -> list[CanonicalUnit]:
     """Builds one CanonicalUnit per repo entry in a Collector
-    daily_brief_<date>.json.
+    daily_brief_<date>.json (schema_version 2).
 
-    Two real gaps in daily_brief's own data, not filled in silently:
-    - No `branch` field — Collector's own daily_brief.py
-      (compute_metrics()) drops it when reducing tier0_scan.py's raw
-      output. Resolved live via resolve_current_branch() (the repo's
-      current HEAD) — assumes the branch hasn't changed since the
-      brief was generated. A repo with no local checkout at all
-      resolves to None, which this function marks integrity_status=
-      "invalid" directly, without attempting a git call that would
-      only fail anyway.
-    - No precise scan timestamp — only a `date` token (day
-      granularity). daily_brief.py does not preserve raw_scan's own
-      `scan_timestamp`. Approximated as that date's 23:59:59 UTC — the
-      real scan could have run at any point during that day, not
-      necessarily at its end; stated here as a genuine approximation,
-      not hidden.
+    A brief whose schema_version is not DAILY_BRIEF_SCHEMA_VERSION (notably
+    every brief written before the field existed) is not interpreted: each
+    unit is built invalid with an empty message slice and no API call is
+    made.
 
-    `commit_messages` (M4, 2026-09-15): daily_brief's own top-level
-    `commit_messages` array is FLAT — a cross-repo list, not per-repo
-    attributed (daily_brief.py's compute_metrics() already collapses it
-    that way before Collector ever writes the file). Every unit built
-    from the same daily_brief carries the identical commit_messages
-    list in its metadata, by construction — not a duplication bug.
-    `mode` is carried through unchanged (Collector's own "fact" /
-    "idea_fallback" decision, already made upstream — this adapter
-    doesn't interpret it, only passes it along, same "trust upstream
-    decisions" principle daily_linkedin_author.py's own module
-    docstring already states for this field).
+    Each unit carries only ITS OWN repository's commit subjects, taken from
+    the brief's attributed `commit_messages`; never the brief-wide list.
+
+    One documented approximation remains: daily_brief carries only a date
+    token, not the scan instant, so `created_at` is that date's 23:59:59
+    UTC. It is not used by the integrity check (which compares head_sha, not
+    a time window).
     """
-    window_days = parse_window_days(daily_brief["window"])
     anchor = datetime.fromisoformat(daily_brief["date"]).replace(
         hour=23, minute=59, second=59, tzinfo=timezone.utc
     )
+    schema_version = daily_brief.get("schema_version")
+    supported = schema_version == DAILY_BRIEF_SCHEMA_VERSION
+    messages_by_repo = _messages_by_repo(daily_brief["commit_messages"]) if supported else {}
 
     units = []
     for repo in daily_brief["per_repo"]:
-        branch = resolve_current_branch(repo["name"])
-        if branch is None:
-            integrity_status = "invalid"
-            detail = f"local checkout not found for {repo['name']!r} (branch could not be resolved)"
+        branch = repo.get("branch")
+        head_sha = repo.get("head_sha")
+        if supported:
+            integrity_status, detail = check_integrity(repo["name"], branch, head_sha)
         else:
-            integrity_status, detail = check_integrity(
-                repo["name"], branch, repo["commit_count"], window_days, anchor
+            integrity_status, detail = "invalid", (
+                f"daily_brief schema_version={schema_version!r}, expected "
+                f"{DAILY_BRIEF_SCHEMA_VERSION}; record not interpreted"
             )
         units.append(
             CanonicalUnit(
@@ -306,12 +298,12 @@ def adapt_daily_brief(daily_brief: dict) -> list[CanonicalUnit]:
                     "source_type": "collector_daily_brief",
                     "repo": repo["name"],
                     "branch": branch,
+                    "head_sha": head_sha,
                     "commit_count": repo["commit_count"],
                     "diffstat": repo["diffstat"],
                     "files_touched": repo["files_touched"],
-                    "commit_messages": daily_brief["commit_messages"],
+                    "commit_messages": messages_by_repo.get(repo["name"], []),
                     "mode": daily_brief["mode"],
-                    "window_days": window_days,
                     "integrity_check_detail": detail,
                 },
             )

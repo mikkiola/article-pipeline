@@ -37,11 +37,12 @@ def build_daily_brief_from_authoring_contexts(
     reimplementing its exact diffstat/keyword thresholds, which this
     module has no basis to duplicate).
 
-    commit_messages are deduplicated across contexts: multiple
-    daily_brief-sourced repos in the same run legitimately share the
-    identical top-level commit_messages list (see collector.py's
-    adapt_daily_brief() docstring) — this must not appear duplicated
-    in the merged output.
+    commit_messages are the union of the INCLUDED contexts' own slices
+    only (each context carries just its own repository's subjects — see
+    collector.py's adapt_daily_brief()), so no excluded unit's message can
+    appear here. Identical subject lines from different included repos are
+    collapsed to one (behavior kept from when every unit carried the same
+    brief-wide list; it no longer has any leak-related role).
     """
     total_diffstat = 0
     files_touched: list[str] = []
