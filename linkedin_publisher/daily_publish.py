@@ -236,6 +236,12 @@ def main() -> None:
     pre_filter_results = pre_filter.run_pre_filter(units)
     gate_result = pre_filter.check_gate_condition(pre_filter_results)
     print(f"gate_result: {gate_result}")
+    for unit in units:
+        print(
+            f"  {unit.metadata.get('repo', '<missing>')}: "
+            f"integrity_status={unit.integrity_status} "
+            f"detail={unit.metadata.get('integrity_check_detail', '<missing>')}"
+        )
 
     content_id = build_content_id(daily_brief["date"])
 

@@ -219,6 +219,60 @@ def test_main_skips_when_pass_record_exists(monkeypatch, tmp_path, capsys):
     assert record_file.read_bytes() == original_bytes
 
 
+def _unit(unit_id, integrity_status, metadata):
+    return SimpleNamespace(
+        unit_id=unit_id,
+        integrity_status=integrity_status,
+        corroboration_status="not_applicable",
+        metadata=metadata,
+    )
+
+
+def _gated_run(monkeypatch, tmp_path, units):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    monkeypatch.setattr(daily_publish.collector_adapter, "adapt_daily_brief", lambda brief: units)
+    monkeypatch.setattr(
+        daily_publish.pre_filter,
+        "run_pre_filter",
+        lambda us: [
+            {"claim_id": u.unit_id, "pre_filter_classification": "exclude", "reason": "excluded"}
+            for u in us
+        ],
+    )
+    monkeypatch.setattr(
+        daily_publish.pre_filter,
+        "check_gate_condition",
+        lambda results: {"status": "gated", "gates": {"zero_included_units": True}},
+    )
+    daily_publish.main()
+    return mocks
+
+
+def test_main_prints_per_unit_integrity_detail_after_the_gate_result(monkeypatch, tmp_path, capsys):
+    units = [
+        _unit("u1", "invalid", {"repo": "archi-kg", "integrity_check_detail": "compare 404: sha not found"}),
+        _unit("u2", "valid", {"repo": "collector", "integrity_check_detail": "identical"}),
+    ]
+
+    mocks = _gated_run(monkeypatch, tmp_path, units)
+
+    out = capsys.readouterr().out
+    assert "units built: 2" in out
+    assert "gate_result: {'status': 'gated', 'gates': {'zero_included_units': True}}" in out
+    assert "  archi-kg: integrity_status=invalid detail=compare 404: sha not found" in out
+    assert "  collector: integrity_status=valid detail=identical" in out
+    assert out.index("gate_result:") < out.index("  archi-kg:") < out.index("  collector:")
+    mocks["publish_post"].assert_not_called()
+
+
+def test_main_marks_a_missing_integrity_detail_instead_of_crashing(monkeypatch, tmp_path, capsys):
+    units = [_unit("u1", "invalid", {"repo": "brain"})]
+
+    _gated_run(monkeypatch, tmp_path, units)
+
+    assert "  brain: integrity_status=invalid detail=<missing>" in capsys.readouterr().out
+
+
 def test_main_proceeds_when_only_a_block_record_exists(monkeypatch, tmp_path):
     registry_dir = tmp_path / "registry"
     monkeypatch.setattr(daily_publish.registry_writer, "OUTPUT_DIR", str(registry_dir))
