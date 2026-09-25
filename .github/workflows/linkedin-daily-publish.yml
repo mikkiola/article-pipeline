@@ -57,9 +57,20 @@ jobs:
           app-id: ${{ secrets.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
           owner: mikkiola
+          # article-pipeline and collector are checked out below. The other
+          # four are NOT checked out: strategy_layer/adapters/collector.py
+          # verifies each repo's recorded head_sha through the GitHub REST API
+          # (docs/adr/0056-*.md), so the token only needs read access to every
+          # repo Collector's daily brief can name. radar-vault is the `vault`
+          # branch of radar. Same App and same repo list as collector's own
+          # daily.yml; no new credential.
           repositories: |
             article-pipeline
             collector
+            tooltempest
+            radar
+            archi-kg
+            brain
 
       - name: Checkout article-pipeline
         uses: actions/checkout@v4
@@ -100,6 +111,10 @@ jobs:
           LINKEDIN_PERSON_URN: ${{ secrets.LINKEDIN_PERSON_URN }}
           ANTHROPIC_API_KEY_DAILY_AUTHOR: ${{ secrets.ANTHROPIC_API_KEY_DAILY_AUTHOR }}
           REGISTRY_OUTPUT_DIR: ${{ github.workspace }}/registry/output
+          # Read by collector.check_integrity(). Deliberately not GH_TOKEN /
+          # GITHUB_TOKEN: the gh CLI reads those, and setting them would switch
+          # on daily_linkedin_author's public-repo link lookup as a side effect.
+          GITHUB_APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: python3 linkedin_publisher/daily_publish.py
 
       # Pushes only to registry-data, never to main. A failed push must fail
