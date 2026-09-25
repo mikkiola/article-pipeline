@@ -2909,3 +2909,36 @@ comment for the current pinned value and its stated ~6-month review cadence).
 **Source.** Owner task, 2026-09-24, following the real M2 production run that
 surfaced both facts directly (the token-expiry limitation already named in
 ADR-0054, and a live `426 NONEXISTENT_VERSION` failure fixed in commit `aa98497`).
+
+### [B-067] P1 — Living-Spec overwrite has no check that a section's enforced semantics survive it
+
+Added: 2026-09-25, found while investigating the bootstrap integrity gate (see
+`docs/adr/0056-collector-integrity-by-github-ancestry-and-per-repo-commit-messages.md`).
+
+**Problem statement.** `docs/CONSTITUTION.md`'s "SPEC.md's status" section (and `[B-030]`)
+make root `SPEC.md` a Living Spec: one location, overwritten wholesale by each new `/spec`
+session, history only in `git log -- SPEC.md`. No ADR governs this model; ADR-0053 and
+ADR-0054 merely cite it as convention. Nothing in that model checks, before the old text
+is replaced, that requirements the code *enforces* were carried into the new `SPEC.md` or
+into an ADR.
+
+**How it went wrong.** The source-independence `SPEC.md` (introduced in `35a1d24`,
+2026-09-16) specified the Collector integrity check as: `git rev-list --count` for the
+reported window "roughly matches the reported `commit_count`", with a test plan line for
+a mismatch "beyond tolerance". `fa04b2f` (2026-09-23, Publication Core Loop) overwrote
+that file; the "Collector's Integrity Check" section, and the tolerance wording with it,
+disappeared. The code had already become an exact-match check with an ad-hoc time anchor,
+and the docstrings still cited "SPEC.md's 'Collector's Integrity Check' section" — a
+section that no longer existed. No check compared the old text's enforced semantics with
+what survived, so the drift between the specified and the implemented behavior was found
+only when a production gate's behavior was investigated.
+
+This is a process gap, not a Collector defect; the Collector integrity fix itself is
+recorded in the ADR above. Not designed here — a future `/spec` scopes what "carried
+forward" should mean and whether it is mechanically checkable at all (see
+`docs/CONSTITUTION.md`'s "Mechanical verification scope": judgment-based rules are not
+script candidates).
+
+- [ ] Needs `/spec` before any implementation.
+
+**Source.** Owner task, 2026-09-25, from the integrity-gate investigation.
