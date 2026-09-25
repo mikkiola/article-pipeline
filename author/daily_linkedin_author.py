@@ -218,6 +218,13 @@ What the data does and does not contain:
 - The data has no commit bodies, no reasons, no test results, and no
   commit hashes. If the input does not contain a reason for a change,
   say nothing about a reason.
+- Only use information present in the supplied data above.
+- Do not infer or invent the author's motivation, reason, consequence,
+  or lesson from a commit subject, a diffstat, or a file path — a
+  commit subject describes what changed; it does not establish why it
+  was changed.
+- If the supplied data does not contain a reason, do not state one,
+  imply one, or hint that one exists.
 
 Write the post in exactly this order, as short paragraphs:
 1. Repo/context — one short line naming the repository (or

@@ -179,6 +179,38 @@ def test_fact_prompt_says_no_reason_if_the_input_has_none():
     assert "Never invent a number" in prompt
 
 
+def test_fact_prompt_states_the_evidence_boundary_explicitly():
+    prompt = _facts_prompt()
+    assert "Only use information present in the supplied data above" in prompt
+    assert (
+        "Do not infer or invent the author's motivation, reason, consequence, "
+        "or lesson from a commit subject, a diffstat, or a file path"
+    ) in prompt
+    assert (
+        "a commit subject describes what changed; it does not establish why it "
+        "was changed"
+    ) in prompt
+    assert (
+        "If the supplied data does not contain a reason, do not state one, "
+        "imply one, or hint that one exists"
+    ) in prompt
+
+
+def test_fact_prompt_stays_silent_about_commit_body_trailers():
+    # Why:/Effect: trailer lines are deliberately not an accepted source yet,
+    # so the prompt must not mention them at all.
+    prompt = _facts_prompt()
+    assert "Why:" not in prompt
+    assert "Effect:" not in prompt
+    assert "trailer" not in prompt.lower()
+
+
+def test_evidence_boundary_text_is_not_added_to_the_idea_fallback_prompt():
+    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
+        prompt = " ".join(author_llm.build_prompt(SAMPLE_IDEA_FALLBACK_DAILY_BRIEF).split())
+    assert "it does not establish why it was changed" not in prompt
+
+
 def test_fact_prompt_forbids_naming_adr_numbers():
     prompt = _facts_prompt()
     assert "Do not name ADR numbers, even if a commit subject contains one" in prompt
