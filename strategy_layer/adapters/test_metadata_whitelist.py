@@ -24,7 +24,7 @@ def test_manifest_real_output_keys_are_all_whitelisted():
         "scan_timestamp": "2026-09-12T00:50:24.808627+00:00",
         "window_days": 7,
         "repos": [
-            {"name": "article-pipeline", "branch": "main", "commit_count": 6, "counts": {"value": 2}},
+            {"name": "article-pipeline", "branch": "main", "head_sha": "a" * 40, "commit_count": 6, "counts": {"value": 2}},
         ],
     }
     from unittest.mock import patch
@@ -37,22 +37,22 @@ def test_manifest_real_output_keys_are_all_whitelisted():
 
 def test_daily_brief_real_output_keys_are_all_whitelisted():
     daily_brief = {
+        "schema_version": 2,
         "mode": "fact",
         "date": "2026-09-11",
         "window": "1.day",
         "total_diffstat": 10,
         "files_touched": ["a.py"],
-        "commit_messages": ["fix: bug"],
+        "commit_messages": [{"repo": "article-pipeline", "sha": "1" * 40, "subject": "fix: bug"}],
         "per_repo": [
-            {"name": "article-pipeline", "commit_count": 2, "diffstat": 10, "files_touched": ["a.py"]},
+            {"name": "article-pipeline", "branch": "main", "head_sha": "a" * 40,
+             "commit_count": 2, "diffstat": 10, "files_touched": ["a.py"]},
         ],
         "decision_source": "heuristic",
     }
     from unittest.mock import patch
 
-    with patch("collector.resolve_current_branch", return_value="main"), patch(
-        "collector.check_integrity", return_value=("valid", "mocked")
-    ):
+    with patch("collector.check_integrity", return_value=("valid", "mocked")):
         units = collector.adapt_daily_brief(daily_brief)
 
     collector.check_metadata_whitelist("collector_daily_brief", units[0].metadata)  # must not raise
