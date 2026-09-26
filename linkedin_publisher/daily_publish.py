@@ -301,7 +301,9 @@ def main() -> None:
     )
     prompt = daily_linkedin_author.build_prompt(daily_brief_shaped)
     response = daily_linkedin_author.call_model(prompt)
-    daily_linkedin_author.validate_structured_response(response, daily_brief_shaped["mode"])
+    daily_linkedin_author.validate_structured_response(
+        response, daily_brief_shaped["mode"], daily_brief_shaped
+    )
     post_text = response["post"]
 
     post_url = linkedin_client.publish_post(post_text)

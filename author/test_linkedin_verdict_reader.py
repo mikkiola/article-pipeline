@@ -37,7 +37,8 @@ def test_daily_brief_sourced_context_populates_real_fields():
     assert result["files_touched"] == ["a.py", "b.py"]
     assert result["commit_messages"] == ["fix: bug", "chore: bump"]
     assert result["per_repo"] == [
-        {"name": "article-pipeline", "commit_count": 2, "diffstat": 42, "files_touched": ["a.py", "b.py"]}
+        {"name": "article-pipeline", "commit_count": 2, "diffstat": 42,
+         "files_touched": ["a.py", "b.py"], "commit_messages": ["fix: bug", "chore: bump"]}
     ]
 
 
@@ -77,6 +78,51 @@ def test_mixed_contexts_deduplicates_identical_subject_lines():
     result = build_daily_brief_from_authoring_contexts(contexts, date="2026-09-15")
     assert result["commit_messages"] == ["fix: shared bug"]
     assert len(result["per_repo"]) == 2
+
+
+def test_per_repo_entries_keep_each_repos_own_messages_without_cross_repo_dedup():
+    # The flat top-level list collapses identical subjects across repos
+    # (kept, other code reads it); per_repo must not, or a repo's own
+    # attribution is lost and per-repo clustering has nothing to cluster.
+    contexts = [
+        AuthoringContext(
+            claim_id="a", framing="f1", source_type="collector_daily_brief",
+            repo="article-pipeline", commit_count=2,
+            commit_messages=["fix: shared bug", "feat: only here"],
+        ),
+        AuthoringContext(
+            claim_id="b", framing="f2", source_type="collector_daily_brief",
+            repo="brain", commit_count=1,
+            commit_messages=["fix: shared bug"],
+        ),
+    ]
+    result = build_daily_brief_from_authoring_contexts(contexts, date="2026-09-15")
+    assert result["commit_messages"] == ["fix: shared bug", "feat: only here"]
+    assert [(r["name"], r["commit_messages"]) for r in result["per_repo"]] == [
+        ("article-pipeline", ["fix: shared bug", "feat: only here"]),
+        ("brain", ["fix: shared bug"]),
+    ]
+
+
+def test_manifest_sourced_context_carries_an_empty_per_repo_message_list():
+    contexts = [
+        AuthoringContext(
+            claim_id="a", framing="f", source_type="collector_manifest",
+            repo="article-pipeline", commit_count=6, counts={"value": 2},
+        )
+    ]
+    result = build_daily_brief_from_authoring_contexts(contexts, date="2026-09-15")
+    assert result["per_repo"][0]["commit_messages"] == []
+
+
+def test_per_repo_message_list_is_a_copy_not_the_contexts_own_list():
+    ctx = AuthoringContext(
+        claim_id="a", framing="f", source_type="collector_daily_brief",
+        repo="brain", commit_count=1, commit_messages=["fix: x"],
+    )
+    result = build_daily_brief_from_authoring_contexts([ctx], date="2026-09-15")
+    result["per_repo"][0]["commit_messages"].append("mutated")
+    assert ctx.commit_messages == ["fix: x"]
 
 
 def test_empty_contexts_produces_idea_fallback_shape():

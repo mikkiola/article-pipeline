@@ -65,3 +65,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0055](0055-publication-registry-state-lives-on-registry-data-branch.md) | Publication Registry state lives on the `registry-data` branch | Accepted | null | null |
 | [ADR-0056](0056-collector-integrity-by-github-ancestry-and-per-repo-commit-messages.md) | Collector records are verified by GitHub ancestry, and commit messages are attributed per repository | Accepted | null | null |
 | [ADR-0057](0057-commit-body-why-effect-trailers-not-yet-accepted-as-evidence.md) | Commit-body Why:/Effect: trailers are not yet accepted as Evidence; facts-only publication stays in force | Accepted | null | null |
+| [ADR-0058](0058-fact-prompt-offers-per-repo-clusters-with-id-based-citation.md) | The fact prompt offers per-repository clusters of ID-tagged facts, and cited IDs are verified | Accepted | null | null |

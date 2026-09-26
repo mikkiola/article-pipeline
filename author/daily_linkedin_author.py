@@ -177,22 +177,83 @@ def _evidence_links_block(links: list) -> str:
     )
 
 
-# TEMPORARY facts-only structure, requested by the owner on 2026-09-24.
-# It deviates from the Narrative Bridge structure fixed by ADR-0044
-# (no hook, no bridge/emergent-property step, no inversion, no
-# hypothesis, no L3 market-signal tier, 100-200 words instead of
-# 150-250) because the model was inventing a reason and a consequence
-# that the input never contained. The decision on whether to amend the
-# ADR is pending the first real post. Deliberately does not embed
-# STYLE_CONSTRAINTS/VOICE_CONTRACT, which still carry the Narrative
-# Bridge wording and remain in use by _build_idea_fallback_prompt.
+# Fact-mode data is offered to the model as deterministic per-repository
+# clusters of ID-tagged facts (Experiment 1, 2026-09-26): one cluster per
+# repository with commit_count > 0, and no flat cross-repo list. Repo-based
+# clustering only: no semantic/topic grouping of any kind.
+FACT_KIND_SUBJECT = "commit subject"
+FACT_KIND_COMMIT_COUNT = "commit count"
+FACT_KIND_FILES_COUNT = "files touched count"
+
+
+def build_clusters(daily_brief: dict) -> list:
+    """One cluster per repository that had at least one commit, each with
+    stable fact IDs `{repo}:fact_{NN}` (zero-padded, 1-indexed).
+
+    One fact per commit subject (that repository's own messages, in the
+    order given, exactly as they appear in the data), then one fact for
+    the repository's commit count, then one for its files-touched count
+    (computed here, not by the model). No diffstat fact: the prompt
+    already forbids using lines-changed figures as evidence. A repository
+    with commit_count == 0 forms no cluster and is never offered.
+
+    Raises AuthorLLMError, rather than degrading to count-only clusters,
+    when a repository's entry has no `commit_messages` key (a DailyBrief
+    shape from before per-repo attribution) or when no cluster exists."""
+    clusters = []
+    for repo in daily_brief["per_repo"]:
+        if repo["commit_count"] <= 0:
+            continue
+        name = repo["name"]
+        if "commit_messages" not in repo:
+            raise AuthorLLMError(
+                f"per_repo entry for {name!r} has no 'commit_messages' key — the "
+                f"DailyBrief-shaped input predates per-repo message attribution, so "
+                f"per-repo fact clusters cannot be built from it."
+            )
+        raw_facts = [(FACT_KIND_SUBJECT, subject) for subject in repo["commit_messages"]]
+        raw_facts.append((FACT_KIND_COMMIT_COUNT, str(repo["commit_count"])))
+        raw_facts.append((FACT_KIND_FILES_COUNT, str(len(repo["files_touched"]))))
+        facts = [
+            {"id": f"{name}:fact_{index:02d}", "kind": kind, "text": text}
+            for index, (kind, text) in enumerate(raw_facts, start=1)
+        ]
+        clusters.append({"repo": name, "facts": facts})
+    if not clusters:
+        raise AuthorLLMError(
+            "No candidate cluster can be offered: no repository in per_repo has "
+            "commit_count > 0."
+        )
+    return clusters
+
+
+def _clusters_block(clusters: list) -> str:
+    blocks = []
+    for cluster in clusters:
+        lines = [f"Cluster: {cluster['repo']}"]
+        for fact in cluster["facts"]:
+            text = (
+                json.dumps(fact["text"], ensure_ascii=False)
+                if fact["kind"] == FACT_KIND_SUBJECT
+                else fact["text"]
+            )
+            lines.append(f"- {fact['id']} ({fact['kind']}): {text}")
+        blocks.append("\n".join(lines))
+    return "\n\n".join(blocks)
+
+
+# Facts-only structure (temporary since 2026-09-24, deviates from ADR-0044's
+# Narrative Bridge). The "does not explain, interpret, or speculate" wording,
+# the three evidence-boundary statements and the no-reason/consequence
+# paragraph below are ADR-0057's, quoted unchanged; Experiment 1 changes only
+# how facts are grouped, selected and cited. Deliberately does not embed
+# STYLE_CONSTRAINTS/VOICE_CONTRACT, which still carry the Narrative Bridge
+# wording and remain in use by _build_idea_fallback_prompt.
 def _build_fact_prompt(daily_brief: dict) -> str:
-    evidence_links = _build_evidence_links(daily_brief['per_repo'])
-    # Counts are computed here, not left to the model: a real post once
-    # reported 20 files touched when the input said 21.
-    active_repos = [r["name"] for r in daily_brief["per_repo"] if r["commit_count"] > 0]
-    total_commits = sum(r["commit_count"] for r in daily_brief["per_repo"])
-    files_touched_count = len(daily_brief["files_touched"])
+    clusters = build_clusters(daily_brief)
+    # L2 links only for repositories that form a cluster: a repository
+    # with no commits is not offered to the model at all.
+    evidence_links = _build_evidence_links([{"name": c["repo"]} for c in clusters])
     return f"""\
 You are drafting one LinkedIn post from a single day's real engineering
 activity. The post reports what changed, using only the data below. It
@@ -200,21 +261,14 @@ does not explain, interpret, or speculate.
 
 Today's real data (DailyBrief), this is your ONLY source of facts —
 never invent a fact, user, reason, pain point, metric, or product state
-not present here:
-- total_diffstat: {daily_brief['total_diffstat']}
-- files_touched: {json.dumps(daily_brief['files_touched'], ensure_ascii=False)}
-- commit_messages: {json.dumps(daily_brief['commit_messages'], ensure_ascii=False)}
-- per_repo breakdown: {json.dumps(daily_brief['per_repo'], ensure_ascii=False)}
+not present here. The data is grouped into candidate clusters, one per
+repository that had commits today. Every fact has an ID:
 
-Counts computed from the data above — use these, do not count yourself:
-- repositories with commits: {json.dumps(active_repos, ensure_ascii=False)}
-- total commits: {total_commits}
-- files touched: {files_touched_count}
+{_clusters_block(clusters)}
 
 What the data does and does not contain:
-- commit_messages are subject lines only, and they are not attributed to
-  a repository. If more than one repository had commits, do not say
-  which repository a given change was in.
+- Each fact is a commit subject line or a count computed from that
+  repository's own data; a fact's ID refers to exactly that data point.
 - The data has no commit bodies, no reasons, no test results, and no
   commit hashes. If the input does not contain a reason for a change,
   say nothing about a reason.
@@ -226,19 +280,30 @@ What the data does and does not contain:
 - If the supplied data does not contain a reason, do not state one,
   imply one, or hint that one exists.
 
+Selecting and connecting facts:
+- Select exactly ONE cluster: select one repository whose cluster
+  contains enough related facts to form a coherent post. If more than
+  one cluster qualifies, any one of them is acceptable.
+- The post uses only facts from the selected cluster. Do not mention
+  facts, changes, or repositories from any other cluster.
+- You may connect 2-3 of the selected cluster's facts into one
+  connected paragraph instead of listing them as separate sentences.
+  Connecting facts does not permit stating why something was done, what
+  it leads to, or what it means; the prohibitions in this prompt apply
+  unchanged.
+
 Write the post in exactly this order, as short paragraphs:
-1. Repo/context — one short line naming the repository (or
-   repositories) that had commits (commit_count > 0 in per_repo). No
+1. Repo/context — one short line naming the selected repository. No
    greeting. No hook. No opening claim that is not in the data.
-2. Change — what changed, stated only from commit_messages,
-   files_touched, and the per_repo numbers. A subject line may be
-   paraphrased; do not embellish it. Do not name ADR numbers, even if a
-   commit subject contains one — describe the change in plain words
-   instead.
-3. Evidence — only facts actually in the data: commit counts, file
-   counts, repository names. Include a public repository link only if
-   the L2 block below lists it. Do not name ADR numbers as evidence.
-   Nothing else counts as evidence.
+2. Change — what changed, stated only from the selected cluster's
+   commit subject facts. A subject line may be paraphrased; do not
+   embellish it. Do not name ADR numbers, even if a commit subject
+   contains one — describe the change in plain words instead.
+3. Evidence — only facts actually in the selected cluster: its commit
+   count, its files-touched count, its repository name. Include a public
+   repository link only if the L2 block below lists it for the selected
+   repository. Do not name ADR numbers as evidence. Nothing else counts
+   as evidence.
 4. Question — exactly one open question, at the end, in the body. No
    pitch. It must not state or imply a reason, a consequence, or a
    benefit.
@@ -248,9 +313,10 @@ what something matters for, an insight or lesson, a hypothesis, a
 prediction, or an idea of what something could become. If the data
 contains no reason, the post states none.
 
-Numbers: every number in the post must appear in the data above or be a
-direct count of items in it (use the computed counts). Never invent a
-number. Do not use total_diffstat or lines-changed counts as evidence.
+Numbers: every number in the post must appear in the selected cluster's
+facts or be a direct count of items in them (use the counts given in the
+facts). Never invent a number. Do not use diffstat or lines-changed
+counts as evidence.
 
 Style constraints, apply these strictly:
 - 100-200 words. Maximum 3 sentences per paragraph.
@@ -267,7 +333,12 @@ The JSON object must have exactly these keys:
 - "post": the final LinkedIn post text (string). This is the only
   field intended for actual publication.
 - "fact_or_product": the main change the post reports, in one line
-  (string). For the owner's own review, it will not be posted."""
+  (string). For the owner's own review, it will not be posted.
+- "selected_cluster": the repository name of the one cluster you
+  selected, exactly as written after "Cluster:" above (string).
+- "supporting_facts": the exact fact IDs of the facts the post draws on,
+  for example ["<repo>:fact_01", "<repo>:fact_03"], using only IDs from
+  the selected cluster (list of strings)."""
 
 
 # NOTE: this fallback builder still uses the Narrative Bridge structure
@@ -333,8 +404,10 @@ publication — they will not be posted."""
 # emergent_property / inversion / commercial_hypothesis were dropped from
 # the fact response on 2026-09-24 (temporary facts-only structure): they
 # only existed to hold the removed emergent-property/inversion/hypothesis
-# steps. idea_fallback keeps its own keys, unchanged.
-FACT_REQUIRED_KEYS = {"post", "fact_or_product"}
+# steps. selected_cluster / supporting_facts were added on 2026-09-26
+# (Experiment 1: per-repo clusters with ID-based citation).
+# idea_fallback keeps its own keys, unchanged.
+FACT_REQUIRED_KEYS = {"post", "fact_or_product", "selected_cluster", "supporting_facts"}
 IDEA_FALLBACK_REQUIRED_KEYS = {
     "post", "fact_or_product", "emergent_property", "evidence_to_collect",
 }
@@ -371,7 +444,44 @@ def check_post_content(post: str) -> None:
         )
 
 
-def validate_structured_response(response: dict, mode: str) -> None:
+def verify_cited_facts(response: dict, daily_brief: dict) -> None:
+    """Fact mode only. Verifies, by exact string match, that the model
+    cited only what it was actually offered this run: `selected_cluster`
+    must be one of the cluster names built from `daily_brief`, and every
+    ID in `supporting_facts` must be an ID of that selected cluster.
+
+    WHAT THIS PROVES: the model's citations refer to facts that exist in
+    the cluster it was given. WHAT IT DOES NOT PROVE: that the post's prose
+    is semantically faithful to those facts, that the cited facts actually
+    support what the post says, or that the post draws on all or only the
+    facts listed. A post could cite real IDs and still misstate them; this
+    check does not detect that. Fail closed: any mismatch raises."""
+    clusters = {c["repo"]: c for c in build_clusters(daily_brief)}
+    selected = response["selected_cluster"]
+    if not isinstance(selected, str) or selected not in clusters:
+        raise AuthorLLMError(
+            f"selected_cluster {selected!r} is not one of the clusters offered this "
+            f"run: {sorted(clusters)}."
+        )
+    supporting = response["supporting_facts"]
+    if (
+        not isinstance(supporting, list)
+        or not supporting
+        or not all(isinstance(fact_id, str) for fact_id in supporting)
+    ):
+        raise AuthorLLMError(
+            f"supporting_facts must be a non-empty list of fact-ID strings, got: {supporting!r}"
+        )
+    offered_ids = {fact["id"] for fact in clusters[selected]["facts"]}
+    unknown = [fact_id for fact_id in supporting if fact_id not in offered_ids]
+    if unknown:
+        raise AuthorLLMError(
+            f"supporting_facts cites ID(s) {unknown!r} that are not in the selected "
+            f"cluster {selected!r} (offered IDs: {sorted(offered_ids)})."
+        )
+
+
+def validate_structured_response(response: dict, mode: str, daily_brief: dict | None = None) -> None:
     required = FACT_REQUIRED_KEYS if mode == "fact" else IDEA_FALLBACK_REQUIRED_KEYS
     missing = required - response.keys()
     if missing:
@@ -385,6 +495,13 @@ def validate_structured_response(response: dict, mode: str) -> None:
             f"got: {response.get('post')!r}"
         )
     check_post_content(response["post"])
+    if mode == "fact":
+        if daily_brief is None:
+            raise AuthorLLMError(
+                "fact-mode validation needs the daily_brief the prompt was built from "
+                "(to know which clusters and fact IDs were offered); none was passed."
+            )
+        verify_cited_facts(response, daily_brief)
 
 
 def _strip_markdown_fence(text: str) -> str:
@@ -469,7 +586,7 @@ def main() -> None:
     daily_brief = json.loads(daily_brief_path.read_text())
     prompt = build_prompt(daily_brief)
     response = call_model(prompt)
-    validate_structured_response(response, daily_brief["mode"])
+    validate_structured_response(response, daily_brief["mode"], daily_brief)
 
     date_token = daily_brief.get("date") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)

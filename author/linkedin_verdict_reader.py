@@ -62,6 +62,11 @@ def build_daily_brief_from_authoring_contexts(
                 "commit_count": ctx.commit_count,
                 "diffstat": diffstat,
                 "files_touched": ctx.files_touched,
+                # This repo's own subjects, NOT deduplicated across repos:
+                # the flat top-level list above collapses identical subjects
+                # from different repos and loses which repo each came from.
+                # Copied so a consumer cannot mutate the context's own list.
+                "commit_messages": list(ctx.commit_messages),
             }
         )
 

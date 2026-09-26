@@ -188,7 +188,9 @@ def _setup_main(monkeypatch, tmp_path):
     monkeypatch.setattr(daily_publish.daily_linkedin_author, "build_prompt", lambda brief: "prompt")
     monkeypatch.setattr(daily_publish.daily_linkedin_author, "call_model", mocks["call_model"])
     monkeypatch.setattr(
-        daily_publish.daily_linkedin_author, "validate_structured_response", lambda response, mode: None
+        daily_publish.daily_linkedin_author,
+        "validate_structured_response",
+        lambda response, mode, daily_brief=None: None,
     )
 
     return mocks
@@ -320,3 +322,103 @@ def test_main_publishes_and_writes_pass_record_when_no_record_exists(monkeypatch
     assert written["gate_status"] == "pass"
     assert written["url"] == _POST_URL
     assert written["content_id"] == _CONTENT_ID
+
+
+# --- main(): real call order around the model-response verification ---------
+#
+# validate_structured_response() is NOT mocked here (unlike _setup_main's
+# default). These tests pin the actual sequence in main(): the model is
+# called, its response is verified against the clusters offered this run,
+# and only then may publish_post() and registry_writer.write_record() run.
+
+_SHAPED_BRIEF = {
+    "mode": "fact",
+    "date": "2026-09-24",
+    "total_diffstat": 10,
+    "files_touched": ["a.py"],
+    "commit_messages": ["fix: alpha"],
+    "per_repo": [
+        {"name": "r", "commit_count": 1, "diffstat": 10, "files_touched": ["a.py"],
+         "commit_messages": ["fix: alpha"]},
+    ],
+}
+
+_GOOD_CITATION = {
+    "post": "I pushed a commit to r.",
+    "fact_or_product": "fix: alpha",
+    "selected_cluster": "r",
+    "supporting_facts": ["r:fact_01"],
+}
+
+
+def _setup_real_validation(monkeypatch, tmp_path, model_response):
+    real_validate = daily_publish.daily_linkedin_author.validate_structured_response
+    mocks = _setup_main(monkeypatch, tmp_path)
+    calls = []
+
+    def spy_validate(response, mode, daily_brief=None):
+        calls.append("validate")
+        return real_validate(response, mode, daily_brief)
+
+    def spy_publish(text):
+        calls.append("publish_post")
+        return _POST_URL
+
+    def spy_write(record):
+        calls.append("write_record")
+        return "path"
+
+    monkeypatch.setattr(
+        daily_publish, "build_daily_brief_from_authoring_contexts", lambda contexts, date: _SHAPED_BRIEF
+    )
+    monkeypatch.setattr(daily_publish.daily_linkedin_author, "call_model", mock.Mock(return_value=model_response))
+    monkeypatch.setattr(daily_publish.daily_linkedin_author, "validate_structured_response", spy_validate)
+    monkeypatch.setattr(daily_publish.linkedin_client, "publish_post", spy_publish)
+    monkeypatch.setattr(daily_publish.registry_writer, "write_record", spy_write)
+    return mocks, calls
+
+
+@pytest.mark.parametrize(
+    "bad_response",
+    [
+        pytest.param({**_GOOD_CITATION, "selected_cluster": "not-offered"}, id="cluster-not-offered"),
+        pytest.param({**_GOOD_CITATION, "supporting_facts": ["other:fact_01"]}, id="fact-id-from-unoffered-cluster"),
+        pytest.param({**_GOOD_CITATION, "supporting_facts": ["r:fact_99"]}, id="fact-id-not-in-cluster"),
+        pytest.param({k: v for k, v in _GOOD_CITATION.items() if k != "supporting_facts"}, id="missing-key"),
+    ],
+)
+def test_failed_fact_verification_raises_before_publish_and_before_any_registry_write(
+    monkeypatch, tmp_path, bad_response
+):
+    mocks, calls = _setup_real_validation(monkeypatch, tmp_path, bad_response)
+
+    with pytest.raises(daily_publish.daily_linkedin_author.AuthorLLMError):
+        daily_publish.main()
+
+    assert calls == ["validate"], f"only validation may have run, got {calls}"
+    daily_publish.daily_linkedin_author.call_model.assert_called_once()
+    registry_dir = tmp_path / "registry"
+    assert not registry_dir.exists() or list(registry_dir.iterdir()) == []
+
+
+def test_write_record_raising_if_called_is_never_reached_on_a_failed_verification(monkeypatch, tmp_path):
+    # Same scenario with write_record wired to raise if it is ever invoked:
+    # the only exception that may escape is the verification failure.
+    mocks, _ = _setup_real_validation(
+        monkeypatch, tmp_path, {**_GOOD_CITATION, "supporting_facts": ["other:fact_01"]}
+    )
+    boom = mock.Mock(side_effect=RuntimeError("write_record must not be called"))
+    monkeypatch.setattr(daily_publish.registry_writer, "write_record", boom)
+
+    with pytest.raises(daily_publish.daily_linkedin_author.AuthorLLMError, match="other:fact_01"):
+        daily_publish.main()
+
+    boom.assert_not_called()
+
+
+def test_well_formed_citation_validates_then_publishes_then_writes_in_that_order(monkeypatch, tmp_path):
+    _, calls = _setup_real_validation(monkeypatch, tmp_path, dict(_GOOD_CITATION))
+
+    daily_publish.main()
+
+    assert calls == ["validate", "publish_post", "write_record"]

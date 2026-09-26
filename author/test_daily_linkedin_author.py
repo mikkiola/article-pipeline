@@ -26,7 +26,11 @@ SAMPLE_FACT_DAILY_BRIEF = {
         "fix(classify): scope value classification to collector's own engineering logic",
     ],
     "per_repo": [
-        {"name": "article-pipeline", "commit_count": 2, "diffstat": 929, "files_touched": ["docs/BACKLOG.md"]},
+        {"name": "article-pipeline", "commit_count": 2, "diffstat": 929, "files_touched": ["docs/BACKLOG.md"],
+         "commit_messages": [
+             "feat(author): first MVP pilot (Collector-manifest-based)",
+             "fix(classify): scope value classification to collector's own engineering logic",
+         ]},
     ],
     "decision_source": "heuristic",
 }
@@ -64,14 +68,16 @@ def test_fact_mode_builds_fact_prompt_and_parses_wellformed_response():
     # PROPERTY/INVERSION/COMMERCIAL HYPOTHESIS steps are gone.
     assert "Repo/context" in prompt
     assert "EMERGENT PROPERTY" not in prompt
-    # Real DailyBrief data must actually appear in the prompt, not be
-    # dropped or replaced with a placeholder.
-    assert "6364" in prompt
+    # Real DailyBrief data must actually appear in the prompt, as an
+    # ID-tagged cluster fact, not be dropped or replaced with a placeholder.
+    assert "article-pipeline:fact_01" in prompt
     assert "feat(author): first MVP pilot (Collector-manifest-based)" in prompt
 
     fake_payload = {
         "post": "Saw something odd in today's diff...",
-        "fact_or_product": "929-line diffstat in article-pipeline",
+        "fact_or_product": "the MVP pilot commit in article-pipeline",
+        "selected_cluster": "article-pipeline",
+        "supporting_facts": ["article-pipeline:fact_01", "article-pipeline:fact_02"],
     }
     with mock.patch.object(author_llm, "_get_api_key", return_value="fake-key"), \
             mock.patch("daily_linkedin_author.anthropic.Anthropic") as MockAnthropic:
@@ -80,7 +86,9 @@ def test_fact_mode_builds_fact_prompt_and_parses_wellformed_response():
         response = author_llm.call_model(prompt)
 
     assert response == fake_payload
-    author_llm.validate_structured_response(response, "fact")  # must not raise
+    author_llm.validate_structured_response(
+        response, "fact", SAMPLE_FACT_DAILY_BRIEF
+    )  # must not raise
     mock_client.messages.create.assert_called_once()
     assert mock_client.messages.create.call_args.kwargs["model"] == author_llm.MODEL
     assert mock_client.messages.create.call_args.kwargs["max_tokens"] == 4096
@@ -128,8 +136,14 @@ SYNTHETIC_FACTS_BRIEF = {
     ],
     "per_repo": [
         {"name": "article-pipeline", "commit_count": 3, "diffstat": 1000,
-         "files_touched": ["a.py", "b.py", "docs/x.md", "c/d.py", "e.txt"]},
-        {"name": "radar", "commit_count": 0, "diffstat": 0, "files_touched": []},
+         "files_touched": ["a.py", "b.py", "docs/x.md", "c/d.py", "e.txt"],
+         "commit_messages": [
+             "feat(publication_registry): content_id becomes caller-supplied (ADR-0053)",
+             "docs(architecture): add Publication Registry row",
+             "fix(linkedin_publisher): bump expired LinkedIn-Version header",
+         ]},
+        {"name": "radar", "commit_count": 0, "diffstat": 0, "files_touched": [],
+         "commit_messages": []},
     ],
     "decision_source": "heuristic",
 }
@@ -160,12 +174,12 @@ def test_fact_prompt_has_facts_only_shape_and_drops_removed_instructions():
         '"commercial_hypothesis"',
     ):
         assert removed not in prompt, f"removed instruction text still present: {removed!r}"
-    # Real input still reaches the model, and counts are computed in code.
-    assert "1000" in prompt
+    # Real input still reaches the model as ID-tagged cluster facts, and
+    # counts are computed in code. Diffstat is not offered as a fact.
     assert "feat(publication_registry): content_id becomes caller-supplied" in prompt
-    assert 'repositories with commits: ["article-pipeline"]' in prompt
-    assert "total commits: 3" in prompt
-    assert "files touched: 5" in prompt
+    assert "article-pipeline:fact_04 (commit count): 3" in prompt
+    assert "article-pipeline:fact_05 (files touched count): 5" in prompt
+    assert "1000" not in prompt
 
 
 def test_fact_prompt_says_no_reason_if_the_input_has_none():
@@ -227,15 +241,186 @@ def test_fact_prompt_keeps_the_l2_public_link_mechanism():
     assert "https://github.com/mikkiola/radar" not in prompt
 
 
-def test_fact_response_requires_only_post_and_fact_or_product():
+def test_fact_response_requires_post_fact_or_product_and_the_cluster_keys():
+    assert author_llm.FACT_REQUIRED_KEYS == {
+        "post", "fact_or_product", "selected_cluster", "supporting_facts",
+    }
     author_llm.validate_structured_response(
-        {"post": "I pushed 3 commits to article-pipeline.", "fact_or_product": "x"}, "fact"
+        {"post": "I pushed 3 commits to article-pipeline.", "fact_or_product": "x",
+         "selected_cluster": "article-pipeline",
+         "supporting_facts": ["article-pipeline:fact_01"]},
+        "fact", SYNTHETIC_FACTS_BRIEF,
     )  # must not raise
+    for missing in ("fact_or_product", "selected_cluster", "supporting_facts"):
+        full = {"post": "text", "fact_or_product": "x", "selected_cluster": "article-pipeline",
+                "supporting_facts": ["article-pipeline:fact_01"]}
+        del full[missing]
+        try:
+            author_llm.validate_structured_response(full, "fact", SYNTHETIC_FACTS_BRIEF)
+            raise AssertionError(f"expected AuthorLLMError for a missing {missing}")
+        except author_llm.AuthorLLMError as e:
+            assert missing in str(e)
+
+
+# --- Experiment 1: per-repo clusters, stable fact IDs, ID-based verification ---
+# Deterministic repo-based clustering only. ADR-0057's inference boundary is
+# untouched by this change (its own tests above still pin that wording).
+
+TWO_CLUSTER_BRIEF = {
+    "mode": "fact",
+    "date": "2026-09-26",
+    "total_diffstat": 50,
+    "files_touched": ["a.py", "b.md", "c.py"],
+    "commit_messages": ["fix: alpha", "feat: beta", "docs: gamma"],
+    "per_repo": [
+        {"name": "collector", "commit_count": 2, "diffstat": 30, "files_touched": ["a.py", "b.md"],
+         "commit_messages": ["fix: alpha", "feat: beta"]},
+        {"name": "brain", "commit_count": 1, "diffstat": 20, "files_touched": ["c.py"],
+         "commit_messages": ["docs: gamma"]},
+        {"name": "radar", "commit_count": 0, "diffstat": 0, "files_touched": [],
+         "commit_messages": []},
+    ],
+}
+
+
+def _cluster_prompt(brief):
+    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
+        return " ".join(author_llm.build_prompt(brief).split())
+
+
+def _cited(post_cluster, facts):
+    return {"post": "I pushed commits.", "fact_or_product": "x",
+            "selected_cluster": post_cluster, "supporting_facts": facts}
+
+
+def test_build_clusters_assigns_stable_per_repo_fact_ids_to_the_exact_data_points():
+    clusters = author_llm.build_clusters(SYNTHETIC_FACTS_BRIEF)
+    assert [c["repo"] for c in clusters] == ["article-pipeline"]
+    facts = clusters[0]["facts"]
+    assert [f["id"] for f in facts] == [
+        "article-pipeline:fact_01", "article-pipeline:fact_02", "article-pipeline:fact_03",
+        "article-pipeline:fact_04", "article-pipeline:fact_05",
+    ]
+    # Subjects are the data points exactly as they appear, in order, unreworded.
+    assert [f["text"] for f in facts[:3]] == SYNTHETIC_FACTS_BRIEF["per_repo"][0]["commit_messages"]
+    assert (facts[3]["kind"], facts[3]["text"]) == ("commit count", "3")
+    assert (facts[4]["kind"], facts[4]["text"]) == ("files touched count", "5")
+
+
+def test_repo_with_zero_commits_forms_no_cluster_and_is_never_offered():
+    assert [c["repo"] for c in author_llm.build_clusters(SYNTHETIC_FACTS_BRIEF)] == ["article-pipeline"]
+    prompt = _cluster_prompt(SYNTHETIC_FACTS_BRIEF)
+    assert "radar" not in prompt
+    assert [c["repo"] for c in author_llm.build_clusters(TWO_CLUSTER_BRIEF)] == ["collector", "brain"]
+    assert "radar" not in _cluster_prompt(TWO_CLUSTER_BRIEF)
+
+
+def test_fact_prompt_offers_only_id_tagged_clusters_not_a_flat_cross_repo_list():
+    prompt = _cluster_prompt(TWO_CLUSTER_BRIEF)
+    assert "Cluster: collector" in prompt and "Cluster: brain" in prompt
+    assert prompt.index('collector:fact_01 (commit subject): "fix: alpha"') < prompt.index("Cluster: brain")
+    assert 'brain:fact_01 (commit subject): "docs: gamma"' in prompt
+    # The old flat cross-repo dump is gone.
+    for gone in ("- commit_messages:", "per_repo breakdown", "total commits:",
+                 "repositories with commits:", "- total_diffstat:", "- files_touched:"):
+        assert gone not in prompt, f"flat-shape text still present: {gone!r}"
+    # Each repository's messages sit only in its own cluster.
+    assert prompt.index("docs: gamma") > prompt.index("Cluster: brain")
+
+
+def test_fact_prompt_asks_for_one_cluster_with_neutral_selection_wording():
+    prompt = _cluster_prompt(TWO_CLUSTER_BRIEF)
+    assert "Select exactly ONE cluster" in prompt
+    assert ("select one repository whose cluster contains enough related facts "
+            "to form a coherent post") in prompt
+    assert "If more than one cluster qualifies, any one of them is acceptable" in prompt
+    assert "Do not mention facts, changes, or repositories from any other cluster" in prompt
+    for evaluative in ("most interesting", "best cluster", "most important", "most relevant"):
+        assert evaluative not in prompt.lower()
+    assert "connect 2-3 of the selected cluster's facts into one connected paragraph" in prompt
+    assert ("Connecting facts does not permit stating why something was done, "
+            "what it leads to, or what it means") in prompt
+    assert '"selected_cluster"' in prompt and '"supporting_facts"' in prompt
+
+
+def test_prompt_build_fails_loudly_when_per_repo_has_no_commit_messages_key():
+    old_shape = {"mode": "fact", "date": "d", "total_diffstat": 1, "files_touched": ["a"],
+                 "commit_messages": ["m"],
+                 "per_repo": [{"name": "collector", "commit_count": 1, "diffstat": 1,
+                               "files_touched": ["a"]}]}
     try:
-        author_llm.validate_structured_response({"post": "text"}, "fact")
-        raise AssertionError("expected AuthorLLMError for a missing fact_or_product")
+        _cluster_prompt(old_shape)
+        raise AssertionError("expected AuthorLLMError for a per_repo entry with no commit_messages")
     except author_llm.AuthorLLMError as e:
-        assert "fact_or_product" in str(e)
+        assert "collector" in str(e) and "commit_messages" in str(e)
+
+
+def test_prompt_build_fails_loudly_when_no_repo_has_any_commit():
+    empty = {"mode": "fact", "date": "d", "total_diffstat": 0, "files_touched": [],
+             "commit_messages": [],
+             "per_repo": [{"name": "radar", "commit_count": 0, "diffstat": 0,
+                           "files_touched": [], "commit_messages": []}]}
+    try:
+        _cluster_prompt(empty)
+        raise AssertionError("expected AuthorLLMError when no cluster can be offered")
+    except author_llm.AuthorLLMError as e:
+        assert "cluster" in str(e)
+
+
+def test_well_formed_cluster_citation_passes_validation():
+    author_llm.validate_structured_response(
+        _cited("collector", ["collector:fact_01", "collector:fact_03"]), "fact", TWO_CLUSTER_BRIEF
+    )  # must not raise
+
+
+def _assert_rejected(response, brief, expected_fragment):
+    try:
+        author_llm.validate_structured_response(response, "fact", brief)
+        raise AssertionError(f"expected AuthorLLMError containing {expected_fragment!r}")
+    except author_llm.AuthorLLMError as e:
+        assert expected_fragment in str(e), f"got: {e}"
+
+
+def test_selected_cluster_that_was_not_offered_is_rejected():
+    _assert_rejected(_cited("nonexistent", ["collector:fact_01"]), TWO_CLUSTER_BRIEF, "selected_cluster")
+    # A repo that had zero commits was never offered, so it cannot be selected.
+    _assert_rejected(_cited("radar", ["radar:fact_01"]), TWO_CLUSTER_BRIEF, "selected_cluster")
+    _assert_rejected(_cited(["collector"], ["collector:fact_01"]), TWO_CLUSTER_BRIEF, "selected_cluster")
+
+
+def test_fact_id_from_a_cluster_not_offered_this_run_is_rejected():
+    _assert_rejected(_cited("collector", ["radar:fact_01"]), TWO_CLUSTER_BRIEF, "radar:fact_01")
+    _assert_rejected(_cited("collector", ["ghost-repo:fact_01"]), TWO_CLUSTER_BRIEF, "ghost-repo:fact_01")
+
+
+def test_fact_id_from_another_offered_cluster_is_rejected():
+    _assert_rejected(_cited("collector", ["collector:fact_01", "brain:fact_01"]),
+                     TWO_CLUSTER_BRIEF, "brain:fact_01")
+
+
+def test_fact_id_that_does_not_exist_in_the_selected_cluster_is_rejected():
+    _assert_rejected(_cited("collector", ["collector:fact_99"]), TWO_CLUSTER_BRIEF, "collector:fact_99")
+    # Exact string match only: no fuzzy or semantic matching of IDs.
+    _assert_rejected(_cited("collector", ["Collector:fact_01"]), TWO_CLUSTER_BRIEF, "Collector:fact_01")
+    _assert_rejected(_cited("collector", ["collector:fact_1"]), TWO_CLUSTER_BRIEF, "collector:fact_1")
+
+
+def test_supporting_facts_must_be_a_non_empty_list_of_strings():
+    _assert_rejected(_cited("collector", []), TWO_CLUSTER_BRIEF, "supporting_facts")
+    _assert_rejected(_cited("collector", "collector:fact_01"), TWO_CLUSTER_BRIEF, "supporting_facts")
+    _assert_rejected(_cited("collector", [["collector:fact_01"]]), TWO_CLUSTER_BRIEF, "supporting_facts")
+
+
+def test_fact_mode_validation_without_the_daily_brief_fails_closed():
+    _assert_rejected(_cited("collector", ["collector:fact_01"]), None, "daily_brief")
+
+
+def test_idea_fallback_validation_needs_no_daily_brief_and_no_cluster_keys():
+    author_llm.validate_structured_response(
+        {"post": "Collector already tracks...", "fact_or_product": "Collector",
+         "emergent_property": "x", "evidence_to_collect": "y"},
+        "idea_fallback",
+    )  # must not raise
 
 
 PLAIN_FACTS_ONLY_POST = (
@@ -273,7 +458,8 @@ def test_post_check_accepts_plain_facts_only_post():
 
 def test_post_check_is_applied_by_validate_structured_response_in_both_modes():
     bad = {"post": "Hi all, I pushed commits.", "fact_or_product": "x", "emergent_property": "x",
-           "evidence_to_collect": "x"}
+           "evidence_to_collect": "x", "selected_cluster": "article-pipeline",
+           "supporting_facts": ["article-pipeline:fact_01"]}
     for mode in ("fact", "idea_fallback"):
         try:
             author_llm.validate_structured_response(bad, mode)
@@ -509,7 +695,21 @@ if __name__ == "__main__":
         test_fact_prompt_says_no_reason_if_the_input_has_none,
         test_fact_prompt_forbids_naming_adr_numbers,
         test_fact_prompt_keeps_the_l2_public_link_mechanism,
-        test_fact_response_requires_only_post_and_fact_or_product,
+        test_fact_response_requires_post_fact_or_product_and_the_cluster_keys,
+        test_build_clusters_assigns_stable_per_repo_fact_ids_to_the_exact_data_points,
+        test_repo_with_zero_commits_forms_no_cluster_and_is_never_offered,
+        test_fact_prompt_offers_only_id_tagged_clusters_not_a_flat_cross_repo_list,
+        test_fact_prompt_asks_for_one_cluster_with_neutral_selection_wording,
+        test_prompt_build_fails_loudly_when_per_repo_has_no_commit_messages_key,
+        test_prompt_build_fails_loudly_when_no_repo_has_any_commit,
+        test_well_formed_cluster_citation_passes_validation,
+        test_selected_cluster_that_was_not_offered_is_rejected,
+        test_fact_id_from_a_cluster_not_offered_this_run_is_rejected,
+        test_fact_id_from_another_offered_cluster_is_rejected,
+        test_fact_id_that_does_not_exist_in_the_selected_cluster_is_rejected,
+        test_supporting_facts_must_be_a_non_empty_list_of_strings,
+        test_fact_mode_validation_without_the_daily_brief_fails_closed,
+        test_idea_fallback_validation_needs_no_daily_brief_and_no_cluster_keys,
         test_post_check_rejects_adr_number,
         test_post_check_rejects_greeting,
         test_post_check_accepts_plain_facts_only_post,
