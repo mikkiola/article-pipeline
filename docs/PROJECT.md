@@ -26,7 +26,7 @@ verify.
 ## Current vs. Target (top-level)
 
 **Current:** the system produces publication-ready drafts (LinkedIn,
-Habr) from real data. No channel publishes automatically today.
+Habr) from real data. LinkedIn now publishes automatically from real data; Habr does not yet publish automatically.
 
 **Target:** every claimed content channel publishes automatically,
 end to end, from real data, with no manual step.
