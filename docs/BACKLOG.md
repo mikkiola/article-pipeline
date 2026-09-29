@@ -2427,7 +2427,9 @@ priority pivot.
 **Note, 2026-09-29.** This entry's `FACT -> EMERGENT PROPERTY -> INVERSION -> COMMERCIAL
 HYPOTHESIS` architecture is the historical basis partially restored by
 `docs/adr/0059-fact-mode-post-generation-evidence-grounded-reasoning-with-personal-position.md`
-(Accepted, supersedes `docs/adr/0044` and `docs/adr/0057`). Partially, not fully: INVERSION is
+(Accepted, supersedes `docs/adr/0057` in full and `docs/adr/0044` for fact-mode only —
+ADR-0044 remains Accepted and normative for `_build_idea_fallback_prompt()`). Its architecture
+is restored only partially, not fully: INVERSION is
 not restored (found, in the trial process ADR-0059 records, to consume narrative space better
 spent elsewhere and to add no identity signal); COMMERCIAL HYPOTHESIS returns as RELEVANT
 PROBLEM, not under its original name. ADR-0059, not this entry's own prose above, is now the
@@ -2484,7 +2486,9 @@ fabricated).
 `docs/adr/0044-linkedin-daily-post-voice-contract.md`.
 
 **Note, 2026-09-29 — re-scoped, not closed.** `docs/adr/0044-linkedin-daily-post-voice-contract.md`
-is now `status: Superseded` (`superseded_by: ADR-0059`); this entry's four checkboxes above
+is now superseded by ADR-0059 for fact-mode only (`status: Accepted` remains, `superseded_by`
+names the fact-mode-only scope) — it stays the active, normative specification for
+`_build_idea_fallback_prompt()`, unaffected by this note; this entry's four checkboxes above
 describe implementing ADR-0044's Narrative Bridge specification (30/40/30 structure, the
 150-250 word/max-3-sentences constraint, the specific forbidden-vocabulary list, the numbered
 causal-chain rule, the three-tier evidence rule) for `_build_fact_prompt()` — **do not
@@ -2526,14 +2530,15 @@ live-check call needed for the L2 evidence tier (not present anywhere in
 confirmed by direct code read in a prior session, 2026-09-29. It was never corrected in the
 original checkbox text; noted here rather than silently left to mislead a future reader.
 
-**Noticed, not resolved here:** ADR-0044 governed both `_build_fact_prompt()` and
-`_build_idea_fallback_prompt()` (its own Decision line names both). ADR-0059's own scope, as
-decided, covers fact-mode only — it says nothing about `_build_idea_fallback_prompt()`.
-Superseding ADR-0044 in full therefore leaves `_build_idea_fallback_prompt()`'s Narrative
+**Noticed 2026-09-29, resolved same day:** ADR-0044 governed both `_build_fact_prompt()` and
+`_build_idea_fallback_prompt()` (its own Decision line names both), but ADR-0059's own scope
+covers fact-mode only — it originally said nothing about `_build_idea_fallback_prompt()`, and
+fully superseding ADR-0044 would have left that builder's Narrative
 Bridge/`STYLE_CONSTRAINTS`/`VOICE_CONTRACT` structure referencing a now-Superseded ADR with no
-replacement decision naming it. Not something this entry resolves — flagging it so it isn't
-silently lost; the owner may want either a narrower ADR-0059 scope statement or a follow-up
-decision for idea_fallback mode specifically.
+replacement decision naming it. Resolved by narrowing ADR-0059's own Decision point 1 and
+ADR-0044's frontmatter to fact-mode-only supersession, same day: ADR-0044 stays `status:
+Accepted` and remains the active, normative specification for `_build_idea_fallback_prompt()`
+and idea_fallback mode generally, unaffected by ADR-0059.
 
 ### [B-059] P2 — Collector CI: WORKSPACE_ROOT hardcoding + actions/checkout@v4 path failure — RESOLVED
 

@@ -78,10 +78,16 @@ failure found in the previous stage's real model output:
 
 ## Decision
 
-1. **This ADR supersedes both ADR-0044 and ADR-0057.** Both remain unchanged as historical
-   records (Immutable Lineage). This ADR is the current source of truth for fact-mode post
-   content and structure. Their frontmatter is updated to reflect this; their body text is
-   untouched.
+1. **This ADR supersedes ADR-0057 in full, and supersedes ADR-0044 only for fact-mode.**
+   ADR-0057's facts-only boundary applied to fact-mode generation exclusively, so its full
+   supersession is unambiguous. ADR-0044's Narrative Bridge voice contract governed both
+   `_build_fact_prompt()` and `_build_idea_fallback_prompt()` — this ADR's reasoning contract
+   (Decision point 4 below) replaces ADR-0044 only for the fact-mode path
+   (`_build_fact_prompt()`). ADR-0044 remains the active, normative specification for
+   `_build_idea_fallback_prompt()` and idea_fallback mode generally, until a future decision
+   addresses that mode specifically. Both ADR-0044 and ADR-0057 remain unchanged as historical
+   records (Immutable Lineage); only ADR-0044's frontmatter reflects a partial-supersession
+   note, and ADR-0057's frontmatter reflects full supersession.
 
 2. **What is preserved from ADR-0057, unchanged:** a post must never state, imply, or invent
    a fact about the real product, the developer's actual historical motivation, or the
@@ -207,4 +213,6 @@ Owner decision, 2026-09-29, following an extended trial process (standalone sand
 archived by the owner as `article-pipeline-trial-archive-20260929.tar.gz`, not committed to
 this repository); `[B-057]` (2026-09-03) as the historical record of the original
 FACT/EMERGENT PROPERTY/INVERSION/COMMERCIAL HYPOTHESIS concept partially restored by this
-decision; `docs/adr/0044` and `docs/adr/0057` as the two superseded prior decisions.
+decision; `docs/adr/0057` as the prior decision this ADR fully supersedes, and `docs/adr/0044`
+as the prior decision this ADR supersedes for fact-mode only, remaining otherwise Accepted and
+normative for `_build_idea_fallback_prompt()`.

@@ -1,8 +1,8 @@
 ---
 id: ADR-0044
-status: Superseded
+status: Accepted
 supersedes: null
-superseded_by: ADR-0059
+superseded_by: "ADR-0059 (fact-mode only; idea_fallback mode remains governed by this ADR)"
 source_type: verbatim
 ---
 
