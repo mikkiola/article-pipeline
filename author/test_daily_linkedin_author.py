@@ -64,9 +64,10 @@ def _fake_response(payload: dict):
 def test_fact_mode_builds_fact_prompt_and_parses_wellformed_response():
     with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
         prompt = author_llm.build_prompt(SAMPLE_FACT_DAILY_BRIEF)
-    # Facts-only structure (temporary, 2026-09-24): the old FACT/EMERGENT
-    # PROPERTY/INVERSION/COMMERCIAL HYPOTHESIS steps are gone.
-    assert "Repo/context" in prompt
+    # ADR-0059 five-step reasoning structure: the old EMERGENT PROPERTY/
+    # INVERSION/COMMERCIAL HYPOTHESIS steps stay gone (INVERSION is
+    # explicitly not restored, ADR-0059 Decision point 5).
+    assert "1. FACT" in prompt
     assert "EMERGENT PROPERTY" not in prompt
     # Real DailyBrief data must actually appear in the prompt, as an
     # ID-tagged cluster fact, not be dropped or replaced with a placeholder.
@@ -75,9 +76,15 @@ def test_fact_mode_builds_fact_prompt_and_parses_wellformed_response():
 
     fake_payload = {
         "post": "Saw something odd in today's diff...",
-        "fact_or_product": "the MVP pilot commit in article-pipeline",
         "selected_cluster": "article-pipeline",
         "supporting_facts": ["article-pipeline:fact_01", "article-pipeline:fact_02"],
+        "reasoning": {
+            "fact": "Two commits landed in article-pipeline.",
+            "tension": "A pilot feature and a scoping fix landed together.",
+            "design_insight": "The author treats scope correction as part of shipping, not cleanup.",
+            "personal_position": "I want scope drift caught before it needs its own commit.",
+            "relevant_problem": "Teams may ship features whose scope quietly widens unnoticed.",
+        },
     }
     with mock.patch.object(author_llm, "_get_api_key", return_value="fake-key"), \
             mock.patch("daily_linkedin_author.anthropic.Anthropic") as MockAnthropic:
@@ -118,10 +125,13 @@ def test_idea_fallback_mode_builds_idea_prompt_and_parses_wellformed_response():
     author_llm.validate_structured_response(response, "idea_fallback")  # must not raise
 
 
-# --- Temporary facts-only fact prompt (owner request, 2026-09-24) ---------
+# --- Fact prompt (ADR-0059: five-step evidence-grounded reasoning) --------
 # Replaces test_fact_prompt_contains_adr_0044_voice_contract: the fact
 # prompt deliberately no longer implements ADR-0044's Narrative Bridge
-# structure. The fallback prompt still does — see its test below.
+# structure. The fallback prompt still does — see its test below. Also
+# replaces the ADR-0057 facts-only structure's own tests (2026-09-24 —
+# 2026-09-29): ADR-0059 lifted that structure's blanket reasoning
+# prohibition, see docs/adr/0059-....md.
 
 SYNTHETIC_FACTS_BRIEF = {
     "mode": "fact",
@@ -154,24 +164,28 @@ def _facts_prompt():
         return " ".join(author_llm.build_prompt(SYNTHETIC_FACTS_BRIEF).split())
 
 
-def test_fact_prompt_has_facts_only_shape_and_drops_removed_instructions():
+def test_fact_prompt_has_five_step_reasoning_shape_in_order():
     prompt = _facts_prompt()
-    # Target shape, in order: repo/context -> change -> evidence -> question.
+    # Target shape, in order: FACT -> TENSION -> DESIGN INSIGHT ->
+    # PERSONAL POSITION -> RELEVANT PROBLEM, then a FINAL EVIDENCE CHECK
+    # step (ADR-0059 Decision point 4).
     positions = [prompt.index(f"{n}. {name}") for n, name in
-                 ((1, "Repo/context"), (2, "Change"), (3, "Evidence"), (4, "Question"))]
+                 ((1, "FACT"), (2, "TENSION"), (3, "DESIGN INSIGHT"),
+                  (4, "PERSONAL POSITION"), (5, "RELEVANT PROBLEM"))]
     assert positions == sorted(positions)
-    assert "exactly one open question" in prompt
-    assert "No greeting" in prompt
-    assert "100-200 words" in prompt
+    assert positions[-1] < prompt.index("FINAL EVIDENCE CHECK")
+    assert "150-300 words" in prompt
     assert "Maximum 3 sentences per paragraph" in prompt
     assert "First person, active voice" in prompt
-    assert "No hashtags" in prompt and "No emoji" in prompt
-    # Removed instruction texts must be gone.
+    assert "No hashtags" in prompt and "No emoji" in prompt and "No greeting" in prompt
+    # INVERSION is explicitly not restored (ADR-0059 Decision point 5); the
+    # old EMERGENT PROPERTY/COMMERCIAL HYPOTHESIS structure and ADR-0044's
+    # Narrative Bridge stay gone too.
     for removed in (
         "EMERGENT PROPERTY", "INVERSION", "COMMERCIAL HYPOTHESIS",
         "Narrative Bridge", "30/40/30", "L3 market signal", "Bridge (~40%",
         "feedback loop", "150-250", '"emergent_property"', '"inversion"',
-        '"commercial_hypothesis"',
+        '"commercial_hypothesis"', '"fact_or_product"',
     ):
         assert removed not in prompt, f"removed instruction text still present: {removed!r}"
     # Real input still reaches the model as ID-tagged cluster facts, and
@@ -182,31 +196,81 @@ def test_fact_prompt_has_facts_only_shape_and_drops_removed_instructions():
     assert "1000" not in prompt
 
 
+def test_fact_prompt_drops_adr_0057_facts_only_prohibition_language():
+    # ADR-0059 Decision point 3 lifts ADR-0057's blanket ban on any
+    # reasoning over facts; only the fixed structural order and the
+    # blanket "no reason/consequence/insight" language are gone. The
+    # underlying no-invented-fact boundary (checked in the next test) is
+    # preserved unchanged (ADR-0059 Decision point 2).
+    prompt = _facts_prompt()
+    for removed in (
+        "Repo/context", "Write the post in exactly this order",
+        'Do not include a reason ("because...")',
+        "exactly one open question",
+    ):
+        assert removed not in prompt, f"ADR-0057 structural text still present: {removed!r}"
+
+
+def test_reasoning_validation_accepts_well_formed_object_and_rejects_missing_pieces():
+    good = {
+        "post": "text", "selected_cluster": "article-pipeline",
+        "supporting_facts": ["article-pipeline:fact_01"],
+        "reasoning": {
+            "fact": "a", "tension": "b", "design_insight": "c",
+            "personal_position": "d", "relevant_problem": "e",
+        },
+    }
+    author_llm.validate_reasoning(good)  # must not raise
+
+    missing_object = {k: v for k, v in good.items() if k != "reasoning"}
+    try:
+        author_llm.validate_reasoning(missing_object)
+        raise AssertionError("expected AuthorLLMError for a response with no 'reasoning' object")
+    except author_llm.AuthorLLMError as e:
+        assert "reasoning" in str(e)
+
+    for missing_field in author_llm.REASONING_REQUIRED_KEYS:
+        broken = {**good, "reasoning": {k: v for k, v in good["reasoning"].items() if k != missing_field}}
+        try:
+            author_llm.validate_reasoning(broken)
+            raise AssertionError(f"expected AuthorLLMError for a reasoning object missing {missing_field!r}")
+        except author_llm.AuthorLLMError as e:
+            assert missing_field in str(e), f"got: {e}"
+
+    empty_field = {**good, "reasoning": {**good["reasoning"], "tension": "   "}}
+    try:
+        author_llm.validate_reasoning(empty_field)
+        raise AssertionError("expected AuthorLLMError for a blank reasoning field")
+    except author_llm.AuthorLLMError as e:
+        assert "tension" in str(e)
+
+
 def test_fact_prompt_says_no_reason_if_the_input_has_none():
+    # ADR-0059 lifts the blanket reasoning ban but still forbids inventing a
+    # reason absent from the data, explicitly including in PERSONAL POSITION.
     prompt = _facts_prompt()
     assert (
-        "If the input does not contain a reason for a change, say nothing about a reason"
+        "If it does not contain a reason for a change, do not invent one — "
+        "not even in the PERSONAL POSITION step below"
         in prompt
     )
-    assert "If the data contains no reason, the post states none" in prompt
     assert "ONLY source of facts" in prompt
     assert "Never invent a number" in prompt
 
 
 def test_fact_prompt_states_the_evidence_boundary_explicitly():
+    # Preserved unchanged from ADR-0057 (ADR-0059 Decision point 2): no
+    # invented facts, and co-occurrence is never evidence of a causal or
+    # design relationship.
     prompt = _facts_prompt()
     assert "Only use information present in the supplied data above" in prompt
     assert (
-        "Do not infer or invent the author's motivation, reason, consequence, "
-        "or lesson from a commit subject, a diffstat, or a file path"
+        "Temporal proximity or co-occurrence in the same batch is not "
+        "evidence of a causal or design relationship"
     ) in prompt
     assert (
-        "a commit subject describes what changed; it does not establish why it "
-        "was changed"
-    ) in prompt
-    assert (
-        "If the supplied data does not contain a reason, do not state one, "
-        "imply one, or hint that one exists"
+        "never invent a fact, user, reason, pain point, metric, or product "
+        "state not present here"
     ) in prompt
 
 
@@ -219,10 +283,14 @@ def test_fact_prompt_stays_silent_about_commit_body_trailers():
     assert "trailer" not in prompt.lower()
 
 
-def test_evidence_boundary_text_is_not_added_to_the_idea_fallback_prompt():
+def test_reasoning_step_text_is_not_added_to_the_idea_fallback_prompt():
+    # ADR-0059's five-step reasoning contract (fact-mode only) must not leak
+    # into idea_fallback, which stays on ADR-0044's Narrative Bridge.
     with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
         prompt = " ".join(author_llm.build_prompt(SAMPLE_IDEA_FALLBACK_DAILY_BRIEF).split())
-    assert "it does not establish why it was changed" not in prompt
+    assert "DESIGN INSIGHT" not in prompt
+    assert "RELEVANT PROBLEM" not in prompt
+    assert "FINAL EVIDENCE CHECK" not in prompt
 
 
 def test_fact_prompt_forbids_naming_adr_numbers():
@@ -241,19 +309,27 @@ def test_fact_prompt_keeps_the_l2_public_link_mechanism():
     assert "https://github.com/mikkiola/radar" not in prompt
 
 
-def test_fact_response_requires_post_fact_or_product_and_the_cluster_keys():
+_GOOD_REASONING = {
+    "fact": "a", "tension": "b", "design_insight": "c",
+    "personal_position": "d", "relevant_problem": "e",
+}
+
+
+def test_fact_response_requires_post_cluster_and_reasoning_keys():
     assert author_llm.FACT_REQUIRED_KEYS == {
-        "post", "fact_or_product", "selected_cluster", "supporting_facts",
+        "post", "selected_cluster", "supporting_facts", "reasoning",
     }
     author_llm.validate_structured_response(
-        {"post": "I pushed 3 commits to article-pipeline.", "fact_or_product": "x",
+        {"post": "I pushed 3 commits to article-pipeline.",
          "selected_cluster": "article-pipeline",
-         "supporting_facts": ["article-pipeline:fact_01"]},
+         "supporting_facts": ["article-pipeline:fact_01"],
+         "reasoning": dict(_GOOD_REASONING)},
         "fact", SYNTHETIC_FACTS_BRIEF,
     )  # must not raise
-    for missing in ("fact_or_product", "selected_cluster", "supporting_facts"):
-        full = {"post": "text", "fact_or_product": "x", "selected_cluster": "article-pipeline",
-                "supporting_facts": ["article-pipeline:fact_01"]}
+    for missing in ("selected_cluster", "supporting_facts", "reasoning"):
+        full = {"post": "text", "selected_cluster": "article-pipeline",
+                "supporting_facts": ["article-pipeline:fact_01"],
+                "reasoning": dict(_GOOD_REASONING)}
         del full[missing]
         try:
             author_llm.validate_structured_response(full, "fact", SYNTHETIC_FACTS_BRIEF)
@@ -289,8 +365,12 @@ def _cluster_prompt(brief):
 
 
 def _cited(post_cluster, facts):
-    return {"post": "I pushed commits.", "fact_or_product": "x",
-            "selected_cluster": post_cluster, "supporting_facts": facts}
+    # A well-formed 'reasoning' object by default: these tests target
+    # selected_cluster/supporting_facts citation logic, not reasoning shape
+    # (covered separately by test_reasoning_validation_accepts_well_formed_
+    # object_and_rejects_missing_pieces).
+    return {"post": "I pushed commits.", "selected_cluster": post_cluster,
+            "supporting_facts": facts, "reasoning": dict(_GOOD_REASONING)}
 
 
 def test_build_clusters_assigns_stable_per_repo_fact_ids_to_the_exact_data_points():
@@ -459,7 +539,7 @@ def test_post_check_accepts_plain_facts_only_post():
 def test_post_check_is_applied_by_validate_structured_response_in_both_modes():
     bad = {"post": "Hi all, I pushed commits.", "fact_or_product": "x", "emergent_property": "x",
            "evidence_to_collect": "x", "selected_cluster": "article-pipeline",
-           "supporting_facts": ["article-pipeline:fact_01"]}
+           "supporting_facts": ["article-pipeline:fact_01"], "reasoning": dict(_GOOD_REASONING)}
     for mode in ("fact", "idea_fallback"):
         try:
             author_llm.validate_structured_response(bad, mode)
@@ -571,12 +651,12 @@ def test_missing_api_key_env_var_raises_fail_fast_error_not_bare_keyerror():
 
 
 def test_malformed_response_missing_keys_raises_clear_error():
-    incomplete_payload = {"post": "some text"}  # missing fact_or_product/emergent_property/etc.
+    incomplete_payload = {"post": "some text"}  # missing selected_cluster/supporting_facts/reasoning
     try:
         author_llm.validate_structured_response(incomplete_payload, "fact")
         raise AssertionError("expected AuthorLLMError for a response missing required keys")
     except author_llm.AuthorLLMError as e:
-        assert "fact_or_product" in str(e), f"error should name the missing key(s), got: {e}"
+        assert "selected_cluster" in str(e), f"error should name the missing key(s), got: {e}"
 
 
 def test_non_json_response_raises_clear_error_not_silent_fallback():
@@ -691,11 +771,16 @@ if __name__ == "__main__":
     tests = [
         test_fact_mode_builds_fact_prompt_and_parses_wellformed_response,
         test_idea_fallback_mode_builds_idea_prompt_and_parses_wellformed_response,
-        test_fact_prompt_has_facts_only_shape_and_drops_removed_instructions,
+        test_fact_prompt_has_five_step_reasoning_shape_in_order,
+        test_fact_prompt_drops_adr_0057_facts_only_prohibition_language,
+        test_reasoning_validation_accepts_well_formed_object_and_rejects_missing_pieces,
         test_fact_prompt_says_no_reason_if_the_input_has_none,
+        test_fact_prompt_states_the_evidence_boundary_explicitly,
+        test_fact_prompt_stays_silent_about_commit_body_trailers,
+        test_reasoning_step_text_is_not_added_to_the_idea_fallback_prompt,
         test_fact_prompt_forbids_naming_adr_numbers,
         test_fact_prompt_keeps_the_l2_public_link_mechanism,
-        test_fact_response_requires_post_fact_or_product_and_the_cluster_keys,
+        test_fact_response_requires_post_cluster_and_reasoning_keys,
         test_build_clusters_assigns_stable_per_repo_fact_ids_to_the_exact_data_points,
         test_repo_with_zero_commits_forms_no_cluster_and_is_never_offered,
         test_fact_prompt_offers_only_id_tagged_clusters_not_a_flat_cross_repo_list,

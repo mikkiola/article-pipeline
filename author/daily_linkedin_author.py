@@ -242,11 +242,26 @@ def _clusters_block(clusters: list) -> str:
     return "\n\n".join(blocks)
 
 
-# Facts-only structure (temporary since 2026-09-24, deviates from ADR-0044's
-# Narrative Bridge). The "does not explain, interpret, or speculate" wording,
-# the three evidence-boundary statements and the no-reason/consequence
-# paragraph below are ADR-0057's, quoted unchanged; Experiment 1 changes only
-# how facts are grouped, selected and cited. Deliberately does not embed
+# Five-step evidence-grounded reasoning structure (ADR-0059, 2026-09-29),
+# replacing the facts-only structure ADR-0057 required (2026-09-24).
+# Preserved unchanged from ADR-0057 (ADR-0059 Decision point 2): a post must
+# never state, imply, or invent a fact about the real product, the author's
+# actual historical motivation, or the external world beyond what the
+# supplied fact cluster contains, and co-occurrence of two commits is never
+# evidence of a causal or design relationship between them. Lifted from
+# ADR-0057 (Decision point 3): the blanket prohibition on any reasoning over
+# facts — reasoning is now required, provided it is framed as interpretation,
+# thought experiment, or preference, never as established fact. Wording for
+# the five steps and the FINAL EVIDENCE CHECK is sourced from the owner's
+# standalone trial process (article-pipeline-trial-archive-20260929.tar.gz:
+# trial_emergent_post.py's v4 lens-based prompt for the five steps,
+# trial_identity_post.py's v2 SIXTH step for the evidence check), with the
+# trial's lens-splitting (a validation technique for proving the fact
+# cluster yields distinct tensions, not part of ADR-0059's shipped contract)
+# and identity-continuity machinery (ADR-0059 Decision point 6, deferred —
+# see docs/BACKLOG.md) both omitted: this function makes one reasoning pass,
+# not three, and takes no identity_state/recent_posts input. INVERSION is
+# not restored (ADR-0059 Decision point 5). Deliberately does not embed
 # STYLE_CONSTRAINTS/VOICE_CONTRACT, which still carry the Narrative Bridge
 # wording and remain in use by _build_idea_fallback_prompt.
 def _build_fact_prompt(daily_brief: dict) -> str:
@@ -256,8 +271,8 @@ def _build_fact_prompt(daily_brief: dict) -> str:
     evidence_links = _build_evidence_links([{"name": c["repo"]} for c in clusters])
     return f"""\
 You are drafting one LinkedIn post from a single day's real engineering
-activity. The post reports what changed, using only the data below. It
-does not explain, interpret, or speculate.
+activity. Work through five reasoning steps in order, then synthesize a
+post from them.
 
 Today's real data (DailyBrief), this is your ONLY source of facts —
 never invent a fact, user, reason, pain point, metric, or product state
@@ -270,48 +285,92 @@ What the data does and does not contain:
 - Each fact is a commit subject line or a count computed from that
   repository's own data; a fact's ID refers to exactly that data point.
 - The data has no commit bodies, no reasons, no test results, and no
-  commit hashes. If the input does not contain a reason for a change,
-  say nothing about a reason.
+  commit hashes. If it does not contain a reason for a change, do not
+  invent one — not even in the PERSONAL POSITION step below.
 - Only use information present in the supplied data above.
-- Do not infer or invent the author's motivation, reason, consequence,
-  or lesson from a commit subject, a diffstat, or a file path — a
-  commit subject describes what changed; it does not establish why it
-  was changed.
-- If the supplied data does not contain a reason, do not state one,
-  imply one, or hint that one exists.
 
-Selecting and connecting facts:
+Selecting a cluster:
 - Select exactly ONE cluster: select one repository whose cluster
   contains enough related facts to form a coherent post. If more than
   one cluster qualifies, any one of them is acceptable.
-- The post uses only facts from the selected cluster. Do not mention
-  facts, changes, or repositories from any other cluster.
+- Every step below, and the final post, uses only facts from the
+  selected cluster. Do not mention facts, changes, or repositories from
+  any other cluster.
 - You may connect 2-3 of the selected cluster's facts into one
-  connected paragraph instead of listing them as separate sentences.
-  Connecting facts does not permit stating why something was done, what
-  it leads to, or what it means; the prohibitions in this prompt apply
-  unchanged.
+  connected paragraph in the FACT step instead of listing them as
+  separate sentences. Connecting facts does not permit stating why
+  something was done, what it leads to, or what it means — the FACT
+  step's own no-interpretation rule below still applies.
 
-Write the post in exactly this order, as short paragraphs:
-1. Repo/context — one short line naming the selected repository. No
-   greeting. No hook. No opening claim that is not in the data.
-2. Change — what changed, stated only from the selected cluster's
-   commit subject facts. A subject line may be paraphrased; do not
-   embellish it. Do not name ADR numbers, even if a commit subject
-   contains one — describe the change in plain words instead.
-3. Evidence — only facts actually in the selected cluster: its commit
-   count, its files-touched count, its repository name. Include a public
-   repository link only if the L2 block below lists it for the selected
-   repository. Do not name ADR numbers as evidence. Nothing else counts
-   as evidence.
-4. Question — exactly one open question, at the end, in the body. No
-   pitch. It must not state or imply a reason, a consequence, or a
-   benefit.
+Work through these five steps, in this order:
 
-Do not include a reason ("because..."), a consequence, a claim about
-what something matters for, an insight or lesson, a hypothesis, a
-prediction, or an idea of what something could become. If the data
-contains no reason, the post states none.
+1. FACT — restate, in your own words, what the selected cluster's
+   commits actually changed. Only what is directly supported by its
+   facts. No interpretation, no reason, no consequence. Do not name ADR
+   numbers, even if a commit subject contains one — describe the change
+   in plain words instead.
+
+2. TENSION — identify a concrete, specific gap, mismatch, asymmetry, or
+   unresolved design question visible in the selected cluster itself.
+   State the observation itself, not an inferred reason for it. Do not
+   infer that one commit was designed to detect, cause, enable, or
+   respond to another commit unless that relationship is directly
+   stated in the facts. Temporal proximity or co-occurrence in the same
+   batch is not evidence of a causal or design relationship — state
+   only that both things are true at once, never that one explains or
+   was built for the other.
+
+3. DESIGN INSIGHT — what does this tension reveal about the kind of
+   system the author wants to build, or the kind of engineering the
+   author values? State this as your own interpretation, not something
+   today's commits prove as a universal law. The insight must preserve
+   the exact object of the tension — do not introduce a new actor,
+   system capability, failure mode, causal mechanism, or market
+   behavior absent from the facts, and do not depend on an unstated
+   design intent. Specificity test: if this sentence could be published
+   about almost any project with a similarly-shaped commit, it fails
+   and must be rewritten, not hedged.
+
+4. PERSONAL POSITION — given this tension, formulate a present-tense
+   engineering preference or design value the author could reasonably
+   carry forward into other systems — explicitly framed as something
+   today's work may strengthen, clarify, or cause the author to
+   formulate, never as a claim about the historical motivation behind
+   the actual commits. The position must still originate from today's
+   tension, but may be broader than what today's data proves — only the
+   underlying FACT and TENSION must remain proven, not the position
+   itself.
+
+5. RELEVANT PROBLEM — describe a real-world problem or pain this
+   position or insight plausibly addresses, framed explicitly as an
+   untested hypothesis, never as a confirmed fact about any market,
+   product, or user.
+
+Then write "post": a single synthesized LinkedIn post of 150-300 words
+that moves through FACT, TENSION, DESIGN INSIGHT, PERSONAL POSITION, and
+RELEVANT PROBLEM as a readable narrative. Do not include a separate
+inversion or thought-experiment beat in the post. It must never present
+the TENSION, DESIGN INSIGHT, or RELEVANT PROBLEM content as an
+established, confirmed, or planned fact, and it must never state or
+imply a historical reason for the actual commit(s) above. Include a
+public repository link only if the L2 block below lists it for the
+selected repository. Do not name ADR numbers as evidence.
+
+FINAL EVIDENCE CHECK — before returning your response, inspect every
+factual or causal statement in the finished post. For each one, verify
+it is directly supported by the selected cluster's facts. Do not state
+as fact: absence of a capability or mechanism unless the facts
+explicitly establish that absence; what "nobody", "the team", "the
+system", or "the author" could or could not do; causal relationships
+not explicitly present in the facts; conclusions about what the work
+"really was" beyond the supplied evidence; or user, business, market, or
+operational impact not present in the data. Interpretations and the
+personal position may go beyond the facts, but must be phrased
+explicitly as interpretation or preference, never as observed fact. If a
+sentence cannot pass this check, rewrite it conservatively or remove it
+— do not add new information while repairing it. This check does not
+constrain the personal position itself: the evidence requirement applies
+to claims about reality, not to the author's stated preference.
 
 Numbers: every number in the post must appear in the selected cluster's
 facts or be a direct count of items in them (use the counts given in the
@@ -319,8 +378,8 @@ facts). Never invent a number. Do not use diffstat or lines-changed
 counts as evidence.
 
 Style constraints, apply these strictly:
-- 100-200 words. Maximum 3 sentences per paragraph.
-- First person, active voice. No hashtags. No emoji.
+- 150-300 words. Maximum 3 sentences per paragraph.
+- First person, active voice. No hashtags. No emoji. No greeting.
 - No motivational language, no startup clichés ("game changer",
   "revolutionary", "unlock", "supercharge"), no false certainty.
 - Write in English (LinkedIn audience).
@@ -332,13 +391,15 @@ Style constraints, apply these strictly:
 The JSON object must have exactly these keys:
 - "post": the final LinkedIn post text (string). This is the only
   field intended for actual publication.
-- "fact_or_product": the main change the post reports, in one line
-  (string). For the owner's own review, it will not be posted.
 - "selected_cluster": the repository name of the one cluster you
   selected, exactly as written after "Cluster:" above (string).
-- "supporting_facts": the exact fact IDs of the facts the post draws on,
-  for example ["<repo>:fact_01", "<repo>:fact_03"], using only IDs from
-  the selected cluster (list of strings)."""
+- "supporting_facts": the exact fact IDs of the facts your reasoning
+  and post draw on, for example ["<repo>:fact_01", "<repo>:fact_03"],
+  using only IDs from the selected cluster (list of strings).
+- "reasoning": an object with exactly these five string fields —
+  "fact", "tension", "design_insight", "personal_position",
+  "relevant_problem" — holding the text you produced for each step
+  above. For the owner's own review; not published verbatim."""
 
 
 # NOTE: this fallback builder still uses the Narrative Bridge structure
@@ -401,13 +462,19 @@ The last two fields are for the owner's own Evidence review, not for
 publication — they will not be posted."""
 
 
-# emergent_property / inversion / commercial_hypothesis were dropped from
-# the fact response on 2026-09-24 (temporary facts-only structure): they
-# only existed to hold the removed emergent-property/inversion/hypothesis
-# steps. selected_cluster / supporting_facts were added on 2026-09-26
-# (Experiment 1: per-repo clusters with ID-based citation).
-# idea_fallback keeps its own keys, unchanged.
-FACT_REQUIRED_KEYS = {"post", "fact_or_product", "selected_cluster", "supporting_facts"}
+# ADR-0059 (2026-09-29) replaces the facts-only structure's fact_or_product
+# field (a one-line summary for the owner's review) with "reasoning", a
+# nested object carrying the five-step evidence-grounded reasoning contract
+# (fact/tension/design_insight/personal_position/relevant_problem) as
+# machine-readable metadata — per the owner's B-068 decision, this metadata
+# stays in the structured response, never as an in-text marker in "post",
+# the field actually published. selected_cluster / supporting_facts (added
+# 2026-09-26, Experiment 1) are unchanged. idea_fallback keeps its own keys,
+# unchanged (ADR-0044 remains normative there).
+REASONING_REQUIRED_KEYS = {
+    "fact", "tension", "design_insight", "personal_position", "relevant_problem",
+}
+FACT_REQUIRED_KEYS = {"post", "selected_cluster", "supporting_facts", "reasoning"}
 IDEA_FALLBACK_REQUIRED_KEYS = {
     "post", "fact_or_product", "emergent_property", "evidence_to_collect",
 }
@@ -481,6 +548,34 @@ def verify_cited_facts(response: dict, daily_brief: dict) -> None:
         )
 
 
+def validate_reasoning(response: dict) -> None:
+    """Fact mode only (ADR-0059). Verifies the 'reasoning' object carries
+    all five required string fields — presence and type only. This does not
+    judge whether the content is itself evidence-grounded: verify_cited_facts
+    covers citation grounding against supporting_facts; nothing here
+    re-derives semantic correctness of the reasoning text."""
+    reasoning = response.get("reasoning")
+    if not isinstance(reasoning, dict):
+        raise AuthorLLMError(
+            f"Model response's 'reasoning' field must be an object, got: {reasoning!r}"
+        )
+    missing = REASONING_REQUIRED_KEYS - reasoning.keys()
+    if missing:
+        raise AuthorLLMError(
+            f"Model response's 'reasoning' object is missing required key(s): "
+            f"{sorted(missing)}. Full reasoning: {reasoning!r}"
+        )
+    invalid = [
+        key for key in REASONING_REQUIRED_KEYS
+        if not isinstance(reasoning.get(key), str) or not reasoning[key].strip()
+    ]
+    if invalid:
+        raise AuthorLLMError(
+            f"Model response's 'reasoning' object has non-string or empty "
+            f"value(s) for key(s): {sorted(invalid)}. Full reasoning: {reasoning!r}"
+        )
+
+
 def validate_structured_response(response: dict, mode: str, daily_brief: dict | None = None) -> None:
     required = FACT_REQUIRED_KEYS if mode == "fact" else IDEA_FALLBACK_REQUIRED_KEYS
     missing = required - response.keys()
@@ -496,6 +591,7 @@ def validate_structured_response(response: dict, mode: str, daily_brief: dict | 
         )
     check_post_content(response["post"])
     if mode == "fact":
+        validate_reasoning(response)
         if daily_brief is None:
             raise AuthorLLMError(
                 "fact-mode validation needs the daily_brief the prompt was built from "

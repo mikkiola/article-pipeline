@@ -345,9 +345,15 @@ _SHAPED_BRIEF = {
 
 _GOOD_CITATION = {
     "post": "I pushed a commit to r.",
-    "fact_or_product": "fix: alpha",
     "selected_cluster": "r",
     "supporting_facts": ["r:fact_01"],
+    "reasoning": {
+        "fact": "One commit landed in r.",
+        "tension": "A fix landed with no accompanying test change.",
+        "design_insight": "The author treats a narrow fix as complete on its own.",
+        "personal_position": "I want fixes to stay small enough to land alone.",
+        "relevant_problem": "Small fixes can hide in larger, harder-to-review batches.",
+    },
 }
 
 
