@@ -3050,6 +3050,28 @@ alongside that work, not after a marking-free version already ships.
 
 **Source.** `docs/adr/0059`'s Decision point 9, 2026-09-29.
 
+**Decision (owner, 2026-09-29) — closed, no longer open.** Option A: **dedicated field, not
+in-text marking.** The FACT/interpretation distinction is represented in machine-readable
+metadata accompanying the post — the existing structured response fields (`fact`, `tension`,
+`design_insight`, `personal_position`, `relevant_problem`) — not as visible inline markers in
+the published post text itself.
+
+Rationale, stated plainly:
+- In-text markers (Option B) would degrade natural reading and visibly expose the generator's
+  internal pipeline structure to the reader — contrary to the goal of the reader seeing an
+  engineer's voice, not a labeling scheme.
+- No marking at all (Option C) is too weak: it would leave the FACT/interpretation distinction
+  as an implicit prompt rule with no way to later verify or trace which part of a published
+  post came from which source.
+- A dedicated field (Option A) preserves both properties: the post reads as natural human
+  text, while provenance/evidence stays traceable inside the pipeline's own data.
+
+**Explicitly not decided by this closure:** the detailed schema of that metadata field (exact
+structure, storage format, how it relates to `publication_registry`'s existing record shape) —
+that is deferred to production implementation, not designed now. This closure fixes only the
+choice of representation (dedicated field vs. in-text marker vs. no marking), per this entry's
+own stated scope.
+
 ### [B-069] P2 — Automation-only-day pre-call guard for fact-mode generation
 
 Added: 2026-09-29, following
