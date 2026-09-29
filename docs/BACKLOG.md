@@ -2424,6 +2424,27 @@ never sent and is now obsolete.
 **Source.** Owner decision, 2026-09-03, continuing `[B-056]`'s
 priority pivot.
 
+**Note, 2026-09-29.** This entry's `FACT -> EMERGENT PROPERTY -> INVERSION -> COMMERCIAL
+HYPOTHESIS` architecture is the historical basis partially restored by
+`docs/adr/0059-fact-mode-post-generation-evidence-grounded-reasoning-with-personal-position.md`
+(Accepted, supersedes `docs/adr/0044` and `docs/adr/0057`). Partially, not fully: INVERSION is
+not restored (found, in the trial process ADR-0059 records, to consume narrative space better
+spent elsewhere and to add no identity signal); COMMERCIAL HYPOTHESIS returns as RELEVANT
+PROBLEM, not under its original name. ADR-0059, not this entry's own prose above, is now the
+current specification for the fact-mode reasoning pipeline — this entry stays as the
+historical record of the original 2026-09-03 design, unedited, per this project's Immutable
+Lineage convention for `docs/BACKLOG.md` entries.
+
+Also noted, since it bears directly on ADR-0059's scope: this entry's claim above that Author
+"reads `mode` from `DailyBrief` and branches its prompt on it — it does not re-derive `mode`
+itself" was found inaccurate by a prior read-only session, 2026-09-29.
+`author/linkedin_verdict_reader.py`'s `build_daily_brief_from_authoring_contexts()` does
+re-derive `mode` locally (`"fact"` iff at least one included unit's commit messages are
+non-empty), independent of Collector's own file-level heuristic, and the two can disagree in
+practice — observed for real on 2026-09-28, where Collector's own committed file said
+`mode: "idea_fallback"` but the pipeline's own re-derivation produced `"fact"` because one
+included zero-commit-elsewhere unit (`radar-vault`) had one real commit.
+
 ### [B-058] P1 — daily_linkedin_author.py's prompt builders must implement the ADR-0044 content-voice contract
 
 Found: 2026-09-04, owner decision, following `[B-057]`'s
@@ -2461,6 +2482,58 @@ fabricated).
 
 **Source.** Owner decision, 2026-09-04, filed alongside
 `docs/adr/0044-linkedin-daily-post-voice-contract.md`.
+
+**Note, 2026-09-29 — re-scoped, not closed.** `docs/adr/0044-linkedin-daily-post-voice-contract.md`
+is now `status: Superseded` (`superseded_by: ADR-0059`); this entry's four checkboxes above
+describe implementing ADR-0044's Narrative Bridge specification (30/40/30 structure, the
+150-250 word/max-3-sentences constraint, the specific forbidden-vocabulary list, the numbered
+causal-chain rule, the three-tier evidence rule) for `_build_fact_prompt()` — **do not
+implement that structure for fact mode.**
+`docs/adr/0059-fact-mode-post-generation-evidence-grounded-reasoning-with-personal-position.md`
+is now the specification `_build_fact_prompt()` must be rebuilt against instead: FACT / TENSION
+/ DESIGN INSIGHT / PERSONAL POSITION / RELEVANT PROBLEM + a final evidence check on the
+synthesized post, plus identity continuity (Decision point 6) and the automation-only-day
+guard (Decision point 7, tracked separately as `[B-069]` below for its production form).
+
+Judgment call (doc-organization, not architectural): **re-scoping this entry in place, not
+closing it and opening a fresh one.** ADR-0059's own Consequences section already commits to
+this — it states the prompt-rebuild work is "tracked by a revision to `[B-058]`," so closing
+this entry here would leave that ADR's own cross-reference dangling. The four checkboxes below
+are superseded by ADR-0059 and should be read as replaced by, not added to, this note:
+- [ ] Rebuild `_build_fact_prompt()` against ADR-0059's five-step pipeline (FACT / TENSION /
+      DESIGN INSIGHT / PERSONAL POSITION / RELEVANT PROBLEM) plus its final evidence check on
+      the synthesized post text, replacing the current facts-only (ADR-0057) structure.
+- [ ] Wire in identity continuity (ADR-0059 Decision point 6): the author's real recent
+      published posts and a persisted `identity_state` (`core_positions` /
+      `emerging_positions` / `recently_used` / `underdeveloped` / `open_threads` /
+      `trajectory`) as new inputs to fact-mode generation — a new data dependency
+      `linkedin_publisher/daily_publish.py` does not have today.
+- [ ] Add/extend `test_daily_linkedin_author.py` coverage for the new structure (each of the
+      five steps, the final evidence check, the automation-only-day guard's prompt-level
+      form) before treating this entry as done, per this project's TDD threshold for a
+      correctness-sensitive prompt/gating change. This replaces, not extends, the old
+      removal-assertion list (`EMERGENT PROPERTY`/`INVERSION`/`COMMERCIAL HYPOTHESIS` and
+      their JSON-key forms) that enforced ADR-0057's now-superseded requirement — ADR-0059
+      Decision point 8 states that test's obsolescence directly.
+- [ ] Re-validate `docs/ARCHITECTURE.md`'s Author row Validation column once real generated
+      posts under ADR-0059's contract have been checked — it currently still describes the
+      facts-only (ADR-0057) structure.
+
+Also corrected, same note: the second original checkbox above ("Add the `gh repo view`
+live-check call needed for the L2 evidence tier (not present anywhere in
+`daily_linkedin_author.py` today)") is stale — that live check already exists
+(`_check_repo_visibility()`/`_build_evidence_links()`, `author/daily_linkedin_author.py`),
+confirmed by direct code read in a prior session, 2026-09-29. It was never corrected in the
+original checkbox text; noted here rather than silently left to mislead a future reader.
+
+**Noticed, not resolved here:** ADR-0044 governed both `_build_fact_prompt()` and
+`_build_idea_fallback_prompt()` (its own Decision line names both). ADR-0059's own scope, as
+decided, covers fact-mode only — it says nothing about `_build_idea_fallback_prompt()`.
+Superseding ADR-0044 in full therefore leaves `_build_idea_fallback_prompt()`'s Narrative
+Bridge/`STYLE_CONSTRAINTS`/`VOICE_CONTRACT` structure referencing a now-Superseded ADR with no
+replacement decision naming it. Not something this entry resolves — flagging it so it isn't
+silently lost; the owner may want either a narrower ADR-0059 scope statement or a follow-up
+decision for idea_fallback mode specifically.
 
 ### [B-059] P2 — Collector CI: WORKSPACE_ROOT hardcoding + actions/checkout@v4 path failure — RESOLVED
 
@@ -2942,3 +3015,68 @@ script candidates).
 - [ ] Needs `/spec` before any implementation.
 
 **Source.** Owner task, 2026-09-25, from the integrity-gate investigation.
+
+### [B-068] Owner decision needed — how to separate FACT from interpretation in the published post's visible text
+
+Added: 2026-09-29, following
+`docs/adr/0059-fact-mode-post-generation-evidence-grounded-reasoning-with-personal-position.md`.
+
+ADR-0059's Decision point 9 states explicitly that the exact machinery for separating FACT
+from interpretive content (TENSION / DESIGN INSIGHT / PERSONAL POSITION / RELEVANT PROBLEM)
+in the *published post's visible text* is not decided by that ADR. The five-step pipeline and
+its final evidence check govern what the model may claim and how; they say nothing about
+whether a reader of the finished LinkedIn post can tell which sentence is grounded fact and
+which is framed interpretation.
+
+This is a goal choice with no basis in the canonical docs or ADR-0059 to prefer one outcome
+over another (`docs/CONSTITUTION.md`'s "the one stop-and-ask rule," case 2) — not an
+implementation detail a session should decide and report after the fact. Filed here as an
+owner decision, not a directly-implementable checklist.
+
+| Option | Pros | Cons |
+|---|---|---|
+| **A. Internal-only separation** — the five reasoning fields stay in the model's structured JSON response for the owner's own review (already how `fact_or_product` works today, `daily_linkedin_author.py`); the published post text carries no visible marker at all. | Reads as one natural voice; no risk of a technical/labeled-output look. | A reader has no way to independently judge which claims are grounded vs. interpreted; the final evidence check becomes the only safeguard, with nothing visible to a skeptical reader. |
+| **B. In-text marker in the published post** — some visual or textual cue (a line break, an italicized clause, an explicit short label) marks where interpretation begins within the post itself. | Transparent to readers; lets a reader calibrate trust per-claim. | Risks reading as self-consciously technical or AI-labeled — the opposite of the "one voice, not a changelog" goal that motivated ADR-0059 in the first place; LinkedIn's own formatting is limited (no rich markup in the feed). |
+| **C. No marking, evidence check as the only safeguard** — same as A in practice, but stated as the deliberate final design rather than a placeholder pending a future marking decision. | Simplest; nothing further to build. | Identical downside to A, but framed as permanent rather than provisional — forecloses ever adding a marker without a new decision. |
+
+**Depends on:** `[B-058]`'s revision (rebuilding `_build_fact_prompt()` against ADR-0059) —
+this decision shapes that rebuild's output-field design, so it should be resolved before or
+alongside that work, not after a marking-free version already ships.
+
+**Source.** `docs/adr/0059`'s Decision point 9, 2026-09-29.
+
+### [B-069] P2 — Automation-only-day pre-call guard for fact-mode generation
+
+Added: 2026-09-29, following
+`docs/adr/0059-fact-mode-post-generation-evidence-grounded-reasoning-with-personal-position.md`'s
+Decision point 7 and Consequences section.
+
+ADR-0059's trial process found that a day whose fact cluster shows only automated, scheduled
+output (no accompanying manual engineering work) can cause the model to invent an engineering
+"discipline" narrative around the automation's own incidental commit shape. The trial fixed
+this with a prompt-level guard — but the trial also confirmed that guard still costs one real
+API call to recognize the automation-only day and produce no post, rather than skipping
+generation before any call is made.
+
+- [ ] Design and implement a pre-call check in `linkedin_publisher/daily_publish.py` that
+      detects, from the day's fact cluster alone (no model call), whether every included
+      unit's commits are automation-only/scheduled output with no accompanying manual
+      engineering work, and skips generation entirely when so — not just at the prompt level.
+- [ ] Define, precisely, what distinguishes "automation-only" from real manual work in a
+      commit's own available metadata (subject text, repo, count) — the trial's guard text
+      exists only in the archived, now-deleted sandbox, not in this repository; this needs
+      re-deriving or re-requesting from the owner, not assumed.
+- [ ] Add regression test coverage for both the skip path (automation-only day: no API call
+      made, no post, no Registry write attempted) and the non-skip path (any real manual
+      commit present: generation proceeds as normal), per this project's TDD threshold for a
+      correctness-sensitive gating change.
+
+Not yet a P1 blocker on shipping the rest of ADR-0059's contract: the prompt-level guard
+already covers the correctness concern (no bad post gets published); this item is a cost
+optimization (skip the API call) and a defense-in-depth correctness fix (don't rely on the
+prompt alone), not something that blocks `[B-058]`'s revision from proceeding without it.
+
+**Depends on:** `[B-058]`'s revision (the rebuilt `_build_fact_prompt()` this pre-call check
+sits in front of).
+
+**Source.** `docs/adr/0059`'s Decision point 7 and Consequences section, 2026-09-29.

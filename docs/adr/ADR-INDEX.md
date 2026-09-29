@@ -51,7 +51,7 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0041](0041-mechanical-verification-scope.md) | Mechanical Verification Scope — Document-Format Conventions Only | Accepted | null | null |
 | [ADR-0042](0042-cowork-layer-practice-boundary.md) | Cowork-Layer Practice Boundary — Practice-Only, No-File Conventions | Accepted | null | null |
 | [ADR-0043](0043-author-mvp-single-source-pilot.md) | Author MVP — Source Adapter / Story Builder / Channel Profile / Channel Author, Single-Source Pilot via Collector | Accepted | null | null |
-| [ADR-0044](0044-linkedin-daily-post-voice-contract.md) | LinkedIn Daily Post Voice Contract | Accepted | null | null |
+| [ADR-0044](0044-linkedin-daily-post-voice-contract.md) | LinkedIn Daily Post Voice Contract | Superseded | null | ADR-0059 |
 | [ADR-0045](0045-post-classification-authoring-context.md) | Post-Classification Authoring Context | Accepted | null | null |
 | [ADR-0046](0046-habr-multi-claim-digest.md) | Habr Multi-Claim Digest | Accepted | null | null |
 | [ADR-0047](0047-two-dimension-verification-model.md) | Two-Dimension Verification Model (Integrity × Corroboration) | Accepted | null | null |
@@ -64,5 +64,6 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0054](0054-m2-ships-core-linkedin-publishing-without-safety-pause-trigger-or-proactive-credential-alerting.md) | M2 ships core LinkedIn publishing without SAFETY_PAUSE's trigger or proactive token-expiry alerting | Accepted | null | null |
 | [ADR-0055](0055-publication-registry-state-lives-on-registry-data-branch.md) | Publication Registry state lives on the `registry-data` branch | Accepted | null | null |
 | [ADR-0056](0056-collector-integrity-by-github-ancestry-and-per-repo-commit-messages.md) | Collector records are verified by GitHub ancestry, and commit messages are attributed per repository | Accepted | null | null |
-| [ADR-0057](0057-commit-body-why-effect-trailers-not-yet-accepted-as-evidence.md) | Commit-body Why:/Effect: trailers are not yet accepted as Evidence; facts-only publication stays in force | Accepted | null | null |
+| [ADR-0057](0057-commit-body-why-effect-trailers-not-yet-accepted-as-evidence.md) | Commit-body Why:/Effect: trailers are not yet accepted as Evidence; facts-only publication stays in force | Superseded | null | ADR-0059 |
 | [ADR-0058](0058-fact-prompt-offers-per-repo-clusters-with-id-based-citation.md) | The fact prompt offers per-repository clusters of ID-tagged facts, and cited IDs are verified | Accepted | null | null |
+| [ADR-0059](0059-fact-mode-post-generation-evidence-grounded-reasoning-with-personal-position.md) | Fact-mode post generation uses a five-step evidence-grounded reasoning pipeline with a personal position | Accepted | [ADR-0044, ADR-0057] | null |
