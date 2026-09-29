@@ -1,7 +1,7 @@
 ---
 id: ADR-0059
 status: Accepted
-supersedes: [ADR-0044, ADR-0057]
+supersedes: [ADR-0057, "ADR-0044 (fact-mode only)"]
 superseded_by: null
 source_type: verbatim
 ---
