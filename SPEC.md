@@ -141,9 +141,10 @@ grep — none exist here today):
 
 ### Functional Requirements — M3: Owner Verdict (LinkedIn)
 
-14. Owner Verdict is an append-only event stream (ADR-0050 point 1),
-    stored as JSON records under `verdict/output/`, one record per
-    verdict, keyed by `content_id` (never `claim_id`).
+14. Owner Verdict is an append-only event stream (ADR-0050 point 1
+    (confirmed current and unchanged by ADR-0052; see ADR-0052's Context
+    & Constraints)), stored as JSON records under `verdict/output/`, one
+    record per verdict, keyed by `content_id` (never `claim_id`).
 15. A verdict record: `content_id`, `verdict_type`
     (`good`/`trash`/`style-off`), `received_at`, optional free-text
     comment (owner may add context in her Telegram reply).
