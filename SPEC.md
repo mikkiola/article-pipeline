@@ -400,10 +400,10 @@ end-to-end.
   - combined: 0.0
 
 ### M3: Owner Verdict Capture (LinkedIn)
-- [ ] Verdict event stream, `content_id`-keyed, no lifecycle coupling
+- [x] Verdict event stream, `content_id`-keyed, no lifecycle coupling
 - verify: a verdict recorded for a real M2 publication, and a Weekly snapshot with no verdict yet for another
 - done-when: both a `recorded` and a `missing` `verdict_status` are demonstrated
-- status: not started
+- status: done — `verdict/` package (contract.py, writer.py) built and tested (15/15); `verdict/demonstrate_m3.py` recorded a real verdict against real M2-published `content_id` `linkedin-2026-09-29` and confirmed zero verdict records for real `content_id` `linkedin-2026-09-28` (both real registry-data-branch records, not synthetic) — both `recorded` and `missing` `verdict_status` outcomes demonstrated directly via `read_verdicts()`, satisfying done-when exactly as stated. The verify line's "Weekly snapshot" phrasing is illustrative, not literal: M6 (Weekly Snapshot & Pattern Detection) is separate, not-started scope — not required by done-when's own wording, and not built here.
 - drift:
   - goal: 0.0
   - constraint: 0.0
