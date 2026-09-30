@@ -159,9 +159,19 @@ SYNTHETIC_FACTS_BRIEF = {
 }
 
 
-def _facts_prompt():
+def _facts_prompt(identity_state=None, recent_posts=None):
+    # Explicit empty defaults here, not None: existing callers of this
+    # helper must stay deterministic regardless of whatever real state
+    # happens to be on disk under author/state/ — real-file loading is
+    # exercised separately, below, by tests that mock the load functions.
+    if identity_state is None:
+        identity_state = dict(author_llm.identity_state_module.DEFAULT_IDENTITY_STATE)
+    if recent_posts is None:
+        recent_posts = []
     with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
-        return " ".join(author_llm.build_prompt(SYNTHETIC_FACTS_BRIEF).split())
+        return " ".join(author_llm.build_prompt(
+            SYNTHETIC_FACTS_BRIEF, identity_state=identity_state, recent_posts=recent_posts
+        ).split())
 
 
 def test_fact_prompt_has_five_step_reasoning_shape_in_order():
@@ -209,6 +219,67 @@ def test_fact_prompt_drops_adr_0057_facts_only_prohibition_language():
         "exactly one open question",
     ):
         assert removed not in prompt, f"ADR-0057 structural text still present: {removed!r}"
+
+
+# --- Identity continuity (ADR-0059 Decision point 6) -----------------------
+
+
+def test_fact_prompt_says_none_recorded_yet_when_no_history_exists():
+    prompt = _facts_prompt(identity_state=dict(author_llm.identity_state_module.DEFAULT_IDENTITY_STATE),
+                            recent_posts=[])
+    assert "none recorded yet" in prompt
+    assert "newly forming" in prompt
+
+
+def test_fact_prompt_includes_identity_state_positions_and_trajectory_when_present():
+    state = {
+        "core_positions": ["small fixes should land alone"],
+        "emerging_positions": ["scope drift deserves its own commit"],
+        "recently_used": ["small fixes should land alone"],
+        "underdeveloped": ["testing strategy"],
+        "open_threads": ["how much scope belongs in one PR"],
+        "trajectory": "moving toward smaller, more isolated changes",
+    }
+    prompt = _facts_prompt(identity_state=state, recent_posts=[])
+    assert "small fixes should land alone" in prompt
+    assert "scope drift deserves its own commit" in prompt
+    assert "moving toward smaller, more isolated changes" in prompt
+    assert "none recorded yet" not in prompt
+
+
+def test_fact_prompt_includes_real_recent_post_text_when_present():
+    prompt = _facts_prompt(recent_posts=["Yesterday I shipped a small fix.", "Today I refactored a test."])
+    assert "Yesterday I shipped a small fix." in prompt
+    assert "Today I refactored a test." in prompt
+
+
+def test_build_prompt_loads_identity_state_and_recent_posts_when_not_provided():
+    fake_state = {**author_llm.identity_state_module.DEFAULT_IDENTITY_STATE,
+                  "trajectory": "loaded from disk, not passed explicitly"}
+    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False), \
+            mock.patch.object(author_llm.identity_state_module, "load_identity_state",
+                               return_value=fake_state) as mock_load_state, \
+            mock.patch.object(author_llm.identity_state_module, "load_recent_posts",
+                               return_value=["a real recent post"]) as mock_load_posts:
+        prompt = author_llm.build_prompt(SYNTHETIC_FACTS_BRIEF)
+    mock_load_state.assert_called_once()
+    mock_load_posts.assert_called_once()
+    assert "loaded from disk, not passed explicitly" in prompt
+    assert "a real recent post" in prompt
+
+
+def test_idea_fallback_prompt_never_includes_identity_state_or_recent_posts():
+    # idea_fallback mode isn't part of ADR-0059's fact-mode contract
+    # (ADR-0044 remains normative there) — passing these inputs must
+    # have zero effect on that branch.
+    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
+        prompt = author_llm.build_prompt(
+            SAMPLE_IDEA_FALLBACK_DAILY_BRIEF,
+            identity_state={"trajectory": "MUST_NOT_APPEAR"},
+            recent_posts=["MUST_NOT_APPEAR_EITHER"],
+        )
+    assert "MUST_NOT_APPEAR" not in prompt
+    assert "MUST_NOT_APPEAR_EITHER" not in prompt
 
 
 def test_reasoning_validation_accepts_well_formed_object_and_rejects_missing_pieces():
@@ -773,6 +844,11 @@ if __name__ == "__main__":
         test_idea_fallback_mode_builds_idea_prompt_and_parses_wellformed_response,
         test_fact_prompt_has_five_step_reasoning_shape_in_order,
         test_fact_prompt_drops_adr_0057_facts_only_prohibition_language,
+        test_fact_prompt_says_none_recorded_yet_when_no_history_exists,
+        test_fact_prompt_includes_identity_state_positions_and_trajectory_when_present,
+        test_fact_prompt_includes_real_recent_post_text_when_present,
+        test_build_prompt_loads_identity_state_and_recent_posts_when_not_provided,
+        test_idea_fallback_prompt_never_includes_identity_state_or_recent_posts,
         test_reasoning_validation_accepts_well_formed_object_and_rejects_missing_pieces,
         test_fact_prompt_says_no_reason_if_the_input_has_none,
         test_fact_prompt_states_the_evidence_boundary_explicitly,

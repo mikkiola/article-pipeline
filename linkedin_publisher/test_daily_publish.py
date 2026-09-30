@@ -141,6 +141,15 @@ def _setup_main(monkeypatch, tmp_path):
     registry_dir = tmp_path / "registry"
     monkeypatch.setattr(daily_publish.registry_writer, "OUTPUT_DIR", str(registry_dir))
 
+    # Identity continuity (ADR-0059 Decision point 6): redirect to
+    # tmp_path so no test ever reads or writes this repo's own real
+    # author/state/ files, matching the Registry's own tmp_path
+    # redirection above.
+    state_dir = tmp_path / "identity_state_dir"
+    monkeypatch.setattr(daily_publish.identity_state, "STATE_DIR", str(state_dir))
+    monkeypatch.setattr(daily_publish.identity_state, "IDENTITY_STATE_FILE", str(state_dir / "identity_state.json"))
+    monkeypatch.setattr(daily_publish.identity_state, "RECENT_POSTS_FILE", str(state_dir / "recent_posts.json"))
+
     brief_path = tmp_path / "daily_brief_2026-09-24.json"
     brief_path.write_text(json.dumps({"date": "2026-09-24"}), encoding="utf-8")
     monkeypatch.setattr(
@@ -185,7 +194,11 @@ def _setup_main(monkeypatch, tmp_path):
         "build_daily_brief_from_authoring_contexts",
         lambda contexts, date: {"mode": "fact"},
     )
-    monkeypatch.setattr(daily_publish.daily_linkedin_author, "build_prompt", lambda brief: "prompt")
+    monkeypatch.setattr(
+        daily_publish.daily_linkedin_author,
+        "build_prompt",
+        lambda brief, identity_state=None, recent_posts=None: "prompt",
+    )
     monkeypatch.setattr(daily_publish.daily_linkedin_author, "call_model", mocks["call_model"])
     monkeypatch.setattr(
         daily_publish.daily_linkedin_author,
@@ -322,6 +335,40 @@ def test_main_publishes_and_writes_pass_record_when_no_record_exists(monkeypatch
     assert written["gate_status"] == "pass"
     assert written["url"] == _POST_URL
     assert written["content_id"] == _CONTENT_ID
+
+
+# --- main(): identity continuity (ADR-0059 Decision point 6) ---------------
+
+
+def test_main_passes_loaded_identity_state_and_recent_posts_into_build_prompt(monkeypatch, tmp_path):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    seeded_state = {**daily_publish.identity_state.DEFAULT_IDENTITY_STATE, "trajectory": "seeded state"}
+    daily_publish.identity_state.write_identity_state(seeded_state)
+    daily_publish.identity_state.append_recent_post("an earlier real post")
+
+    build_prompt_spy = mock.Mock(return_value="prompt")
+    monkeypatch.setattr(daily_publish.daily_linkedin_author, "build_prompt", build_prompt_spy)
+
+    daily_publish.main()
+
+    build_prompt_spy.assert_called_once()
+    call_kwargs = build_prompt_spy.call_args.kwargs
+    assert call_kwargs["identity_state"] == seeded_state
+    assert call_kwargs["recent_posts"] == ["an earlier real post"]
+
+
+def test_main_appends_published_post_text_to_recent_posts_after_publish(monkeypatch, tmp_path):
+    _run_main(monkeypatch, tmp_path)
+
+    assert daily_publish.identity_state.load_recent_posts() == ["post text"]
+
+
+def test_main_does_not_append_recent_post_when_gate_blocks(monkeypatch, tmp_path):
+    units = [_unit("u1", "invalid", {"repo": "r", "integrity_check_detail": "d"})]
+
+    _gated_run(monkeypatch, tmp_path, units)
+
+    assert daily_publish.identity_state.load_recent_posts() == []
 
 
 # --- main(): real call order around the model-response verification ---------

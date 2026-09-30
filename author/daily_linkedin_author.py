@@ -37,6 +37,8 @@ from pathlib import Path
 
 import anthropic
 
+import identity_state as identity_state_module
+
 OUTPUT_DIR = Path(__file__).resolve().parent / "output"
 
 # Model used for this component's single LLM call.
@@ -242,6 +244,47 @@ def _clusters_block(clusters: list) -> str:
     return "\n\n".join(blocks)
 
 
+_IDENTITY_STATE_LIST_KEYS = (
+    "core_positions", "emerging_positions", "recently_used",
+    "underdeveloped", "open_threads",
+)
+
+
+def _identity_context_block(identity_state: dict, recent_posts: list) -> str:
+    """Renders `identity_state` + real recent post text as generation
+    context (ADR-0059 Decision point 6) — input only, never something
+    the model is asked to update or restate. Returns an explicit "none
+    yet" line instead of an empty section on a first run, so the prompt
+    never silently omits this contract element."""
+    has_state = any(identity_state.get(key) for key in _IDENTITY_STATE_LIST_KEYS) or identity_state.get(
+        "trajectory"
+    )
+    if not has_state and not recent_posts:
+        return (
+            "Author identity state: none recorded yet — this is the first "
+            "fact-mode post under this contract. Do not invent a prior "
+            "trajectory or prior positions; treat today's position as newly "
+            "forming, not a continuation of anything."
+        )
+    lines = [
+        "Author identity state (context only — do not restate this section "
+        "in the post, and do not treat it as something to update yourself; "
+        "it exists only to keep today's PERSONAL POSITION consistent with "
+        "the author's actual trajectory, not repetitive of an already-"
+        "established position):"
+    ]
+    for key in _IDENTITY_STATE_LIST_KEYS:
+        values = identity_state.get(key) or []
+        lines.append(f"- {key}: {', '.join(values) if values else '(none yet)'}")
+    lines.append(f"- trajectory: {identity_state.get('trajectory') or '(none yet)'}")
+    if recent_posts:
+        lines.append("")
+        lines.append("Author's real recent published posts (most recent last):")
+        for index, post in enumerate(recent_posts, start=1):
+            lines.append(f"{index}. {post}")
+    return "\n".join(lines)
+
+
 # Five-step evidence-grounded reasoning structure (ADR-0059, 2026-09-29),
 # replacing the facts-only structure ADR-0057 required (2026-09-24).
 # Preserved unchanged from ADR-0057 (ADR-0059 Decision point 2): a post must
@@ -258,17 +301,33 @@ def _clusters_block(clusters: list) -> str:
 # trial_identity_post.py's v2 SIXTH step for the evidence check), with the
 # trial's lens-splitting (a validation technique for proving the fact
 # cluster yields distinct tensions, not part of ADR-0059's shipped contract)
-# and identity-continuity machinery (ADR-0059 Decision point 6, deferred —
-# see docs/BACKLOG.md) both omitted: this function makes one reasoning pass,
-# not three, and takes no identity_state/recent_posts input. INVERSION is
+# omitted: this function makes one reasoning pass, not three. INVERSION is
 # not restored (ADR-0059 Decision point 5). Deliberately does not embed
 # STYLE_CONSTRAINTS/VOICE_CONTRACT, which still carry the Narrative Bridge
 # wording and remain in use by _build_idea_fallback_prompt.
-def _build_fact_prompt(daily_brief: dict) -> str:
+#
+# Identity continuity (ADR-0059 Decision point 6, wired 2026-09-30):
+# `identity_state`/`recent_posts` default to a fresh load from
+# identity_state.py's persisted state when the caller doesn't supply
+# them (e.g. daily_publish.py's main() passes them explicitly; a direct
+# test call can omit them and still get a real, if empty-on-first-run,
+# state). This function only reads them as prompt context — it never
+# decides what the next identity_state should contain; see
+# identity_state.py's own module docstring for why that update is
+# deliberately not performed here.
+def _build_fact_prompt(
+    daily_brief: dict,
+    identity_state: dict | None = None,
+    recent_posts: list | None = None,
+) -> str:
     clusters = build_clusters(daily_brief)
     # L2 links only for repositories that form a cluster: a repository
     # with no commits is not offered to the model at all.
     evidence_links = _build_evidence_links([{"name": c["repo"]} for c in clusters])
+    if identity_state is None:
+        identity_state = identity_state_module.load_identity_state()
+    if recent_posts is None:
+        recent_posts = identity_state_module.load_recent_posts()
     return f"""\
 You are drafting one LinkedIn post from a single day's real engineering
 activity. Work through five reasoning steps in order, then synthesize a
@@ -280,6 +339,8 @@ not present here. The data is grouped into candidate clusters, one per
 repository that had commits today. Every fact has an ID:
 
 {_clusters_block(clusters)}
+
+{_identity_context_block(identity_state, recent_posts)}
 
 What the data does and does not contain:
 - Each fact is a commit subject line or a count computed from that
@@ -339,7 +400,10 @@ Work through these five steps, in this order:
    the actual commits. The position must still originate from today's
    tension, but may be broader than what today's data proves — only the
    underlying FACT and TENSION must remain proven, not the position
-   itself.
+   itself. If the author identity state above lists an existing
+   position that already covers this tension, deepen or extend it
+   rather than restating it; if it's genuinely new, say so as newly
+   forming, not as something the author has always held.
 
 5. RELEVANT PROBLEM — describe a real-world problem or pain this
    position or insight plausibly addresses, framed explicitly as an
@@ -480,10 +544,14 @@ IDEA_FALLBACK_REQUIRED_KEYS = {
 }
 
 
-def build_prompt(daily_brief: dict) -> str:
+def build_prompt(
+    daily_brief: dict,
+    identity_state: dict | None = None,
+    recent_posts: list | None = None,
+) -> str:
     mode = daily_brief["mode"]
     if mode == "fact":
-        return _build_fact_prompt(daily_brief)
+        return _build_fact_prompt(daily_brief, identity_state, recent_posts)
     if mode == "idea_fallback":
         return _build_idea_fallback_prompt(daily_brief)
     raise AuthorLLMError(f"Unknown DailyBrief mode: {mode!r} — expected 'fact' or 'idea_fallback'.")

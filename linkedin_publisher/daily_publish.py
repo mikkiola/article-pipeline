@@ -10,8 +10,10 @@ LinkedIn publish, and a real Publication Registry write:
 Collector daily_brief.json -> collector adapter -> CanonicalUnit list
 -> pre_filter (bootstrap gate) -> [gate blocks: write a block Registry
 record, stop] / [gate passes: framing -> Strategy Layer verdict ->
-AuthoringContext -> daily_brief-shaped dict -> LLM prompt -> LLM call
--> LinkedIn publish -> write a pass Registry record].
+AuthoringContext -> daily_brief-shaped dict -> identity_state +
+recent-posts load (ADR-0059 Decision point 6) -> LLM prompt -> LLM call
+-> LinkedIn publish -> recent-posts append -> write a pass Registry
+record].
 
 Known data-model limitation, stated plainly, not silently resolved:
 publication_registry.contract.PublicationRecord.claim_id is a single
@@ -57,6 +59,7 @@ import collector as collector_adapter  # noqa: E402
 from authoring_context import build_authoring_contexts  # noqa: E402
 from linkedin_verdict_reader import build_daily_brief_from_authoring_contexts  # noqa: E402
 import daily_linkedin_author  # noqa: E402
+import identity_state  # noqa: E402
 
 
 def _load_isolated(module_name: str, file_path: Path):
@@ -299,7 +302,18 @@ def main() -> None:
     daily_brief_shaped = build_daily_brief_from_authoring_contexts(
         contexts, date=daily_brief["date"]
     )
-    prompt = daily_linkedin_author.build_prompt(daily_brief_shaped)
+    # ADR-0059 Decision point 6: identity continuity is an input to
+    # generation, loaded here (not inside build_prompt/_build_fact_prompt
+    # itself) matching this function's own existing convention of
+    # assembling every generation input at this one call site before
+    # invoking daily_linkedin_author — the same place check_safety_pause_state()
+    # and check_token_preflight() are already called explicitly, rather
+    # than reached for deeper inside a prompt-building function.
+    author_identity_state = identity_state.load_identity_state()
+    recent_posts = identity_state.load_recent_posts()
+    prompt = daily_linkedin_author.build_prompt(
+        daily_brief_shaped, identity_state=author_identity_state, recent_posts=recent_posts
+    )
     response = daily_linkedin_author.call_model(prompt)
     daily_linkedin_author.validate_structured_response(
         response, daily_brief_shaped["mode"], daily_brief_shaped
@@ -308,6 +322,14 @@ def main() -> None:
 
     post_url = linkedin_client.publish_post(post_text)
     print(f"Published: {post_url}")
+
+    # Persist the real published text so it's available as "the author's
+    # real recent published posts" input on a future run (ADR-0059
+    # Decision point 6) — identity_state.py's own module docstring
+    # explains why this file, not PublicationRecord, is where this
+    # lives. Only reached after a real publish succeeded above, so
+    # every stored entry is genuinely published, never a draft.
+    identity_state.append_recent_post(post_text)
 
     included_claim_id = pick_representative_claim_id([ctx.claim_id for ctx in contexts])
     record = build_pass_record(content_id, post_url, included_claim_id, now)
