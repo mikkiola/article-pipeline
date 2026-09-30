@@ -8,12 +8,11 @@ Goals version: 2026-09-30.v1
 Reference: docs/PROJECT.md
 
 ## NOW
-Rebuilding `daily_linkedin_author.py`'s fact-mode prompt/response pipeline to match
-ADR-0059's five-step evidence-grounded reasoning contract (`docs/BACKLOG.md`'s [B-058]).
+This mission is closed (see `## STATUS`). Awaiting reconciliation with the
+next mission — not yet selected here.
 
 ## CURRENT STEP
-Wire in identity continuity (ADR-0059 Decision point 6): pass the author's real
-recent published posts and a persisted `identity_state` into fact-mode generation.
+None — closed, pending the next mission's reconciliation.
 
 ## WHY
 The five-step prompt rebuild (B-058's first checkbox) is already committed
