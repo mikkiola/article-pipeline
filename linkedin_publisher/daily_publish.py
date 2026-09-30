@@ -318,6 +318,23 @@ def main() -> None:
     daily_linkedin_author.validate_structured_response(
         response, daily_brief_shaped["mode"], daily_brief_shaped
     )
+
+    # Prompt-level automation-only-day guard (ADR-0059 Decision point 7):
+    # the model still gets called (unlike [B-069]'s own, still-unbuilt
+    # pre-call skip), but honestly reports there is nothing to publish
+    # today rather than fabricating a post. No Registry record is written
+    # for this outcome — PublicationRecord's gate_status is only
+    # `pass`/`block` (a bootstrap/R6 gate outcome), and this is neither;
+    # inventing a third value would mean changing that schema, out of this
+    # change's scope. This is a known, named gap, not an oversight.
+    if response.get("automation_only_day"):
+        print(
+            f"Automation-only day detected (selected_cluster="
+            f"{response.get('selected_cluster')!r}) — no post generated, "
+            f"no publish attempted, no Registry record written."
+        )
+        return
+
     post_text = response["post"]
 
     post_url = linkedin_client.publish_post(post_text)

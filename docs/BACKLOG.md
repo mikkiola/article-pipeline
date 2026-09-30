@@ -2447,7 +2447,7 @@ practice — observed for real on 2026-09-28, where Collector's own committed fi
 `mode: "idea_fallback"` but the pipeline's own re-derivation produced `"fact"` because one
 included zero-commit-elsewhere unit (`radar-vault`) had one real commit.
 
-### [B-058] P1 — daily_linkedin_author.py's prompt builders must implement the ADR-0044 content-voice contract
+### [B-058] P1 — daily_linkedin_author.py's prompt builders must implement the ADR-0044 content-voice contract — RESOLVED
 
 Found: 2026-09-04, owner decision, following `[B-057]`'s
 implementation of the Collector/Author daily LinkedIn branch.
@@ -2517,31 +2517,39 @@ are superseded by ADR-0059 and should be read as replaced by, not added to, this
       point 6's own text ("new inputs to fact-mode generation"). No writer populates real
       `identity_state.json` content yet — see `[B-070]` for the deferred, separate
       persistence/promotion question this checkbox does not cover.
-- [ ] Add/extend `test_daily_linkedin_author.py` coverage for the new structure (each of the
+- [x] Add/extend `test_daily_linkedin_author.py` coverage for the new structure (each of the
       five steps, the final evidence check, the automation-only-day guard's prompt-level
       form) before treating this entry as done, per this project's TDD threshold for a
       correctness-sensitive prompt/gating change. This replaces, not extends, the old
       removal-assertion list (`EMERGENT PROPERTY`/`INVERSION`/`COMMERCIAL HYPOTHESIS` and
       their JSON-key forms) that enforced ADR-0057's now-superseded requirement — ADR-0059
       Decision point 8 states that test's obsolescence directly.
-      **Partially done, 2026-09-30 (54/54 passing, `author/test_daily_linkedin_author.py`) —
-      still genuinely open, not checked.** Coverage added for each of the five steps' own
-      instructional content (not just header presence/order) and for the FINAL EVIDENCE
-      CHECK's substantive content. The automation-only-day guard's prompt-level form has no
-      test coverage because it has no implementation to cover: direct grep of
-      `author/daily_linkedin_author.py` today finds zero occurrences of any automation-only-day
-      guard text, under any phrasing. ADR-0059 Decision point 7 itself states plainly this
-      guard's text exists only in the trial prompt (`article-pipeline-trial-archive-20260929.tar.gz`,
-      archived and deleted, never committed to this repository) and "its production form is
-      `[B-069]`... not shipped by this ADR" — meaning the ADR's own Decision text already
-      confirms the guard was never carried into the real shipped prompt, in either its trial
-      or production form. `[B-069]`'s own second checklist item independently confirms the
-      exact "automation-only" definition "needs re-deriving or re-requesting from the owner,
-      not assumed." Writing prompt text for this guard now, with no canonical source for its
-      wording, would mean inventing that definition — exactly what `[B-069]` itself declines to
-      do and what `docs/CONSTITUTION.md`'s stop-and-ask rule (case 2: genuinely different
-      possible outcomes with no basis to choose between them) covers. Left open pending
-      `[B-069]` or explicit owner input, not silently closed.
+      **Done, 2026-09-30 (64/64 passing, `author/test_daily_linkedin_author.py`; 25/25 passing,
+      `linkedin_publisher/test_daily_publish.py`).** Coverage added for each of the five steps'
+      own instructional content (not just header presence/order) and for the FINAL EVIDENCE
+      CHECK's substantive content (prior session). The automation-only-day guard's prompt-level
+      form was flagged as missing from the implementation in a prior session — corrected here:
+      **that "archived and deleted" characterization was itself wrong.** A dedicated read-only
+      search found `article-pipeline-trial-archive-20260929.tar.gz` fully intact at
+      `~/Dev/article-pipeline-trial-archive-20260929.tar.gz`, plus an already-extracted copy
+      under `/private/tmp/`, both containing the trial's real guard wording
+      (`trial_identity_post.py`'s v2 `identity_contribution: AUTOMATION_ONLY_DAY` branch). This
+      also corrects ADR-0059's own Context paragraph ("a now-deleted, archived sandbox") — not
+      itself edited, per Immutable Lineage; the correction lives here instead. The guard's
+      condition and "produce no personal position, no full post" behavior were adapted into
+      `_build_fact_prompt()`'s own five-step voice (prose only — the trial's own seven-step
+      structure, its `identity_contribution`/`position_used`/`evidence_ids` field shape, and its
+      `identity_state_update` step were not carried over; the last of those would have required
+      touching `identity_state.py`'s promotion/merging logic, out of this task's scope). A new
+      `"automation_only_day"` boolean field was added to `FACT_REQUIRED_KEYS` for this signal —
+      a dedicated field, matching this project's own precedent (`[B-068]`'s decision) for
+      representing an out-of-band signal machine-readably rather than overloading `post`'s
+      emptiness, which would also have conflicted with existing validation. `daily_publish.py`
+      now skips `publish_post()`/`write_record()` when the model reports
+      `automation_only_day: true` — no Registry record is written for this outcome, since
+      `gate_status` only has `pass`/`block` values and this is neither; a known, named gap, not
+      an oversight. `[B-069]`'s own, separate, still-unbuilt pre-call skip (never making the
+      model call at all) remains unimplemented and out of this checkbox's scope.
 - [x] Re-validate `docs/ARCHITECTURE.md`'s Author row Validation column once real generated
       posts under ADR-0059's contract have been checked — it currently still describes the
       facts-only (ADR-0057) structure.

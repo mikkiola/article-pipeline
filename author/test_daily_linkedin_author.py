@@ -75,6 +75,7 @@ def test_fact_mode_builds_fact_prompt_and_parses_wellformed_response():
     assert "feat(author): first MVP pilot (Collector-manifest-based)" in prompt
 
     fake_payload = {
+        "automation_only_day": False,
         "post": "Saw something odd in today's diff...",
         "selected_cluster": "article-pipeline",
         "supporting_facts": ["article-pipeline:fact_01", "article-pipeline:fact_02"],
@@ -250,6 +251,122 @@ def test_fact_prompt_final_evidence_check_content_is_present():
         "This check does not constrain the personal position itself: the evidence "
         "requirement applies to claims about reality, not to the author's stated preference"
     ) in prompt
+
+
+# --- Automation-only-day guard (ADR-0059 Decision point 7) -----------------
+# Prompt-level guard only: the model still gets called, but is told not to
+# fabricate a personal position/full post when the selected cluster's
+# commits are entirely automated output. B-069's own, separate, still-
+# unbuilt scope is skipping the API call before any model call — not
+# tested here.
+
+
+def test_fact_prompt_includes_automation_only_day_guard_prose():
+    prompt = _facts_prompt()
+    assert (
+        "check whether the selected cluster's commits are entirely the output of "
+        "an automated, scheduled process with no accompanying manual engineering "
+        "work that day"
+    ) in prompt
+    assert (
+        "An automated process's own commit structure is never evidence of the "
+        "author's engineering judgment on that day"
+    ) in prompt
+    assert (
+        '"automation_only_day" set to true, "post" set to an empty string, '
+        '"supporting_facts" set to an empty list'
+    ) in prompt
+
+
+def test_fact_prompt_output_format_documents_automation_only_day_field():
+    prompt = _facts_prompt()
+    assert '"automation_only_day": true if the automation-only-day guard above' in prompt
+    assert 'Empty only on an automation-only day' in prompt
+
+
+def test_idea_fallback_prompt_never_mentions_automation_only_day():
+    # The guard is fact-mode-only; idea_fallback keeps its own ADR-0044 keys.
+    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
+        prompt = author_llm.build_prompt(SAMPLE_IDEA_FALLBACK_DAILY_BRIEF)
+    assert "automation_only_day" not in prompt
+    assert "automation-only-day" not in prompt.lower()
+
+
+_GOOD_AUTOMATION_ONLY_RESPONSE = {
+    "automation_only_day": True,
+    "post": "",
+    "selected_cluster": "article-pipeline",
+    "supporting_facts": [],
+    "reasoning": {
+        "fact": "The selected cluster's only commit was an automated, scheduled "
+                "process's own output, with no manual engineering work alongside it.",
+        "tension": "", "design_insight": "", "personal_position": "", "relevant_problem": "",
+    },
+}
+
+
+def test_automation_only_day_response_well_formed_passes_validation():
+    author_llm.validate_structured_response(
+        dict(_GOOD_AUTOMATION_ONLY_RESPONSE), "fact", SYNTHETIC_FACTS_BRIEF
+    )  # must not raise
+
+
+def test_automation_only_day_response_rejects_non_empty_post():
+    bad = {**_GOOD_AUTOMATION_ONLY_RESPONSE, "post": "I pushed a commit."}
+    try:
+        author_llm.validate_structured_response(bad, "fact", SYNTHETIC_FACTS_BRIEF)
+        raise AssertionError("expected AuthorLLMError for a non-empty post on an automation-only day")
+    except author_llm.AuthorLLMError as e:
+        assert "post" in str(e)
+
+
+def test_automation_only_day_response_rejects_non_empty_supporting_facts():
+    bad = {**_GOOD_AUTOMATION_ONLY_RESPONSE, "supporting_facts": ["article-pipeline:fact_01"]}
+    try:
+        author_llm.validate_structured_response(bad, "fact", SYNTHETIC_FACTS_BRIEF)
+        raise AssertionError("expected AuthorLLMError for non-empty supporting_facts on an automation-only day")
+    except author_llm.AuthorLLMError as e:
+        assert "supporting_facts" in str(e)
+
+
+def test_automation_only_day_response_rejects_cluster_not_offered():
+    bad = {**_GOOD_AUTOMATION_ONLY_RESPONSE, "selected_cluster": "nonexistent"}
+    try:
+        author_llm.validate_structured_response(bad, "fact", SYNTHETIC_FACTS_BRIEF)
+        raise AssertionError("expected AuthorLLMError for a selected_cluster not offered this run")
+    except author_llm.AuthorLLMError as e:
+        assert "selected_cluster" in str(e)
+
+
+def test_automation_only_day_response_rejects_blank_reasoning_fact():
+    bad = {**_GOOD_AUTOMATION_ONLY_RESPONSE,
+           "reasoning": {**_GOOD_AUTOMATION_ONLY_RESPONSE["reasoning"], "fact": "   "}}
+    try:
+        author_llm.validate_structured_response(bad, "fact", SYNTHETIC_FACTS_BRIEF)
+        raise AssertionError("expected AuthorLLMError for a blank reasoning.fact")
+    except author_llm.AuthorLLMError as e:
+        assert "reasoning.fact" in str(e)
+
+
+def test_automation_only_day_response_rejects_non_empty_other_reasoning_fields():
+    bad = {**_GOOD_AUTOMATION_ONLY_RESPONSE,
+           "reasoning": {**_GOOD_AUTOMATION_ONLY_RESPONSE["reasoning"], "tension": "a real tension"}}
+    try:
+        author_llm.validate_structured_response(bad, "fact", SYNTHETIC_FACTS_BRIEF)
+        raise AssertionError("expected AuthorLLMError for a non-empty 'tension' on an automation-only day")
+    except author_llm.AuthorLLMError as e:
+        assert "tension" in str(e)
+
+
+def test_automation_only_day_true_is_distinguished_from_false_by_type():
+    # Only the literal boolean True triggers the automation-only-day path —
+    # a truthy-but-wrong-type value must not silently take this shortcut
+    # and skip the normal five-step validation it was never meant to.
+    normal = _cited("article-pipeline", ["article-pipeline:fact_01"])
+    normal["automation_only_day"] = "true"  # a string, not a bool
+    author_llm.validate_structured_response(normal, "fact", SYNTHETIC_FACTS_BRIEF)  # must not raise
+    # (falls through to normal validation since "true" is not `is True`, and
+    # `normal`'s post/citations are otherwise well-formed)
 
 
 def test_fact_prompt_drops_adr_0057_facts_only_prohibition_language():
@@ -434,17 +551,18 @@ _GOOD_REASONING = {
 
 def test_fact_response_requires_post_cluster_and_reasoning_keys():
     assert author_llm.FACT_REQUIRED_KEYS == {
-        "post", "selected_cluster", "supporting_facts", "reasoning",
+        "post", "selected_cluster", "supporting_facts", "reasoning", "automation_only_day",
     }
     author_llm.validate_structured_response(
-        {"post": "I pushed 3 commits to article-pipeline.",
+        {"automation_only_day": False,
+         "post": "I pushed 3 commits to article-pipeline.",
          "selected_cluster": "article-pipeline",
          "supporting_facts": ["article-pipeline:fact_01"],
          "reasoning": dict(_GOOD_REASONING)},
         "fact", SYNTHETIC_FACTS_BRIEF,
     )  # must not raise
-    for missing in ("selected_cluster", "supporting_facts", "reasoning"):
-        full = {"post": "text", "selected_cluster": "article-pipeline",
+    for missing in ("selected_cluster", "supporting_facts", "reasoning", "automation_only_day"):
+        full = {"automation_only_day": False, "post": "text", "selected_cluster": "article-pipeline",
                 "supporting_facts": ["article-pipeline:fact_01"],
                 "reasoning": dict(_GOOD_REASONING)}
         del full[missing]
@@ -486,7 +604,7 @@ def _cited(post_cluster, facts):
     # selected_cluster/supporting_facts citation logic, not reasoning shape
     # (covered separately by test_reasoning_validation_accepts_well_formed_
     # object_and_rejects_missing_pieces).
-    return {"post": "I pushed commits.", "selected_cluster": post_cluster,
+    return {"automation_only_day": False, "post": "I pushed commits.", "selected_cluster": post_cluster,
             "supporting_facts": facts, "reasoning": dict(_GOOD_REASONING)}
 
 
@@ -656,7 +774,8 @@ def test_post_check_accepts_plain_facts_only_post():
 def test_post_check_is_applied_by_validate_structured_response_in_both_modes():
     bad = {"post": "Hi all, I pushed commits.", "fact_or_product": "x", "emergent_property": "x",
            "evidence_to_collect": "x", "selected_cluster": "article-pipeline",
-           "supporting_facts": ["article-pipeline:fact_01"], "reasoning": dict(_GOOD_REASONING)}
+           "supporting_facts": ["article-pipeline:fact_01"], "reasoning": dict(_GOOD_REASONING),
+           "automation_only_day": False}
     for mode in ("fact", "idea_fallback"):
         try:
             author_llm.validate_structured_response(bad, mode)
@@ -891,6 +1010,16 @@ if __name__ == "__main__":
         test_fact_prompt_has_five_step_reasoning_shape_in_order,
         test_fact_prompt_each_step_carries_its_own_defining_instruction,
         test_fact_prompt_final_evidence_check_content_is_present,
+        test_fact_prompt_includes_automation_only_day_guard_prose,
+        test_fact_prompt_output_format_documents_automation_only_day_field,
+        test_idea_fallback_prompt_never_mentions_automation_only_day,
+        test_automation_only_day_response_well_formed_passes_validation,
+        test_automation_only_day_response_rejects_non_empty_post,
+        test_automation_only_day_response_rejects_non_empty_supporting_facts,
+        test_automation_only_day_response_rejects_cluster_not_offered,
+        test_automation_only_day_response_rejects_blank_reasoning_fact,
+        test_automation_only_day_response_rejects_non_empty_other_reasoning_fields,
+        test_automation_only_day_true_is_distinguished_from_false_by_type,
         test_fact_prompt_drops_adr_0057_facts_only_prohibition_language,
         test_fact_prompt_says_none_recorded_yet_when_no_history_exists,
         test_fact_prompt_includes_identity_state_positions_and_trajectory_when_present,

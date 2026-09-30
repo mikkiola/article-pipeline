@@ -391,6 +391,7 @@ _SHAPED_BRIEF = {
 }
 
 _GOOD_CITATION = {
+    "automation_only_day": False,
     "post": "I pushed a commit to r.",
     "selected_cluster": "r",
     "supporting_facts": ["r:fact_01"],
@@ -475,3 +476,40 @@ def test_well_formed_citation_validates_then_publishes_then_writes_in_that_order
     daily_publish.main()
 
     assert calls == ["validate", "publish_post", "write_record"]
+
+
+# --- main(): automation-only-day guard (ADR-0059 Decision point 7) --------
+# Prompt-level guard: the model was still called and validated, but honestly
+# reported nothing to publish today. B-069's separate pre-call skip (never
+# calling the model at all) is not exercised here.
+
+_GOOD_AUTOMATION_ONLY_RESPONSE = {
+    "automation_only_day": True,
+    "post": "",
+    "selected_cluster": "r",
+    "supporting_facts": [],
+    "reasoning": {
+        "fact": "The selected cluster's only commit was an automated, scheduled "
+                "process's own output, with no manual engineering work alongside it.",
+        "tension": "", "design_insight": "", "personal_position": "", "relevant_problem": "",
+    },
+}
+
+
+def test_main_skips_publish_and_registry_write_on_automation_only_day_response(monkeypatch, tmp_path, capsys):
+    _, calls = _setup_real_validation(monkeypatch, tmp_path, dict(_GOOD_AUTOMATION_ONLY_RESPONSE))
+
+    daily_publish.main()
+
+    assert calls == ["validate"], f"publish_post/write_record must not run, got {calls}"
+    assert "Automation-only day detected" in capsys.readouterr().out
+    registry_dir = tmp_path / "registry"
+    assert not registry_dir.exists() or list(registry_dir.iterdir()) == []
+
+
+def test_main_does_not_append_recent_post_on_automation_only_day(monkeypatch, tmp_path):
+    _setup_real_validation(monkeypatch, tmp_path, dict(_GOOD_AUTOMATION_ONLY_RESPONSE))
+
+    daily_publish.main()
+
+    assert daily_publish.identity_state.load_recent_posts() == []

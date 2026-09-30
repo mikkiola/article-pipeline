@@ -363,6 +363,21 @@ Selecting a cluster:
   something was done, what it leads to, or what it means — the FACT
   step's own no-interpretation rule below still applies.
 
+Automation-only-day guard: before working through the five steps below,
+check whether the selected cluster's commits are entirely the output of
+an automated, scheduled process with no accompanying manual engineering
+work that day (for example, a recurring automated data or scan commit,
+with no other manual code change in the same cluster). An automated
+process's own commit structure is never evidence of the author's
+engineering judgment on that day — do not construct an engineering
+preference, discipline, or design value from its shape. If this is the
+case: do not work through the five steps below, do not write a full
+post, and respond instead with "automation_only_day" set to true,
+"post" set to an empty string, "supporting_facts" set to an empty list,
+and "reasoning" whose "fact" field states in one sentence that the
+selected cluster contains only automated output with no accompanying
+manual work that day, with its other four fields set to empty strings.
+
 Work through these five steps, in this order:
 
 1. FACT — restate, in your own words, what the selected cluster's
@@ -453,17 +468,26 @@ Style constraints, apply these strictly:
 {OUTPUT_FORMAT_INSTRUCTIONS}
 
 The JSON object must have exactly these keys:
+- "automation_only_day": true if the automation-only-day guard above
+  applied today, false otherwise (boolean). Every other key below is
+  still present either way, but on an automation-only day "post" and
+  "supporting_facts" are empty and four of "reasoning"'s five fields
+  are empty strings, exactly as that guard describes.
 - "post": the final LinkedIn post text (string). This is the only
-  field intended for actual publication.
+  field intended for actual publication. Empty only on an
+  automation-only day.
 - "selected_cluster": the repository name of the one cluster you
   selected, exactly as written after "Cluster:" above (string).
 - "supporting_facts": the exact fact IDs of the facts your reasoning
   and post draw on, for example ["<repo>:fact_01", "<repo>:fact_03"],
-  using only IDs from the selected cluster (list of strings).
+  using only IDs from the selected cluster (list of strings). Empty
+  only on an automation-only day.
 - "reasoning": an object with exactly these five string fields —
   "fact", "tension", "design_insight", "personal_position",
   "relevant_problem" — holding the text you produced for each step
-  above. For the owner's own review; not published verbatim."""
+  above. For the owner's own review; not published verbatim. On an
+  automation-only day, "fact" holds the one-sentence automation-only
+  finding and the other four fields are empty strings."""
 
 
 # NOTE: this fallback builder still uses the Narrative Bridge structure
@@ -538,7 +562,21 @@ publication — they will not be posted."""
 REASONING_REQUIRED_KEYS = {
     "fact", "tension", "design_insight", "personal_position", "relevant_problem",
 }
-FACT_REQUIRED_KEYS = {"post", "selected_cluster", "supporting_facts", "reasoning"}
+# "automation_only_day" (ADR-0059 Decision point 7, wired 2026-09-30 from
+# B-058's re-scoped third checkbox): its guard text and this dedicated-field
+# shape are adapted from the owner's standalone trial process
+# (article-pipeline-trial-archive-20260929.tar.gz's trial_identity_post.py,
+# SECOND step's identity_contribution=AUTOMATION_ONLY_DAY branch) — the
+# trial's own identity_contribution/position_used/evidence_ids field shape
+# was not adopted (that structure belongs to a different, seven-step
+# identity-trajectory prompt this project never shipped); only its guard
+# condition and its "produce no personal position, no full post" behavior
+# were kept, expressed as a boolean field per this project's own precedent
+# for a dedicated field over an overloaded implicit signal (B-068's
+# decision). This is the prompt-level guard only — it still costs one real
+# model call; the separate pre-call guard that skips generation entirely
+# before any model call is [B-069]'s own, still-unbuilt scope.
+FACT_REQUIRED_KEYS = {"post", "selected_cluster", "supporting_facts", "reasoning", "automation_only_day"}
 IDEA_FALLBACK_REQUIRED_KEYS = {
     "post", "fact_or_product", "emergent_property", "evidence_to_collect",
 }
@@ -644,6 +682,66 @@ def validate_reasoning(response: dict) -> None:
         )
 
 
+def validate_automation_only_day_response(response: dict, daily_brief: dict | None) -> None:
+    """Fact mode only, `automation_only_day=True` path (ADR-0059 Decision
+    point 7's guard). No real cluster analysis happened on this path, so
+    `post`/`supporting_facts`/four of `reasoning`'s five fields are
+    deliberately empty — validating them against the normal non-empty/
+    citation rules would force the model to invent filler content just to
+    pass a check that was never meant for this case. This validates only
+    the shape the automation-only-day contract actually promises:
+    `selected_cluster` must still be a real, offered cluster (traceability
+    — which cluster triggered the guard), `post`/`supporting_facts` must be
+    empty (never partially populated), and `reasoning.fact` must carry the
+    one required factual note while its other four fields are empty."""
+    if response.get("post") != "":
+        raise AuthorLLMError(
+            f"automation_only_day=True but 'post' is not an empty string: {response.get('post')!r}"
+        )
+    if response.get("supporting_facts") != []:
+        raise AuthorLLMError(
+            f"automation_only_day=True but 'supporting_facts' is not an empty list: "
+            f"{response.get('supporting_facts')!r}"
+        )
+    if daily_brief is None:
+        raise AuthorLLMError(
+            "automation_only_day validation needs the daily_brief the prompt was built "
+            "from (to know which clusters were offered); none was passed."
+        )
+    clusters = {c["repo"]: c for c in build_clusters(daily_brief)}
+    selected = response.get("selected_cluster")
+    if not isinstance(selected, str) or selected not in clusters:
+        raise AuthorLLMError(
+            f"selected_cluster {selected!r} is not one of the clusters offered this "
+            f"run: {sorted(clusters)}."
+        )
+    reasoning = response.get("reasoning")
+    if not isinstance(reasoning, dict):
+        raise AuthorLLMError(
+            f"Model response's 'reasoning' field must be an object, got: {reasoning!r}"
+        )
+    missing = REASONING_REQUIRED_KEYS - reasoning.keys()
+    if missing:
+        raise AuthorLLMError(
+            f"Model response's 'reasoning' object is missing required key(s): "
+            f"{sorted(missing)}. Full reasoning: {reasoning!r}"
+        )
+    if not isinstance(reasoning.get("fact"), str) or not reasoning["fact"].strip():
+        raise AuthorLLMError(
+            f"automation_only_day=True but 'reasoning.fact' is not a non-empty string: "
+            f"{reasoning.get('fact')!r}"
+        )
+    non_empty_others = [
+        key for key in REASONING_REQUIRED_KEYS - {"fact"}
+        if reasoning.get(key) != ""
+    ]
+    if non_empty_others:
+        raise AuthorLLMError(
+            f"automation_only_day=True but 'reasoning' field(s) {sorted(non_empty_others)} "
+            f"are not empty strings: {reasoning!r}"
+        )
+
+
 def validate_structured_response(response: dict, mode: str, daily_brief: dict | None = None) -> None:
     required = FACT_REQUIRED_KEYS if mode == "fact" else IDEA_FALLBACK_REQUIRED_KEYS
     missing = required - response.keys()
@@ -652,6 +750,9 @@ def validate_structured_response(response: dict, mode: str, daily_brief: dict | 
             f"Model response missing required key(s) for mode={mode!r}: "
             f"{sorted(missing)}. Full response: {response!r}"
         )
+    if mode == "fact" and response.get("automation_only_day") is True:
+        validate_automation_only_day_response(response, daily_brief)
+        return
     if not isinstance(response.get("post"), str) or not response["post"].strip():
         raise AuthorLLMError(
             f"Model response's 'post' field must be a non-empty string, "
