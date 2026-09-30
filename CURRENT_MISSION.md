@@ -41,8 +41,16 @@ against real generated posts — and [B-058] is closed in `docs/BACKLOG.md`.
 ## BLOCKERS
 - None known.
 
+## COMPLETION
+DONE WHEN is satisfied: all four of [B-058]'s checkboxes are checked and the
+entry is closed in `docs/BACKLOG.md` (commit `5ab85f9`, `Closes: B-058`).
+This says nothing about whether the referenced goals (G052/G055) are
+themselves achieved — that remains an owner decision, not implied by this
+mission's completion, per the Mission Harness section's own
+Mission-Done-≠-Goal-Achieved rule.
+
 ## STATUS
-ACTIVE
+DONE
 
 ## SCOPE RULE
 Discovered issues, ideas, opportunities, cleanup, refactors, and future work do not
