@@ -62,8 +62,19 @@ themselves achieved — that remains an owner decision, not implied by this
 mission's completion, per the Mission Harness section's own
 Mission-Done-≠-Goal-Achieved rule.
 
+## COMPLETION
+DONE WHEN is satisfied: SPEC.md's M3 checkbox is checked (`[x]`) and its
+`status:` line reads `done`, per commits `07aec0e` (verdict/ package,
+15/15 tests, real demonstration against real M2-published `content_id`s
+`linkedin-2026-09-29`/`linkedin-2026-09-28`) and `23c216b`
+(docs/ARCHITECTURE.md's Owner Verdict Capture row). This says nothing
+about whether the referenced goals (G061/G064) are themselves achieved
+— that remains an owner decision, not implied by this mission's
+completion, per the Mission Harness section's own
+Mission-Done-≠-Goal-Achieved rule.
+
 ## STATUS
-ACTIVE
+DONE
 
 ## SCOPE RULE
 Discovered issues, ideas, opportunities, cleanup, refactors, and future work do not
