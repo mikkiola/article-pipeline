@@ -31,13 +31,54 @@ Builder and architect, not a one-off consultant.
 
 At the start of a session, read, in order: `docs/CONSTITUTION.md`
 (this file), `docs/PROJECT.md`, `docs/ARCHITECTURE.md`,
-`docs/ROADMAP.md`, `docs/BACKLOG.md`. Then state the session's plan
-before starting work.
+`docs/ROADMAP.md`, `docs/BACKLOG.md`, and `CURRENT_MISSION.md` (the
+current operational mission — see "The Mission Harness" below). Then
+state the session's plan before starting work.
 
 `docs/ROADMAP.md`'s current-pointer section states what to work on
 next, in priority order — that's the day's target unless it states
-otherwise. End the session when that target is reached, or when
-blocked on a decision only the owner can make.
+otherwise. Where `CURRENT_MISSION.md` exists and is `ACTIVE`, its `NOW`/
+`CURRENT STEP` fields are the live operational target and take
+precedence if the two disagree — `docs/ROADMAP.md`'s pointer can lag
+behind actual work without being rewritten to match. End the session
+when that target is reached, or when blocked on a decision only the
+owner can make.
+
+## The Mission Harness (`CURRENT_MISSION.md`)
+
+`CURRENT_MISSION.md` (repository root) holds the single, currently
+active operational workstream: `NOW`, `CURRENT STEP`, `DONE WHEN`, `IN
+SCOPE`, `OUT OF SCOPE`, `BLOCKERS`, `STATUS`. It is the operational
+source of truth for those fields only — it does not replace, and is not
+authoritative for, `docs/PROJECT.md` (why the project exists),
+`docs/ARCHITECTURE.md` (what currently exists), `docs/ROADMAP.md`
+(sequencing/direction — its own Current-pointer section may lag behind
+`CURRENT_MISSION.md`'s `NOW` without being rewritten to match),
+`docs/BACKLOG.md` (the task pool), `SPEC.md` (the bounded implementation
+contract for whichever task the mission currently selects), or
+`docs/adr/` (decision history).
+
+Its `GOAL` field cites a stable ID (e.g. `G052`) from the ecosystem's
+owner-controlled strategic registry, `../SYSTEM_GOALS.md` — a sibling
+document at the shared workspace root, written in Russian and
+maintained by the owner. Claude never rewrites that registry's goal
+wording, marks a goal `ACHIEVED`, or selects a successor goal on its own
+initiative — a possible achievement is written up as a question for the
+owner, never decided unilaterally.
+
+**Scope fence.** A newly discovered issue, idea, or opportunity enters
+the current mission only if `DONE WHEN` requires it or the owner
+explicitly adds it to `IN SCOPE` — otherwise it is recorded elsewhere
+(typically `docs/BACKLOG.md`) and the current mission continues
+unchanged. The owner may explicitly switch the active task at any time;
+that explicit switch is what reconciles `CURRENT_MISSION.md`, never a
+silent mid-session re-interpretation of scope.
+
+**Mission Done ≠ Goal Achieved.** Satisfying `DONE WHEN` sets this
+file's `STATUS` to `DONE` — it says nothing about whether the strategic
+goal(s) the mission served are themselves achieved. One mission can
+complete while its referenced goal remains active and open to further
+missions.
 
 If `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/BACKLOG.md`
 conflict with each other on a factual point: `docs/ARCHITECTURE.md`
