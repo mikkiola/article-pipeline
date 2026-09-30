@@ -2504,14 +2504,19 @@ closing it and opening a fresh one.** ADR-0059's own Consequences section alread
 this — it states the prompt-rebuild work is "tracked by a revision to `[B-058]`," so closing
 this entry here would leave that ADR's own cross-reference dangling. The four checkboxes below
 are superseded by ADR-0059 and should be read as replaced by, not added to, this note:
-- [ ] Rebuild `_build_fact_prompt()` against ADR-0059's five-step pipeline (FACT / TENSION /
+- [x] Rebuild `_build_fact_prompt()` against ADR-0059's five-step pipeline (FACT / TENSION /
       DESIGN INSIGHT / PERSONAL POSITION / RELEVANT PROBLEM) plus its final evidence check on
       the synthesized post text, replacing the current facts-only (ADR-0057) structure.
-- [ ] Wire in identity continuity (ADR-0059 Decision point 6): the author's real recent
+      **Done, commit `e582b8c`.**
+- [x] Wire in identity continuity (ADR-0059 Decision point 6): the author's real recent
       published posts and a persisted `identity_state` (`core_positions` /
       `emerging_positions` / `recently_used` / `underdeveloped` / `open_threads` /
       `trajectory`) as new inputs to fact-mode generation — a new data dependency
       `linkedin_publisher/daily_publish.py` does not have today.
+      **Done, commit `c8dbc86`** — as generation *input* wiring only, per ADR-0059 Decision
+      point 6's own text ("new inputs to fact-mode generation"). No writer populates real
+      `identity_state.json` content yet — see `[B-070]` for the deferred, separate
+      persistence/promotion question this checkbox does not cover.
 - [ ] Add/extend `test_daily_linkedin_author.py` coverage for the new structure (each of the
       five steps, the final evidence check, the automation-only-day guard's prompt-level
       form) before treating this entry as done, per this project's TDD threshold for a
@@ -2519,9 +2524,30 @@ are superseded by ADR-0059 and should be read as replaced by, not added to, this
       removal-assertion list (`EMERGENT PROPERTY`/`INVERSION`/`COMMERCIAL HYPOTHESIS` and
       their JSON-key forms) that enforced ADR-0057's now-superseded requirement — ADR-0059
       Decision point 8 states that test's obsolescence directly.
-- [ ] Re-validate `docs/ARCHITECTURE.md`'s Author row Validation column once real generated
+      **Partially done, 2026-09-30 (54/54 passing, `author/test_daily_linkedin_author.py`) —
+      still genuinely open, not checked.** Coverage added for each of the five steps' own
+      instructional content (not just header presence/order) and for the FINAL EVIDENCE
+      CHECK's substantive content. The automation-only-day guard's prompt-level form has no
+      test coverage because it has no implementation to cover: direct grep of
+      `author/daily_linkedin_author.py` today finds zero occurrences of any automation-only-day
+      guard text, under any phrasing. ADR-0059 Decision point 7 itself states plainly this
+      guard's text exists only in the trial prompt (`article-pipeline-trial-archive-20260929.tar.gz`,
+      archived and deleted, never committed to this repository) and "its production form is
+      `[B-069]`... not shipped by this ADR" — meaning the ADR's own Decision text already
+      confirms the guard was never carried into the real shipped prompt, in either its trial
+      or production form. `[B-069]`'s own second checklist item independently confirms the
+      exact "automation-only" definition "needs re-deriving or re-requesting from the owner,
+      not assumed." Writing prompt text for this guard now, with no canonical source for its
+      wording, would mean inventing that definition — exactly what `[B-069]` itself declines to
+      do and what `docs/CONSTITUTION.md`'s stop-and-ask rule (case 2: genuinely different
+      possible outcomes with no basis to choose between them) covers. Left open pending
+      `[B-069]` or explicit owner input, not silently closed.
+- [x] Re-validate `docs/ARCHITECTURE.md`'s Author row Validation column once real generated
       posts under ADR-0059's contract have been checked — it currently still describes the
       facts-only (ADR-0057) structure.
+      **Done, 2026-09-30** — re-validated against a real post generated under the rebuilt
+      five-step prompt and independently checked against real git history (scheduled run
+      `36658751291`, Registry record `linkedin-2026-09-30`).
 
 Also corrected, same note: the second original checkbox above ("Add the `gh repo view`
 live-check call needed for the L2 evidence tier (not present anywhere in

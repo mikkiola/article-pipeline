@@ -206,6 +206,52 @@ def test_fact_prompt_has_five_step_reasoning_shape_in_order():
     assert "1000" not in prompt
 
 
+def test_fact_prompt_each_step_carries_its_own_defining_instruction():
+    # test_fact_prompt_has_five_step_reasoning_shape_in_order only pins each
+    # step's numbered header and their relative order — it would still pass
+    # if a step's own substantive instructions were hollowed out to a single
+    # line while its header survived. This pins one load-bearing sentence
+    # per step (B-058's third checkbox: "coverage for... each of the five
+    # steps"), so a regression that guts a step's actual content, not just
+    # its heading, is caught.
+    prompt = _facts_prompt()
+    assert "Only what is directly supported by its facts. No interpretation, no reason, no consequence." in prompt
+    assert (
+        "identify a concrete, specific gap, mismatch, asymmetry, or unresolved design "
+        "question visible in the selected cluster itself"
+    ) in prompt
+    assert "The insight must preserve the exact object of the tension" in prompt
+    assert (
+        "The position must still originate from today's tension, but may be broader "
+        "than what today's data proves"
+    ) in prompt
+    assert (
+        "framed explicitly as an untested hypothesis, never as a confirmed fact about "
+        "any market, product, or user"
+    ) in prompt
+
+
+def test_fact_prompt_final_evidence_check_content_is_present():
+    # test_fact_prompt_has_five_step_reasoning_shape_in_order only confirms
+    # the FINAL EVIDENCE CHECK heading exists after the five steps — it does
+    # not pin what that check actually requires. B-058's third checkbox
+    # names "the final evidence check" as its own coverage target,
+    # separately from the five steps.
+    prompt = _facts_prompt()
+    assert (
+        'Do not state as fact: absence of a capability or mechanism unless the facts '
+        'explicitly establish that absence'
+    ) in prompt
+    assert (
+        'what "nobody", "the team", "the system", or "the author" could or could not do'
+    ) in prompt
+    assert "If a sentence cannot pass this check, rewrite it conservatively or remove it" in prompt
+    assert (
+        "This check does not constrain the personal position itself: the evidence "
+        "requirement applies to claims about reality, not to the author's stated preference"
+    ) in prompt
+
+
 def test_fact_prompt_drops_adr_0057_facts_only_prohibition_language():
     # ADR-0059 Decision point 3 lifts ADR-0057's blanket ban on any
     # reasoning over facts; only the fixed structural order and the
@@ -843,6 +889,8 @@ if __name__ == "__main__":
         test_fact_mode_builds_fact_prompt_and_parses_wellformed_response,
         test_idea_fallback_mode_builds_idea_prompt_and_parses_wellformed_response,
         test_fact_prompt_has_five_step_reasoning_shape_in_order,
+        test_fact_prompt_each_step_carries_its_own_defining_instruction,
+        test_fact_prompt_final_evidence_check_content_is_present,
         test_fact_prompt_drops_adr_0057_facts_only_prohibition_language,
         test_fact_prompt_says_none_recorded_yet_when_no_history_exists,
         test_fact_prompt_includes_identity_state_positions_and_trajectory_when_present,
