@@ -1,8 +1,8 @@
 # Current Mission
 
 ## GOAL
-ID: G052, G055
-Title: Turn real work into content; separate fact from interpretation
+ID: G061, G064
+Title: Measure publication quality; improve content based on past results
 Source: ../SYSTEM_GOALS.md
 Goals version: 2026-09-30.v1
 Reference: docs/PROJECT.md
