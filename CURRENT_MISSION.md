@@ -8,39 +8,53 @@ Goals version: 2026-09-30.v1
 Reference: docs/PROJECT.md
 
 ## NOW
-This mission is closed (see `## STATUS`). Awaiting reconciliation with the
-next mission — not yet selected here.
+Building M3 (Owner Verdict Capture, LinkedIn) per `SPEC.md`'s milestone
+definition: an append-only, `content_id`-keyed verdict event stream,
+independent of publication lifecycle state.
 
 ## CURRENT STEP
-None — closed, pending the next mission's reconciliation.
+Design and implement the verdict record schema and storage mechanism
+(`verdict/output/`, JSON records) per SPEC.md requirements 14-16 and
+ADR-0050 points 1-2.
 
 ## WHY
-The five-step prompt rebuild (B-058's first checkbox) is already committed
-(`e582b8c`). Identity continuity is the next unchecked item in [B-058], and no
-other checkbox in that entry can start before it per the entry's own ordering.
+M3 is a named, explicit dependency of `SAFETY_PAUSE`'s trigger and
+proactive credential alerting (ADR-0054), both currently unbuilt and
+blocking full M2 safety coverage. M3 is also SPEC.md's own next
+not-started milestone in the Publication Core Loop sequence.
 
 ## DONE WHEN
-[B-058]'s four checkboxes are all satisfied — five-step prompt rebuilt (done),
-identity continuity wired, `test_daily_linkedin_author.py` extended for the new
-structure, and `docs/ARCHITECTURE.md`'s Author row Validation column re-validated
-against real generated posts — and [B-058] is closed in `docs/BACKLOG.md`.
+SPEC.md's M3 checkbox is satisfied: both a `recorded` and a `missing`
+`verdict_status` are demonstrated (a verdict recorded for a real M2
+publication, and a Weekly snapshot showing no verdict yet for another)
+— and M3's own `status:` line in SPEC.md is updated from `not started`
+to reflect this.
 
 ## IN SCOPE
-- `identity_state`/recent-posts wiring into the fact-mode generation path
-- Test coverage extension for the five-step structure and identity wiring
-- Re-validating `docs/ARCHITECTURE.md`'s Author row once posts are checked
+- Verdict event stream schema and writer (`verdict/output/`, JSON,
+  `content_id`-keyed)
+- Recording a `verdict_type` (`good`/`trash`/`style-off`) with
+  `received_at` and optional comment
+- Demonstrating both `recorded` and `missing` `verdict_status` outcomes
+- No Telegram delivery mechanism (M5, blocked on `[B-065]`) — verdicts
+  may be recorded via a direct, manual/test-only interface for this
+  milestone; a real Telegram round-trip is explicitly M5's own scope,
+  not M3's
 
 ## OUT OF SCOPE
-- `_build_idea_fallback_prompt()` / idea_fallback mode (governed separately by ADR-0044)
-- The automation-only-day pre-call guard ([B-069], filed separately)
-- [B-068]'s metadata-field schema detail (decision already closed; schema deferred)
-- Quality Gate, Platform Adapter, Multi-Source Claim Layer, or any Phase 4/5 work
-- General architecture cleanup or refactors not required for [B-058]
+- M5 (Telegram HITL Bot) and any Telegram transport
+- M6 (Weekly Snapshot & Pattern Detection) beyond the single
+  demonstration snapshot DONE WHEN requires
+- `SAFETY_PAUSE`'s actual trigger wiring (depends on M3 being done, but
+  wiring the trigger itself is separate, later work)
+- M4 (Habr Manual Outbox)
+- B-069 (automation-only-day pre-call guard)
+- Any Quality Gate, Platform Adapter, or Multi-Source Claim Layer work
 
 ## BLOCKERS
 - None known.
 
-## COMPLETION
+## PREVIOUS MISSION COMPLETION (B-058, historical — superseded by this mission)
 DONE WHEN is satisfied: all four of [B-058]'s checkboxes are checked and the
 entry is closed in `docs/BACKLOG.md` (commit `5ab85f9`, `Closes: B-058`).
 This says nothing about whether the referenced goals (G052/G055) are
@@ -49,7 +63,7 @@ mission's completion, per the Mission Harness section's own
 Mission-Done-≠-Goal-Achieved rule.
 
 ## STATUS
-DONE
+ACTIVE
 
 ## SCOPE RULE
 Discovered issues, ideas, opportunities, cleanup, refactors, and future work do not
