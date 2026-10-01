@@ -67,3 +67,5 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0057](0057-commit-body-why-effect-trailers-not-yet-accepted-as-evidence.md) | Commit-body Why:/Effect: trailers are not yet accepted as Evidence; facts-only publication stays in force | Superseded | null | ADR-0059 |
 | [ADR-0058](0058-fact-prompt-offers-per-repo-clusters-with-id-based-citation.md) | The fact prompt offers per-repository clusters of ID-tagged facts, and cited IDs are verified | Accepted | null | null |
 | [ADR-0059](0059-fact-mode-post-generation-evidence-grounded-reasoning-with-personal-position.md) | Fact-mode post generation uses a five-step evidence-grounded reasoning pipeline with a personal position | Accepted | [ADR-0057, "ADR-0044 (fact-mode only)"] | null |
+| [ADR-0060](0060-habr-edit-capture-as-its-own-component.md) | Habr Edit Capture — a new component, a Drive-metadata dedup key, and an explicit zero-diff record | Accepted | null | null |
+| [ADR-0061](0061-why-effect-trailers-activated-as-fact-mode-evidence-tier.md) | Why:/Effect: commit trailers activated as a fact-mode evidence tier | Accepted | null | null |
