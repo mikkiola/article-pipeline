@@ -317,9 +317,13 @@ approve/reject, Weekly reports, and alerts.
 
 - **LinkedIn**: `w_member_social` scope, personal-profile posting via the
   Share on LinkedIn product (ADR-0049). No partner review needed.
-- **Telegram Bot API**: `sendMessage`, cron-polling `getUpdates` (no
-  webhook, matching this ecosystem's GitHub-Actions-cron pattern) — via
-  the shared ToolTempest transport once `[B-065]` lands.
+- **Telegram Bot API, M4**: a standalone one-way `sendMessage` call (bot
+  token + chat ID) delivering the Habr draft hand-off — no dependency on
+  `[B-065]` or the shared transport; FR20 explicitly rules out any
+  round-trip for this milestone.
+- **Telegram Bot API, M5**: `sendMessage` plus cron-polling `getUpdates`
+  (no webhook, matching this ecosystem's GitHub-Actions-cron pattern) —
+  via the shared ToolTempest transport once `[B-065]` lands.
 - **Google Drive/Docs API**: read-only access to the owner's existing
   per-Habr-article folders, via a new service-account credential scoped
   to article-pipeline specifically (net-new, per requirement 21).
