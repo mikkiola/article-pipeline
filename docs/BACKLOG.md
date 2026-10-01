@@ -3177,7 +3177,7 @@ scope.
 
 **Source.** Architect chat session, 2026-09-30.
 
-### [B-071] P1 — No working path (manual or scheduled) produces a current Habr draft — blocks M4's FR17/verify/done-when
+### [B-071] P1 — No working Habr draft-generation entry point exists (one of four separate gaps on FR17's own path)
 
 Found: 2026-10-01, a canon-only investigation into whether M4 (Habr Manual Outbox + Edit
 Capture) is blocked without a scheduled Habr-draft-generation trigger. SPEC.md's own FR17
@@ -3210,13 +3210,34 @@ Blocks, precisely: FR17 (nothing current exists for `habr_edit_capture/telegram_
 exists linking a real `-draft`/`-final` pair") — both require a real, current draft to exist
 first, which nothing in this repo reliably produces today.
 
+**Scope note, added 2026-10-02 (not a changed finding — a narrowing, after this entry's own
+title was found to read as covering more than it actually does).** A follow-on
+Outcome-traceability trace found this entry's own gap is one of four separate, independently
+confirmed facts standing on FR17's own path, not the whole story: (1) this entry's own finding
+(no working generator); (2) separately, nothing anywhere decides *when* generation should run
+— no cron/workflow/CLI triggers it on any cadence, confirmed by zero Habr-related
+`.github/workflows/` entries; (3) separately again, `send_habr_draft()` itself has zero real
+call sites anywhere in this codebase, confirmed by direct grep — true independent of whether
+(1) or (2) ever get fixed; (4) `habr-edit-capture.yml`'s own schedule is real but would fail if
+triggered today — no `HABR_DRIVE_SERVICE_ACCOUNT_KEY_JSON`/`HABR_DRIVE_ROOT_FOLDER_ID` secret
+exists, confirmed via `gh secret list`, and the owner hasn't shared her Drive folder with a
+service account that doesn't exist yet. Gaps (2)/(3)/(4) are **not** filed as their own
+`[B-NNN]` entries — each is a narrow, concrete fact about FR17's/M4's own already-written
+code and configuration, not a separate body of investigation or an owner decision requiring
+its own tracked task; all three are now stated directly, in full, in `SPEC.md`'s own FR17
+note and milestone-tracker status line, and in `docs/ARCHITECTURE.md`'s Habr Edit Capture
+(M4) row — the living documents a future session would read first regardless. Filing them
+separately here too would duplicate the same three facts in a second place with no
+independent reason to track them apart from this entry's own gap or from each other.
+
 - [ ] Not fixed here — per this entry's own investigating task's explicit scope, this is a
       filed finding, not a patch. Whoever picks this up decides, as its own scoped task (not
       assumed here): whether `run_habr_pilot.py` itself should be hardened past "throwaway"
       into a real, reusable manual-invocation entry point (updating its hardcoded manifest
-      path at minimum), or whether a different, new entry point should be built instead — and
-      separately, whether that entry point should ever become scheduled, given FR17's own
-      grammar does not require it to be.
+      path at minimum), or whether a different, new entry point should be built instead. The
+      three separate facts named in the scope note above (no trigger, no wiring, no Drive
+      secrets) are not resolved by fixing this entry's own gap alone and need their own
+      attention regardless of which generator-entry-point option is chosen.
 
 **Source.** Canon-only investigation (SPEC.md, ROADMAP.md, BACKLOG.md, ADR-0043/0045/0046/
 0050), 2026-10-01, following the M4 implementation pass that built `habr_edit_capture/`

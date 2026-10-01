@@ -162,16 +162,34 @@ grep — none exist here today):
     this requirement consumes, not an action it must itself cause or
     schedule — confirmed, 2026-10-01, by direct comparison against
     FR19's self-contained "a scheduled job watches for..." wording,
-    which does own its trigger mechanism. The precondition does not
-    currently hold, though: no working path (manual or scheduled)
-    anywhere in this repo produces a *current* Habr draft today —
-    `strategy_layer/run_habr_pilot.py`, the only end-to-end script,
-    hardcodes a stale manifest date and is self-described as "Throwaway
-    orchestration... not TDD'd for that reason." Filed as
-    `docs/BACKLOG.md`'s `[B-071]`, not fixed here — building or hardening
-    a draft-generation entry point is new scope, out of this
-    requirement's own grammar and out of this note's investigating
-    task.
+    which does own its trigger mechanism. Three separate, independently
+    confirmed facts stand between this requirement and real use, not
+    one:
+    - No working path (manual or scheduled) anywhere in this repo
+      produces a *current* Habr draft today — `strategy_layer/
+      run_habr_pilot.py`, the only end-to-end script, hardcodes a stale
+      manifest date and is self-described as "Throwaway orchestration...
+      not TDD'd for that reason." Filed as `docs/BACKLOG.md`'s
+      `[B-071]`, not fixed here.
+    - Separately, and still true even once a working generator exists:
+      nothing anywhere in this repo decides *when* generation should
+      run — no cron, workflow, or CLI triggers it on any cadence,
+      manual or scheduled. Confirmed directly, 2026-10-01: zero
+      `.github/workflows/` entries reference anything Habr-related, and
+      no script calls a generation step on any kind of schedule.
+    - Separately again, and also true even once a working, triggered
+      generator exists: `habr_edit_capture/telegram_send.py`'s
+      `send_habr_draft()` — this requirement's own `sendMessage` call —
+      is built and unit-tested but has zero real call sites anywhere in
+      this codebase. Confirmed by direct grep, 2026-10-01: `grep -rn
+      "send_habr_draft" --include="*.py" .` outside its own test file
+      returns only its own `def` line. Fixing the two points above would
+      not, by itself, make this call fire — something would still need
+      to invoke it.
+    None of these three is fixed by this note; building or hardening a
+    draft-generation entry point, its trigger, or wiring the send call to
+    it is new scope, out of this requirement's own grammar and out of
+    this note's investigating task.
 18. Edit capture reuses the owner's **existing** per-Habr-article Google
     Docs folder convention (confirmed net-new code for article-pipeline
     itself, not net-new to the owner's workflow): each folder contains
@@ -446,20 +464,27 @@ end-to-end.
   zero-diff/unedited-draft capture — `docs/adr/0060-habr-edit-capture-as-its-own-
   component.md`), its own scheduled workflow (`habr-edit-capture.yml`) and
   branch-separated output (`habr-edit-capture-data`, same reasoning as ADR-0055's
-  `registry-data`), 34/34 unit tests passing against synthetic Drive data (no real
-  Drive account or credential exists yet — not run against a live account). FR17's
-  own `send_habr_draft()` (`habr_edit_capture/telegram_send.py`) is built and
-  unit-tested but has nothing real to send: a canon-only investigation,
-  2026-10-01, confirmed FR17's own grammar treats draft generation as a
-  precondition, not an in-scope M4 action, but found that precondition does not
-  currently hold anywhere in this repo — `strategy_layer/run_habr_pilot.py`, the
-  only end-to-end script, hardcodes a stale manifest date and is self-described
-  as throwaway, not a working entry point (filed as `docs/BACKLOG.md`'s
-  `[B-071]`, a real blocker on FR17/verify/done-when, not fixed by this
-  milestone). Not yet satisfied: verify's "one real Habr draft delivered" and
-  done-when's "a real `-draft`/`-final` pair" both require a real, current draft
-  — blocked on `[B-071]` — and a real owner Drive account, which also doesn't
-  exist yet.
+  `registry-data`), 34/34 unit tests passing against synthetic Drive data.
+  A 2026-10-01 Outcome-traceability trace found four separate, independently
+  confirmed gaps on FR17's own path — fixing one does not fix the others:
+  (1) no working Habr draft-generation entry point exists
+  (`strategy_layer/run_habr_pilot.py` is throwaway, hardcoded to a stale
+  manifest date — filed as `docs/BACKLOG.md`'s `[B-071]`); (2) separately,
+  nothing anywhere decides *when* generation should run — zero
+  `.github/workflows/` entries reference anything Habr-related, confirmed
+  directly; (3) separately again, FR17's own `send_habr_draft()`
+  (`habr_edit_capture/telegram_send.py`) is built and unit-tested but has zero
+  real call sites anywhere in this codebase, confirmed by direct grep — fixing
+  (1) and (2) would not by itself make this call fire; (4) `habr-edit-
+  capture.yml` is genuinely scheduled (`cron: "0 12 * * *"`) and would run, but
+  would fail immediately if triggered today: `gh secret list --repo
+  mikkiola/article-pipeline` confirms neither `HABR_DRIVE_SERVICE_ACCOUNT_
+  KEY_JSON` nor `HABR_DRIVE_ROOT_FOLDER_ID` exists as a repo secret, and the
+  owner has not shared her real per-Habr-article Drive folder with a
+  service account that doesn't exist yet either. Not yet satisfied: verify's
+  "one real Habr draft delivered" and done-when's "a real `-draft`/`-final`
+  pair" both require all four gaps above to close, not just `[B-071]` (gap 1)
+  alone.
 - drift:
   - goal: 0.0
   - constraint: 0.0
