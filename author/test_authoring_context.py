@@ -73,6 +73,49 @@ def test_daily_brief_unit_carries_commit_messages_and_diffstat():
     assert contexts[0].framing == "2 commits landed."
 
 
+def test_daily_brief_unit_carries_commit_evidence_when_present():
+    units = [
+        _unit(
+            "a",
+            {
+                "source_type": "collector_daily_brief",
+                "repo": "article-pipeline",
+                "commit_count": 1,
+                "commit_messages": ["feat: x"],
+                "commit_evidence": [
+                    {"sha": "1" * 40, "subject": "feat: x", "why": "needed", "effect": "works"}
+                ],
+            },
+        )
+    ]
+    claim_treatments = [
+        {"claim_id": "a", "final_classification": "include", "framing": "1 commit landed."}
+    ]
+    contexts = build_authoring_contexts(units, claim_treatments)
+    assert contexts[0].commit_evidence == [
+        {"sha": "1" * 40, "subject": "feat: x", "why": "needed", "effect": "works"}
+    ]
+
+
+def test_daily_brief_unit_defaults_commit_evidence_to_empty_when_absent():
+    units = [
+        _unit(
+            "a",
+            {
+                "source_type": "collector_daily_brief",
+                "repo": "article-pipeline",
+                "commit_count": 1,
+                "commit_messages": ["feat: x"],
+            },
+        )
+    ]
+    claim_treatments = [
+        {"claim_id": "a", "final_classification": "include", "framing": "1 commit landed."}
+    ]
+    contexts = build_authoring_contexts(units, claim_treatments)
+    assert contexts[0].commit_evidence == []
+
+
 def test_manifest_unit_has_counts_not_raw_text():
     units = [
         _unit(

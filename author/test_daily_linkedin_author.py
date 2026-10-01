@@ -216,7 +216,10 @@ def test_fact_prompt_each_step_carries_its_own_defining_instruction():
     # steps"), so a regression that guts a step's actual content, not just
     # its heading, is caught.
     prompt = _facts_prompt()
-    assert "Only what is directly supported by its facts. No interpretation, no reason, no consequence." in prompt
+    assert (
+        "Only what is directly supported by its facts. No interpretation, no "
+        "inferred reason, no inferred consequence"
+    ) in prompt
     assert (
         "identify a concrete, specific gap, mismatch, asymmetry, or unresolved design "
         "question visible in the selected cluster itself"
@@ -482,10 +485,17 @@ def test_reasoning_validation_accepts_well_formed_object_and_rejects_missing_pie
 def test_fact_prompt_says_no_reason_if_the_input_has_none():
     # ADR-0059 lifts the blanket reasoning ban but still forbids inventing a
     # reason absent from the data, explicitly including in PERSONAL POSITION.
+    # Updated 2026-10-01 (ADR-0057 point 4 activation): a commit WITH its own
+    # stated-reason/stated-effect fact is now an explicit exception -- see
+    # test_fact_prompt_surfaces_stated_reason_and_effect_as_distinct_facts --
+    # but SYNTHETIC_FACTS_BRIEF has no commit_evidence at all, so this test's
+    # own commits still have no such fact and the prohibition still applies
+    # to them in full.
     prompt = _facts_prompt()
     assert (
-        "If it does not contain a reason for a change, do not invent one — "
-        "not even in the PERSONAL POSITION step below"
+        "If a commit has no stated-reason/stated-effect fact, do "
+        "not invent a reason or consequence for it — not even in the PERSONAL "
+        "POSITION step below"
         in prompt
     )
     assert "ONLY source of facts" in prompt
@@ -508,13 +518,107 @@ def test_fact_prompt_states_the_evidence_boundary_explicitly():
     ) in prompt
 
 
-def test_fact_prompt_stays_silent_about_commit_body_trailers():
-    # Why:/Effect: trailer lines are deliberately not an accepted source yet,
-    # so the prompt must not mention them at all.
+# --- Why:/Effect: stated-reason evidence tier (ADR-0057 point 4 / ---------
+# ADR-0059 activation, 2026-10-01) -------------------------------------------
+# Replaces test_fact_prompt_stays_silent_about_commit_body_trailers, whose
+# silence requirement this activation deliberately lifts: obsolete, not
+# wrong, same treatment ADR-0059 Decision point 8 gave the old EMERGENT
+# PROPERTY/INVERSION removal-assertion list.
+
+SYNTHETIC_FACTS_BRIEF_WITH_EVIDENCE = {
+    "mode": "fact",
+    "date": "2026-10-01",
+    "window": "1.day",
+    "total_diffstat": 100,
+    "files_touched": ["a.py"],
+    "commit_messages": [
+        "feat(author): wire Why:/Effect: evidence tier",
+        "chore: unrelated tidy-up",
+    ],
+    "per_repo": [
+        {
+            "name": "article-pipeline",
+            "commit_count": 2,
+            "diffstat": 100,
+            "files_touched": ["a.py"],
+            "commit_messages": [
+                "feat(author): wire Why:/Effect: evidence tier",
+                "chore: unrelated tidy-up",
+            ],
+            "commit_evidence": [
+                {
+                    "sha": "1" * 40,
+                    "subject": "feat(author): wire Why:/Effect: evidence tier",
+                    "why": "ADR-0057 point 4 judged the trailer history sufficient",
+                    "effect": "fact-mode can now cite a stated reason for this commit",
+                },
+            ],
+        },
+    ],
+    "decision_source": "heuristic",
+}
+
+
+def _facts_prompt_with_evidence():
+    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
+        return " ".join(author_llm.build_prompt(
+            SYNTHETIC_FACTS_BRIEF_WITH_EVIDENCE,
+            identity_state=dict(author_llm.identity_state_module.DEFAULT_IDENTITY_STATE),
+            recent_posts=[],
+        ).split())
+
+
+def test_fact_prompt_surfaces_stated_reason_and_effect_as_distinct_facts():
+    prompt = _facts_prompt_with_evidence()
+    assert author_llm.FACT_KIND_STATED_WHY in prompt
+    assert author_llm.FACT_KIND_STATED_EFFECT in prompt
+    assert "ADR-0057 point 4 judged the trailer history sufficient" in prompt
+    assert "fact-mode can now cite a stated reason for this commit" in prompt
+    # Only the one commit with real commit_evidence produced a fact of this
+    # kind — the second commit (no entry in commit_evidence) must not have
+    # fabricated one.
+    assert prompt.count(f"({author_llm.FACT_KIND_STATED_WHY}):") == 1
+    assert prompt.count(f"({author_llm.FACT_KIND_STATED_EFFECT}):") == 1
+    assert "chore: unrelated tidy-up" in prompt
+
+
+def test_fact_prompt_omits_stated_reason_kind_entirely_when_no_commit_has_one():
+    # SYNTHETIC_FACTS_BRIEF's per_repo entries carry no commit_evidence key
+    # at all -- the baseline, pre-activation shape. The kind's own name
+    # still appears once, in the static "what the data does and does not
+    # contain" explanation (always present, independent of this run's
+    # data) -- but no actual FACT line of that kind is offered, since none
+    # was built from a commit with no commit_evidence entry.
     prompt = _facts_prompt()
-    assert "Why:" not in prompt
-    assert "Effect:" not in prompt
-    assert "trailer" not in prompt.lower()
+    assert prompt.count(f"({author_llm.FACT_KIND_STATED_WHY}):") == 0
+    assert prompt.count(f"({author_llm.FACT_KIND_STATED_EFFECT}):") == 0
+
+
+def test_fact_prompt_allows_stating_a_reason_only_for_the_commits_own_trailer():
+    prompt = _facts_prompt()
+    assert (
+        "if a commit has its own stated-reason and/or stated-effect fact "
+        "in this cluster, you may state it as that specific commit's own "
+        "stated reason/effect"
+    ) in prompt
+    assert (
+        "never borrow another commit's stated reason or effect for it, "
+        "even a commit in the same cluster"
+    ) in prompt
+
+
+def test_fact_prompt_final_evidence_check_covers_stated_reason_grounding():
+    prompt = _facts_prompt()
+    assert (
+        "A stated reason or effect for a specific commit is valid only if "
+        "it is directly supported by that same commit's own "
+        "stated-reason/stated-effect fact among the selected cluster's "
+        "offered facts"
+    ) in prompt
+    assert (
+        "never inferred from a bare commit subject, and never borrowed "
+        "from a different commit's own trailer, even one in the same cluster"
+    ) in prompt
 
 
 def test_reasoning_step_text_is_not_added_to_the_idea_fallback_prompt():
@@ -1029,7 +1133,10 @@ if __name__ == "__main__":
         test_reasoning_validation_accepts_well_formed_object_and_rejects_missing_pieces,
         test_fact_prompt_says_no_reason_if_the_input_has_none,
         test_fact_prompt_states_the_evidence_boundary_explicitly,
-        test_fact_prompt_stays_silent_about_commit_body_trailers,
+        test_fact_prompt_surfaces_stated_reason_and_effect_as_distinct_facts,
+        test_fact_prompt_omits_stated_reason_kind_entirely_when_no_commit_has_one,
+        test_fact_prompt_allows_stating_a_reason_only_for_the_commits_own_trailer,
+        test_fact_prompt_final_evidence_check_covers_stated_reason_grounding,
         test_reasoning_step_text_is_not_added_to_the_idea_fallback_prompt,
         test_fact_prompt_forbids_naming_adr_numbers,
         test_fact_prompt_keeps_the_l2_public_link_mechanism,

@@ -37,13 +37,15 @@ def test_manifest_real_output_keys_are_all_whitelisted():
 
 def test_daily_brief_real_output_keys_are_all_whitelisted():
     daily_brief = {
-        "schema_version": 2,
+        "schema_version": 3,
         "mode": "fact",
         "date": "2026-09-11",
         "window": "1.day",
         "total_diffstat": 10,
         "files_touched": ["a.py"],
-        "commit_messages": [{"repo": "article-pipeline", "sha": "1" * 40, "subject": "fix: bug"}],
+        "commit_messages": [
+            {"repo": "article-pipeline", "sha": "1" * 40, "subject": "fix: bug", "why": None, "effect": None}
+        ],
         "per_repo": [
             {"name": "article-pipeline", "branch": "main", "head_sha": "a" * 40,
              "commit_count": 2, "diffstat": 10, "files_touched": ["a.py"]},

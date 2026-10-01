@@ -27,10 +27,13 @@ verifies exactly as strongly as a busy one) and does not verify
 individual commit messages. Stated plainly so the label isn't read as
 more than it is.
 
-**Attribution.** A daily brief (schema_version 2) attributes each commit
-message to its repository. Each unit receives only its own repository's
-messages, never the brief-wide list — an excluded unit's messages can
-therefore never reach the post prompt through an included unit.
+**Attribution.** A daily brief (schema_version 3) attributes each commit
+message to its repository, and additionally carries why/effect (a
+Why:/Effect: commit-body trailer, or null) per message — ADR-0057 point 4 /
+ADR-0059's activation, 2026-10-01. Each unit receives only its own
+repository's messages and evidence, never the brief-wide list — an excluded
+unit's messages/evidence can therefore never reach the post prompt through
+an included unit.
 """
 
 from __future__ import annotations
@@ -51,8 +54,12 @@ INTEGRITY_CHECK_METHOD = "ancestry_reconciliation"
 
 # The only daily_brief schema this adapter understands (Collector's
 # daily_brief.py SCHEMA_VERSION). An unknown version is never guessed at:
-# every unit built from it is marked invalid.
-DAILY_BRIEF_SCHEMA_VERSION = 2
+# every unit built from it is marked invalid. Bumped 2 -> 3 for ADR-0057
+# point 4 / ADR-0059's activation (2026-10-01): schema 3's commit_messages
+# entries additionally carry why/effect (collector's own schema history,
+# see daily_brief.py) — a schema-2 brief has no such fields and is not
+# interpreted, same fail-closed precedent as a pre-schema-2 brief today.
+DAILY_BRIEF_SCHEMA_VERSION = 3
 
 GITHUB_API_BASE = "https://api.github.com"
 GITHUB_OWNER = "mikkiola"
@@ -91,6 +98,7 @@ METADATA_WHITELIST = {
         "diffstat",
         "files_touched",
         "commit_messages",
+        "commit_evidence",
         "mode",
         "integrity_check_detail",
     },
@@ -233,7 +241,7 @@ def adapt_manifest(manifest: dict) -> list[CanonicalUnit]:
 
 
 def _messages_by_repo(commit_messages: list) -> dict[str, list[str]]:
-    """Groups a schema-2 brief's attributed commit_messages by repo,
+    """Groups a schema-3 brief's attributed commit_messages by repo,
     keeping only the subject text. A malformed entry raises: an unattributable
     message must never be guessed into some repo's slice."""
     by_repo: dict[str, list[str]] = {}
@@ -247,6 +255,25 @@ def _messages_by_repo(commit_messages: list) -> dict[str, list[str]]:
                 f"commit_messages entry is not a {{repo, sha, subject}} object: {entry!r}"
             )
         by_repo.setdefault(entry["repo"], []).append(entry["subject"])
+    return by_repo
+
+
+def _evidence_by_repo(commit_messages: list) -> dict[str, list[dict]]:
+    """Groups a schema-3 brief's attributed commit_messages by repo into
+    stated-reason/stated-effect evidence entries, keeping only commits that
+    actually carry at least one of why/effect (ADR-0057 point 4 / ADR-0059
+    activation). A commit with neither contributes nothing here — absence
+    of a trailer is not itself evidence, and must not reach the prompt as
+    an empty-but-present fact."""
+    by_repo: dict[str, list[dict]] = {}
+    for entry in commit_messages:
+        why = entry.get("why")
+        effect = entry.get("effect")
+        if not why and not effect:
+            continue
+        by_repo.setdefault(entry["repo"], []).append(
+            {"sha": entry["sha"], "subject": entry["subject"], "why": why, "effect": effect}
+        )
     return by_repo
 
 
@@ -273,6 +300,7 @@ def adapt_daily_brief(daily_brief: dict) -> list[CanonicalUnit]:
     schema_version = daily_brief.get("schema_version")
     supported = schema_version == DAILY_BRIEF_SCHEMA_VERSION
     messages_by_repo = _messages_by_repo(daily_brief["commit_messages"]) if supported else {}
+    evidence_by_repo = _evidence_by_repo(daily_brief["commit_messages"]) if supported else {}
 
     units = []
     for repo in daily_brief["per_repo"]:
@@ -303,6 +331,7 @@ def adapt_daily_brief(daily_brief: dict) -> list[CanonicalUnit]:
                     "diffstat": repo["diffstat"],
                     "files_touched": repo["files_touched"],
                     "commit_messages": messages_by_repo.get(repo["name"], []),
+                    "commit_evidence": evidence_by_repo.get(repo["name"], []),
                     "mode": daily_brief["mode"],
                     "integrity_check_detail": detail,
                 },

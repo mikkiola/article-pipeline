@@ -187,6 +187,20 @@ FACT_KIND_SUBJECT = "commit subject"
 FACT_KIND_COMMIT_COUNT = "commit count"
 FACT_KIND_FILES_COUNT = "files touched count"
 
+# ADR-0057 point 4 / ADR-0059 activation (2026-10-01, following that date's
+# re-measurement: 39 Why:/Effect:-bearing commits over 30 days across
+# article-pipeline and collector, holding for 4 distinct calendar days — the
+# owner's own judgment-call bar, not a fixed threshold). A commit whose body
+# carried a Why:/Effect: trailer (collector/scripts/tier0_scan.py's capture,
+# collector/scripts/daily_brief.py schema_version 3) contributes one
+# additional fact per trailer line present, kept as its own distinct kind so
+# the model — and FINAL EVIDENCE CHECK below — can always tell an author-
+# stated reason/effect apart from a bare commit subject with no stated
+# reason. These are per-commit: a stated-reason fact is never evidence for
+# any commit other than the one whose trailer it came from.
+FACT_KIND_STATED_WHY = "stated reason (Why: trailer)"
+FACT_KIND_STATED_EFFECT = "stated effect (Effect: trailer)"
+
 
 def build_clusters(daily_brief: dict) -> list:
     """One cluster per repository that had at least one commit, each with
@@ -201,7 +215,14 @@ def build_clusters(daily_brief: dict) -> list:
 
     Raises AuthorLLMError, rather than degrading to count-only clusters,
     when a repository's entry has no `commit_messages` key (a DailyBrief
-    shape from before per-repo attribution) or when no cluster exists."""
+    shape from before per-repo attribution) or when no cluster exists.
+
+    `commit_evidence` (optional; absent on a DailyBrief predating ADR-0057
+    point 4's activation, or when no commit in this repo today carried a
+    Why:/Effect: trailer — both treated as "no stated-reason facts today",
+    not an error) contributes one stated-reason and/or stated-effect fact
+    per commit that has one, in addition to that commit's own subject fact
+    above."""
     clusters = []
     for repo in daily_brief["per_repo"]:
         if repo["commit_count"] <= 0:
@@ -214,6 +235,11 @@ def build_clusters(daily_brief: dict) -> list:
                 f"per-repo fact clusters cannot be built from it."
             )
         raw_facts = [(FACT_KIND_SUBJECT, subject) for subject in repo["commit_messages"]]
+        for entry in repo.get("commit_evidence", []):
+            if entry.get("why"):
+                raw_facts.append((FACT_KIND_STATED_WHY, entry["why"]))
+            if entry.get("effect"):
+                raw_facts.append((FACT_KIND_STATED_EFFECT, entry["effect"]))
         raw_facts.append((FACT_KIND_COMMIT_COUNT, str(repo["commit_count"])))
         raw_facts.append((FACT_KIND_FILES_COUNT, str(len(repo["files_touched"]))))
         facts = [
@@ -229,6 +255,9 @@ def build_clusters(daily_brief: dict) -> list:
     return clusters
 
 
+_FREE_TEXT_FACT_KINDS = (FACT_KIND_SUBJECT, FACT_KIND_STATED_WHY, FACT_KIND_STATED_EFFECT)
+
+
 def _clusters_block(clusters: list) -> str:
     blocks = []
     for cluster in clusters:
@@ -236,7 +265,7 @@ def _clusters_block(clusters: list) -> str:
         for fact in cluster["facts"]:
             text = (
                 json.dumps(fact["text"], ensure_ascii=False)
-                if fact["kind"] == FACT_KIND_SUBJECT
+                if fact["kind"] in _FREE_TEXT_FACT_KINDS
                 else fact["text"]
             )
             lines.append(f"- {fact['id']} ({fact['kind']}): {text}")
@@ -343,11 +372,22 @@ repository that had commits today. Every fact has an ID:
 {_identity_context_block(identity_state, recent_posts)}
 
 What the data does and does not contain:
-- Each fact is a commit subject line or a count computed from that
-  repository's own data; a fact's ID refers to exactly that data point.
-- The data has no commit bodies, no reasons, no test results, and no
-  commit hashes. If it does not contain a reason for a change, do not
-  invent one — not even in the PERSONAL POSITION step below.
+- Each fact is a commit subject line, a stated reason or stated effect
+  taken verbatim from that specific commit's own Why:/Effect: trailer
+  (kind: "{FACT_KIND_STATED_WHY}" / "{FACT_KIND_STATED_EFFECT}"), or a
+  count computed from that repository's own data; a fact's ID refers to
+  exactly that data point.
+- A stated-reason or stated-effect fact belongs to exactly one commit —
+  the commit whose own trailer it came from. You may state it as that
+  commit's own stated reason/effect. A commit with no such fact in this
+  cluster has no stated reason: do not invent one for it, and never
+  borrow another commit's stated reason or effect for it, even a commit
+  in the same cluster.
+- Beyond a commit's own stated-reason/stated-effect fact when present,
+  the data has no other commit-body content, no test results, and no
+  commit hashes. If a commit has no stated-reason/stated-effect fact, do
+  not invent a reason or consequence for it — not even in the PERSONAL
+  POSITION step below.
 - Only use information present in the supplied data above.
 
 Selecting a cluster:
@@ -382,9 +422,13 @@ Work through these five steps, in this order:
 
 1. FACT — restate, in your own words, what the selected cluster's
    commits actually changed. Only what is directly supported by its
-   facts. No interpretation, no reason, no consequence. Do not name ADR
-   numbers, even if a commit subject contains one — describe the change
-   in plain words instead.
+   facts. No interpretation, no inferred reason, no inferred
+   consequence — EXCEPT: if a commit has its own stated-reason and/or
+   stated-effect fact in this cluster, you may state it as that
+   specific commit's own stated reason/effect (attribute it as such,
+   e.g. "the author notes this was for..."), never generalized to a
+   different commit. Do not name ADR numbers, even if a commit subject
+   contains one — describe the change in plain words instead.
 
 2. TENSION — identify a concrete, specific gap, mismatch, asymmetry, or
    unresolved design question visible in the selected cluster itself.
@@ -443,13 +487,18 @@ explicitly establish that absence; what "nobody", "the team", "the
 system", or "the author" could or could not do; causal relationships
 not explicitly present in the facts; conclusions about what the work
 "really was" beyond the supplied evidence; or user, business, market, or
-operational impact not present in the data. Interpretations and the
-personal position may go beyond the facts, but must be phrased
-explicitly as interpretation or preference, never as observed fact. If a
-sentence cannot pass this check, rewrite it conservatively or remove it
-— do not add new information while repairing it. This check does not
-constrain the personal position itself: the evidence requirement applies
-to claims about reality, not to the author's stated preference.
+operational impact not present in the data. A stated reason or effect
+for a specific commit is valid only if it is directly supported by that
+same commit's own stated-reason/stated-effect fact among the selected
+cluster's offered facts — never inferred from a bare commit subject,
+and never borrowed from a different commit's own trailer, even one in
+the same cluster. Interpretations and the personal position may go
+beyond the facts, but must be phrased explicitly as interpretation or
+preference, never as observed fact. If a sentence cannot pass this
+check, rewrite it conservatively or remove it — do not add new
+information while repairing it. This check does not constrain the
+personal position itself: the evidence requirement applies to claims
+about reality, not to the author's stated preference.
 
 Numbers: every number in the post must appear in the selected cluster's
 facts or be a direct count of items in them (use the counts given in the

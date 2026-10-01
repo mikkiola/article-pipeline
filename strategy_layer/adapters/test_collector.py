@@ -162,17 +162,19 @@ def test_check_integrity_does_not_touch_the_local_filesystem_or_git(mock_get):
 
 def _brief(**overrides):
     brief = {
-        "schema_version": 2,
+        "schema_version": 3,
         "mode": "fact",
         "date": "2026-09-24",
         "window": "1.day",
         "total_diffstat": 100,
         "files_touched": ["a.py"],
         "commit_messages": [
-            {"repo": "article-pipeline", "sha": "1" * 40, "subject": "feat(a): change in article-pipeline"},
-            {"repo": "article-pipeline", "sha": "2" * 40, "subject": "fix(a): second in article-pipeline"},
-            {"repo": "radar", "sha": "3" * 40, "subject": "Radar update"},
-            {"repo": "collector", "sha": "4" * 40, "subject": "chore(data): daily run"},
+            {"repo": "article-pipeline", "sha": "1" * 40, "subject": "feat(a): change in article-pipeline",
+             "why": None, "effect": None},
+            {"repo": "article-pipeline", "sha": "2" * 40, "subject": "fix(a): second in article-pipeline",
+             "why": "needed to close a real gap", "effect": "the gap is closed"},
+            {"repo": "radar", "sha": "3" * 40, "subject": "Radar update", "why": None, "effect": None},
+            {"repo": "collector", "sha": "4" * 40, "subject": "chore(data): daily run", "why": None, "effect": None},
         ],
         "per_repo": [
             {"name": "article-pipeline", "branch": "main", "head_sha": "a" * 40,
@@ -257,6 +259,39 @@ def test_a_malformed_commit_message_entry_is_refused_loudly():
     with patch("collector.check_integrity", return_value=("valid", "mocked")):
         with pytest.raises(ValueError, match="commit_messages"):
             collector.adapt_daily_brief(bad)
+
+
+# --- commit_evidence (ADR-0057 point 4 / ADR-0059 activation, 2026-10-01) --
+
+
+def test_a_unit_receives_commit_evidence_only_for_its_own_commits_with_a_trailer():
+    with patch("collector.check_integrity", return_value=("valid", "mocked")):
+        units = collector.adapt_daily_brief(_brief())
+    by_repo = {u.metadata["repo"]: u.metadata["commit_evidence"] for u in units}
+
+    # Only _brief()'s second article-pipeline commit carries a real
+    # why/effect; the other three repos' commits (and the first
+    # article-pipeline commit) have neither and contribute nothing here.
+    assert by_repo["article-pipeline"] == [
+        {
+            "sha": "2" * 40,
+            "subject": "fix(a): second in article-pipeline",
+            "why": "needed to close a real gap",
+            "effect": "the gap is closed",
+        }
+    ]
+    assert by_repo["radar"] == []
+    assert by_repo["collector"] == []
+    assert by_repo["brain"] == []
+
+
+def test_a_brief_of_an_unknown_schema_version_has_no_commit_evidence_either():
+    old_shape = _brief()
+    del old_shape["schema_version"]
+    with patch("collector._github_get") as mock_get:
+        units = collector.adapt_daily_brief(old_shape)
+    assert all(u.metadata["commit_evidence"] == [] for u in units)
+    mock_get.assert_not_called()
 
 
 def test_adapt_daily_brief_has_no_local_git_dependency():

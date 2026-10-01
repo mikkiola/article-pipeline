@@ -41,14 +41,14 @@ MESSAGES = {
 
 def _brief():
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "mode": "fact",
         "date": "2026-09-24",
         "window": "1.day",
         "total_diffstat": 5615,
         "files_touched": [],
         "commit_messages": [
-            {"repo": repo, "sha": f"{i:040d}", "subject": subject}
+            {"repo": repo, "sha": f"{i:040d}", "subject": subject, "why": None, "effect": None}
             for i, (repo, subjects) in enumerate(MESSAGES.items())
             for subject in subjects
         ],

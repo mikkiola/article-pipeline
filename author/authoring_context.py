@@ -49,6 +49,13 @@ class AuthoringContext(BaseModel):
     files_touched: list[str] = []
     commit_messages: list[str] = []
 
+    # ADR-0057 point 4 / ADR-0059 activation (2026-10-01): {sha, subject,
+    # why, effect} entries, one per commit that carried a Why:/Effect:
+    # trailer — a strict subset of commit_messages' commits, never a
+    # superset. Empty for a unit with no such commit today, same
+    # "expected, not an error" convention as the fields above.
+    commit_evidence: list[dict[str, Any]] = []
+
     # Collector-weekly units populate this instead; Collector-daily
     # units leave it None.
     counts: dict[str, Any] | None = None
@@ -82,6 +89,7 @@ def build_authoring_contexts(
                 diffstat=metadata.get("diffstat"),
                 files_touched=metadata.get("files_touched", []),
                 commit_messages=metadata.get("commit_messages", []),
+                commit_evidence=metadata.get("commit_evidence", []),
                 counts=metadata.get("counts"),
             )
         )

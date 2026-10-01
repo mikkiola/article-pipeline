@@ -47,6 +47,8 @@ def build_daily_brief_from_authoring_contexts(
     total_diffstat = 0
     files_touched: list[str] = []
     commit_messages: list[str] = []
+    commit_evidence: list[dict] = []
+    seen_evidence_shas: set[str] = set()
     per_repo = []
 
     for ctx in contexts:
@@ -56,6 +58,14 @@ def build_daily_brief_from_authoring_contexts(
         for msg in ctx.commit_messages:
             if msg not in commit_messages:
                 commit_messages.append(msg)
+        for entry in ctx.commit_evidence:
+            # Deduplicated by sha (not subject): two different commits can
+            # share an identical subject line, but a sha is always unique —
+            # same reasoning as commit_messages' subject-based dedup, picked
+            # per-field since commit_evidence always carries a real sha.
+            if entry["sha"] not in seen_evidence_shas:
+                seen_evidence_shas.add(entry["sha"])
+                commit_evidence.append(entry)
         per_repo.append(
             {
                 "name": ctx.repo,
@@ -67,6 +77,9 @@ def build_daily_brief_from_authoring_contexts(
                 # from different repos and loses which repo each came from.
                 # Copied so a consumer cannot mutate the context's own list.
                 "commit_messages": list(ctx.commit_messages),
+                # Same per-repo, not-deduplicated-across-repos convention,
+                # for this repo's own stated-reason/stated-effect commits.
+                "commit_evidence": list(ctx.commit_evidence),
             }
         )
 
@@ -78,5 +91,6 @@ def build_daily_brief_from_authoring_contexts(
         "total_diffstat": total_diffstat,
         "files_touched": sorted(set(files_touched)),
         "commit_messages": commit_messages,
+        "commit_evidence": commit_evidence,
         "per_repo": per_repo,
     }

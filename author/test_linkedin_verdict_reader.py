@@ -38,8 +38,10 @@ def test_daily_brief_sourced_context_populates_real_fields():
     assert result["commit_messages"] == ["fix: bug", "chore: bump"]
     assert result["per_repo"] == [
         {"name": "article-pipeline", "commit_count": 2, "diffstat": 42,
-         "files_touched": ["a.py", "b.py"], "commit_messages": ["fix: bug", "chore: bump"]}
+         "files_touched": ["a.py", "b.py"], "commit_messages": ["fix: bug", "chore: bump"],
+         "commit_evidence": []}
     ]
+    assert result["commit_evidence"] == []
 
 
 def test_manifest_sourced_context_has_no_raw_text_falls_back_to_idea_fallback_mode():
@@ -130,3 +132,57 @@ def test_empty_contexts_produces_idea_fallback_shape():
     assert result["mode"] == "idea_fallback"
     assert result["per_repo"] == []
     assert result["total_diffstat"] == 0
+
+
+# --- commit_evidence (ADR-0057 point 4 / ADR-0059 activation, 2026-10-01) --
+
+
+def test_commit_evidence_is_carried_through_top_level_and_per_repo():
+    ctx = AuthoringContext(
+        claim_id="a", framing="f", source_type="collector_daily_brief",
+        repo="article-pipeline", commit_count=1, commit_messages=["feat: x"],
+        commit_evidence=[{"sha": "1" * 40, "subject": "feat: x", "why": "needed for y", "effect": "y works"}],
+    )
+    result = build_daily_brief_from_authoring_contexts([ctx], date="2026-09-15")
+    assert result["commit_evidence"] == [
+        {"sha": "1" * 40, "subject": "feat: x", "why": "needed for y", "effect": "y works"}
+    ]
+    assert result["per_repo"][0]["commit_evidence"] == [
+        {"sha": "1" * 40, "subject": "feat: x", "why": "needed for y", "effect": "y works"}
+    ]
+
+
+def test_commit_evidence_deduplicated_by_sha_not_subject():
+    # Two different commits can share an identical subject; sha is the
+    # dedup key here, unlike the flat commit_messages list above (which
+    # dedups by subject text, kept for that field's own reasons).
+    same_sha_entry = {"sha": "1" * 40, "subject": "feat: x", "why": "needed", "effect": "works"}
+    contexts = [
+        AuthoringContext(
+            claim_id="a", framing="f1", source_type="collector_daily_brief",
+            repo="article-pipeline", commit_count=1, commit_messages=["feat: x"],
+            commit_evidence=[same_sha_entry],
+        ),
+        AuthoringContext(
+            claim_id="b", framing="f2", source_type="collector_daily_brief",
+            repo="brain", commit_count=1, commit_messages=["feat: x"],
+            commit_evidence=[same_sha_entry],
+        ),
+    ]
+    result = build_daily_brief_from_authoring_contexts(contexts, date="2026-09-15")
+    assert result["commit_evidence"] == [same_sha_entry]
+    # Per-repo attribution is unaffected by the top-level dedup.
+    assert result["per_repo"][0]["commit_evidence"] == [same_sha_entry]
+    assert result["per_repo"][1]["commit_evidence"] == [same_sha_entry]
+
+
+def test_manifest_sourced_context_carries_an_empty_commit_evidence_list():
+    contexts = [
+        AuthoringContext(
+            claim_id="a", framing="f", source_type="collector_manifest",
+            repo="article-pipeline", commit_count=6, counts={"value": 2},
+        )
+    ]
+    result = build_daily_brief_from_authoring_contexts(contexts, date="2026-09-15")
+    assert result["commit_evidence"] == []
+    assert result["per_repo"][0]["commit_evidence"] == []
