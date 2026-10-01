@@ -157,7 +157,19 @@ grep — none exist here today):
 
 17. Once Author generates a Habr draft, the pipeline sends it to the
     owner via Telegram (draft text or a link to it) — no automatic Habr
-    posting exists or is attempted.
+    posting exists or is attempted. **Trigger point not yet concrete**,
+    found during this milestone's implementation pass: `author/
+    habr_weekly_author.py`/`habr_verdict_to_story.py` are pure
+    rendering/business-logic functions with no file-writing or CLI
+    entry point, and the only script that calls them end-to-end
+    (`strategy_layer/run_habr_pilot.py`) is explicitly self-described as
+    "Throwaway orchestration... not TDD'd for that reason," with a
+    hardcoded, stale manifest path, and is not invoked by any
+    `.github/workflows/` schedule (verified directly: zero Habr-related
+    entries exist there as of this note). This send cannot be wired to
+    a real production trigger until a real, scheduled Habr-draft-
+    generation entry point exists — building one is not this
+    requirement's own scope and is not done by this milestone.
 18. Edit capture reuses the owner's **existing** per-Habr-article Google
     Docs folder convention (confirmed net-new code for article-pipeline
     itself, not net-new to the owner's workflow): each folder contains
@@ -169,6 +181,14 @@ grep — none exist here today):
     matching `-draft` file in the same folder, and writes the diff as an
     Evidence record (ADR-0050 point 4) — the same signal kind a `trash`/
     `style-off` verdict produces, feeding the same Weekly aggregation.
+    Implemented as its own component, `habr_edit_capture/` (not an
+    extension of `verdict/` or `evidence_package/` — see
+    `docs/adr/0060-habr-edit-capture-as-its-own-component.md` for the
+    reasoning), with a dedup key on the `-final` file's Drive
+    `modifiedTime` so a repeated scheduled run against an unchanged file
+    is a no-op while a genuine re-edit is correctly captured as a new
+    event, and an explicit `has_changes` field so a draft published
+    unedited is still recorded, not silently skipped (same ADR).
 20. No Telegram round-trip and no Habr page scraping for this step —
     scraping was explicitly rejected (no confirmed ToS permission, adds
     an HTML-parsing dependency this build otherwise has no need for).
@@ -418,7 +438,19 @@ end-to-end.
 - [ ] Telegram draft hand-off, Google Drive credential + client (new), draft/final diff → Evidence
 - verify: one real Habr draft delivered, one real owner edit captured as a diff-based Evidence record
 - done-when: an Evidence record exists linking a real `-draft`/`-final` pair
-- status: not started
+- status: in progress — FR18/19/21 built: `habr_edit_capture/` component (Drive
+  read via `google-api-python-client`, `difflib.unified_diff`-based diff capture,
+  dedup on the `-final` file's Drive `modifiedTime`, explicit `has_changes` for a
+  zero-diff/unedited-draft capture — `docs/adr/0060-habr-edit-capture-as-its-own-
+  component.md`), its own scheduled workflow (`habr-edit-capture.yml`) and
+  branch-separated output (`habr-edit-capture-data`, same reasoning as ADR-0055's
+  `registry-data`), 34/34 unit tests passing against synthetic Drive data (no real
+  Drive account or credential exists yet — not run against a live account). FR17
+  (Telegram send) is NOT wired: no real, scheduled Habr-draft-generation entry
+  point exists anywhere in this repo to trigger it from (see FR17's own note).
+  Not yet satisfied: verify's "one real Habr draft delivered" and done-when's "a
+  real `-draft`/`-final` pair" both require a real owner Drive account and a real
+  Habr article — neither exists yet.
 - drift:
   - goal: 0.0
   - constraint: 0.0
