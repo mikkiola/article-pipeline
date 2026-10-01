@@ -1,0 +1,104 @@
+name: Habr Edit Capture
+
+# SPEC.md Milestone M4, Functional Requirement 19 ("A scheduled job
+# watches for a new `-final` file..."). Drive-polling only — this
+# workflow does NOT send the Telegram draft hand-off (FR17): see this
+# task's own report, Part 5. No real production entry point produces a
+# finished Habr draft today (`strategy_layer/run_habr_pilot.py` is
+# explicitly a throwaway, hardcoded-date pilot, not a scheduled job),
+# so there is nothing yet to wire FR17's sendMessage call to. FR19's
+# own job (watch Drive, diff, capture) does not depend on how the
+# draft was originally delivered, so it is not blocked by that gap.
+#
+# Schedule: no real-world cadence data exists yet for how often the
+# owner finishes a Habr edit — picked once-daily (noon UTC, clear of
+# both Collector's 23:00 UTC and LinkedIn's 23:30 UTC runs) as a
+# starting cadence, not a measured one. Revisit once real data exists
+# — same honesty standard linkedin-daily-publish.yml's own 30-minute
+# buffer comment sets.
+
+on:
+  schedule:
+    - cron: "0 12 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+# Mirrors linkedin-daily-publish.yml's own reasoning: two simultaneous
+# runs must not both pass write_capture()'s dedup check before either
+# has pushed, or a genuine re-edit landing mid-run could be captured
+# twice under two different output-branch commits that then conflict
+# on push. Queue, don't cancel, for the same reason a publish-in-
+# progress must not be killed.
+concurrency:
+  group: habr-edit-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout article-pipeline
+        uses: actions/checkout@v4
+        with:
+          path: article-pipeline
+
+      # Separate, unprotected branch — same reasoning as ADR-0055's
+      # registry-data (main is branch-protected; this workflow's bot
+      # identity has no admin bypass). Checked out into its own
+      # directory, exactly like linkedin-daily-publish.yml's own
+      # "Checkout registry-data" step.
+      - name: Checkout habr-edit-capture-data
+        uses: actions/checkout@v4
+        with:
+          ref: habr-edit-capture-data
+          path: habr-edit-capture-data
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install pinned dependencies
+        run: pip install pydantic==2.13.4 google-api-python-client==2.201.0 google-auth==2.59.1
+
+      # NOT YET CONFIGURED — flagged plainly, not silently assumed to
+      # already work, same discipline linkedin-daily-publish.yml's own
+      # comments use for GH_APP_ID/GH_APP_PRIVATE_KEY. Confirmed this
+      # session (`gh secret list --repo mikkiola/article-pipeline`):
+      # neither secret exists yet. The owner must (1) create a Google
+      # Cloud service account, (2) share her existing per-Habr-article
+      # root Drive folder with that service account's email address
+      # (standard Drive sharing — this workflow cannot do this step),
+      # and (3) add both secrets below, before this job can read
+      # anything real.
+      - name: Write service-account key to a temp file
+        env:
+          HABR_DRIVE_SERVICE_ACCOUNT_KEY_JSON: ${{ secrets.HABR_DRIVE_SERVICE_ACCOUNT_KEY_JSON }}
+        run: |
+          echo "$HABR_DRIVE_SERVICE_ACCOUNT_KEY_JSON" > "$RUNNER_TEMP/habr-drive-service-account.json"
+
+      - name: Run Habr edit capture
+        working-directory: article-pipeline
+        env:
+          HABR_DRIVE_SERVICE_ACCOUNT_FILE: ${{ runner.temp }}/habr-drive-service-account.json
+          HABR_DRIVE_ROOT_FOLDER_ID: ${{ secrets.HABR_DRIVE_ROOT_FOLDER_ID }}
+          HABR_EDIT_CAPTURE_OUTPUT_DIR: ${{ github.workspace }}/habr-edit-capture-data/output
+        run: python3 habr_edit_capture/run_capture.py
+
+      # Pushes only to habr-edit-capture-data, never to main. A failed
+      # push must fail the step loudly: a captured diff that didn't
+      # persist is exactly the kind of silently-lost Evidence ADR-0050
+      # point 4 exists to prevent.
+      - name: Commit and push capture output
+        working-directory: habr-edit-capture-data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -- output/
+          if git diff --cached --quiet -- output/; then
+            echo "No new capture records to commit."
+            exit 0
+          fi
+          git commit -m "chore(habr-edit-capture): capture pass $(date -u +%Y-%m-%d)"
+          git push origin habr-edit-capture-data
