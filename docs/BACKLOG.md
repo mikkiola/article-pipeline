@@ -3176,3 +3176,49 @@ This is deferred future work, not a current blocker, and not part of `[B-058]`'s
 scope.
 
 **Source.** Architect chat session, 2026-09-30.
+
+### [B-071] P1 — No working path (manual or scheduled) produces a current Habr draft — blocks M4's FR17/verify/done-when
+
+Found: 2026-10-01, a canon-only investigation into whether M4 (Habr Manual Outbox + Edit
+Capture) is blocked without a scheduled Habr-draft-generation trigger. SPEC.md's own FR17
+("Once Author generates a Habr draft, the pipeline sends it...") grammatically treats draft
+generation as an external precondition M4 consumes, not an in-scope action M4 must cause or
+schedule — confirmed by direct comparison against FR19's own self-contained "a scheduled job
+watches for..." wording, which does own its trigger mechanism. SPEC.md's "Habr stays a
+manual-outbox hand-off (no confirmed automatic Habr route exists)" and ROADMAP.md's "no Habr
+publication component exists" both resolve, on direct read, to the Habr-*posting* automation
+question (getting the final text onto Habr's own platform — FR20's scraping rejection, ADR-
+0050's "no confirmed automatic publication route"), not to draft-generation scheduling. No
+existing BACKLOG.md entry or ROADMAP.md open question names this specific gap.
+
+The gap is real regardless of that scoping question, because the precondition itself does not
+currently hold: `strategy_layer/run_habr_pilot.py` is the only script that produces an
+end-to-end Habr draft today, and it does not work for a *current* draft without a prior code
+change. Verified directly, not assumed: its `MANIFEST_PATH` (line 37) is hardcoded to
+`collector/data/manifest_2026-09-12.json` — 19 days stale as of this entry's filing date
+(2026-10-01); the newest manifest actually present in the sibling `collector/data/` checkout
+is `manifest_2026-09-19.json`, 12 days stale and not what the script reads regardless. The
+script's own module docstring self-describes it as "Throwaway orchestration, same class as
+run_pilot.py/run_collector_pilot.py/run_linkedin_pilot.py — not TDD'd for that reason" — it
+was built to validate ADR-0046's multi-claim-digest design against real data once, not as a
+durable entry point. No other script, workflow, or CLI anywhere in this repo produces a Habr
+draft (confirmed: zero `.github/workflows/` entries reference anything Habr-related).
+
+Blocks, precisely: FR17 (nothing current exists for `habr_edit_capture/telegram_send.py`'s
+`send_habr_draft()` — built and unit-tested, `commit 57021bb` — to actually send) and M4's own
+`verify` line ("one real Habr draft delivered") and `done-when` line ("an Evidence record
+exists linking a real `-draft`/`-final` pair") — both require a real, current draft to exist
+first, which nothing in this repo reliably produces today.
+
+- [ ] Not fixed here — per this entry's own investigating task's explicit scope, this is a
+      filed finding, not a patch. Whoever picks this up decides, as its own scoped task (not
+      assumed here): whether `run_habr_pilot.py` itself should be hardened past "throwaway"
+      into a real, reusable manual-invocation entry point (updating its hardcoded manifest
+      path at minimum), or whether a different, new entry point should be built instead — and
+      separately, whether that entry point should ever become scheduled, given FR17's own
+      grammar does not require it to be.
+
+**Source.** Canon-only investigation (SPEC.md, ROADMAP.md, BACKLOG.md, ADR-0043/0045/0046/
+0050), 2026-10-01, following the M4 implementation pass that built `habr_edit_capture/`
+(commits `57021bb`, `964c390`, `4bf4b71`, `abe480b`) and found `telegram_send.py` had nothing
+real to send.
