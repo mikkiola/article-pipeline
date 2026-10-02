@@ -1,55 +1,45 @@
 # Current Mission
 
 ## GOAL
-ID: G061, G064
-Title: Measure publication quality; improve content based on past results
+ID: G057
+Title: see SYSTEM_GOALS.md, G057
 Source: ../SYSTEM_GOALS.md
 Goals version: 2026-09-30.v1
 Reference: docs/PROJECT.md
 
 ## NOW
-Building M3 (Owner Verdict Capture, LinkedIn) per `SPEC.md`'s milestone
-definition: an append-only, `content_id`-keyed verdict event stream,
-independent of publication lifecycle state.
+Restore the daily LinkedIn auto-publish after the two identified failure
+causes.
 
 ## CURRENT STEP
-Design and implement the verdict record schema and storage mechanism
-(`verdict/output/`, JSON records) per SPEC.md requirements 14-16 and
-ADR-0050 points 1-2.
+Not started. Mission reconciled; evidence collection for the two causes
+follows in a separate task.
 
 ## WHY
-M3 is a named, explicit dependency of `SAFETY_PAUSE`'s trigger and
-proactive credential alerting (ADR-0054), both currently unbuilt and
-blocking full M2 safety coverage. M3 is also SPEC.md's own next
-not-started milestone in the Publication Core Loop sequence.
+No post for 2026-10-01 (the model response was not parseable as JSON) or
+2026-10-02 (Collector emitted `schema_version` 3 while the consumer on
+`origin/main` expected 2, so the bootstrap gate blocked the day).
 
 ## DONE WHEN
-SPEC.md's M3 checkbox is satisfied: both a `recorded` and a `missing`
-`verdict_status` are demonstrated (a verdict recorded for a real M2
-publication, and a Weekly snapshot showing no verdict yet for another)
-— and M3's own `status:` line in SPEC.md is updated from `not started`
-to reflect this.
+The first scheduled run after the fixes either publishes a real post, or
+skips correctly. The result must be confirmed by literal workflow logs and
+the Registry record.
 
 ## IN SCOPE
-- Verdict event stream schema and writer (`verdict/output/`, JSON,
-  `content_id`-keyed)
-- Recording a `verdict_type` (`good`/`trash`/`style-off`) with
-  `received_at` and optional comment
-- Demonstrating both `recorded` and `missing` `verdict_status` outcomes
-- No Telegram delivery mechanism (M5, blocked on `[B-065]`) — verdicts
-  may be recorded via a direct, manual/test-only interface for this
-  milestone; a real Telegram round-trip is explicitly M5's own scope,
-  not M3's
+- The failure to parse the model response
+- The Collector-to-Pipeline contract: schema version and rollout order
+- The misleading block reason in the Registry record, only where fixing
+  the contract requires it
 
 ## OUT OF SCOPE
-- M5 (Telegram HITL Bot) and any Telegram transport
-- M6 (Weekly Snapshot & Pattern Detection) beyond the single
-  demonstration snapshot DONE WHEN requires
-- `SAFETY_PAUSE`'s actual trigger wiring (depends on M3 being done, but
-  wiring the trigger itself is separate, later work)
-- M4 (Habr Manual Outbox)
-- B-069 (automation-only-day pre-call guard)
-- Any Quality Gate, Platform Adapter, or Multi-Source Claim Layer work
+- M4 in full, including its research session
+- M5 through M8
+- B-069 and B-070
+- The `identity_state` writer
+- Changing the model used by `call_model`
+- A Registry record for the automation-only-day outcome
+- SPEC.md drift
+- Any push other than one the owner approves explicitly
 
 ## BLOCKERS
 - None known.
@@ -62,7 +52,7 @@ themselves achieved — that remains an owner decision, not implied by this
 mission's completion, per the Mission Harness section's own
 Mission-Done-≠-Goal-Achieved rule.
 
-## COMPLETION
+## PREVIOUS MISSION COMPLETION (M3, historical — superseded by this mission)
 DONE WHEN is satisfied: SPEC.md's M3 checkbox is checked (`[x]`) and its
 `status:` line reads `done`, per commits `07aec0e` (verdict/ package,
 15/15 tests, real demonstration against real M2-published `content_id`s
@@ -74,7 +64,7 @@ completion, per the Mission Harness section's own
 Mission-Done-≠-Goal-Achieved rule.
 
 ## STATUS
-DONE
+ACTIVE
 
 ## SCOPE RULE
 Discovered issues, ideas, opportunities, cleanup, refactors, and future work do not
