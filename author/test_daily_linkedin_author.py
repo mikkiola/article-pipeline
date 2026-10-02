@@ -1017,6 +1017,112 @@ def test_non_json_response_raises_clear_error_not_silent_fallback():
             assert "not valid JSON" in str(e), f"error should say the response wasn't valid JSON, got: {e}"
 
 
+def _call_model_with_raw_text(raw_text: str):
+    """Runs call_model() against a mocked Anthropic client whose text
+    block carries `raw_text` verbatim (no json.dumps), so a test can
+    feed it deliberately malformed or unescaped JSON."""
+    with mock.patch.object(author_llm, "_get_api_key", return_value="fake-key"), \
+            mock.patch("daily_linkedin_author.anthropic.Anthropic") as MockAnthropic:
+        mock_client = MockAnthropic.return_value
+        content_block = mock.Mock()
+        content_block.type = "text"
+        content_block.text = raw_text
+        fake_response = mock.Mock()
+        fake_response.content = [content_block]
+        mock_client.messages.create.return_value = fake_response
+        return author_llm.call_model("irrelevant prompt")
+
+
+_RAW_NEWLINE_PAYLOAD = {
+    "automation_only_day": False,
+    "post": "First paragraph of a synthetic post.\n\nSecond paragraph,\twith a tab.\n\nThird paragraph.",
+    "selected_cluster": "article-pipeline",
+    "supporting_facts": ["article-pipeline:fact_01"],
+    "reasoning": {
+        "fact": "A synthetic fact.\nOn two lines.",
+        "tension": "A synthetic tension.",
+        "design_insight": "A synthetic design insight.",
+        "personal_position": "A synthetic personal position.",
+        "relevant_problem": "A synthetic relevant problem.",
+    },
+}
+
+
+def _raw_control_character_response_text() -> str:
+    """The failure shape of the 2026-10-01 run: a valid JSON object whose
+    string values carry literal line breaks/tabs instead of the escaped
+    `\\n`/`\\t` sequences the JSON grammar requires."""
+    import json as _json
+    escaped = _json.dumps(_RAW_NEWLINE_PAYLOAD)
+    return escaped.replace("\\n", "\n").replace("\\t", "\t")
+
+
+def test_call_model_tolerates_raw_control_characters_in_string_values():
+    import json as _json
+    raw_text = _raw_control_character_response_text()
+    # Precondition: this really is the failure shape strict parsing rejects.
+    try:
+        _json.loads(raw_text)
+        raise AssertionError("fixture must be rejected by strict json.loads")
+    except _json.JSONDecodeError as e:
+        assert "control character" in str(e)
+    assert "\n" in raw_text and "\t" in raw_text
+
+    response = _call_model_with_raw_text(raw_text)
+
+    # Same structured result as the properly escaped response.
+    assert response == _RAW_NEWLINE_PAYLOAD
+    assert response == _json.loads(_json.dumps(_RAW_NEWLINE_PAYLOAD))
+    # Paragraph breaks in the post text are preserved, not collapsed.
+    assert response["post"].count("\n\n") == 2
+    assert response["post"].split("\n\n")[1].startswith("Second paragraph")
+    # Nested string values are covered too.
+    assert response["reasoning"]["fact"] == "A synthetic fact.\nOn two lines."
+    author_llm.validate_structured_response(
+        response, "fact", SAMPLE_FACT_DAILY_BRIEF
+    )  # must not raise
+
+
+def test_call_model_tolerates_raw_control_characters_inside_markdown_fence():
+    raw_text = "```json\n" + _raw_control_character_response_text() + "\n```"
+    assert _call_model_with_raw_text(raw_text) == _RAW_NEWLINE_PAYLOAD
+
+
+def test_other_invalid_json_still_raises_author_llm_error_despite_tolerance():
+    # Tolerating raw control characters must not loosen anything else:
+    # every one of these is still rejected, including ones that also
+    # carry raw line breaks.
+    cases = {
+        "truncated object": '{"post": "cut off',
+        "trailing comma": '{"post": "x",}',
+        "single-quoted keys": "{'post': 'x'}",
+        "unescaped inner quote": '{"post": "she said "hi" to me"}',
+        "missing closing brace": '{"post": "a\n\nb"',
+        "bare prose": "this is not json at all",
+        "empty response": "",
+        "unquoted key with raw newline": '{post: "a\n\nb"}',
+    }
+    for label, raw_text in cases.items():
+        try:
+            _call_model_with_raw_text(raw_text)
+            raise AssertionError(f"expected AuthorLLMError for {label}")
+        except author_llm.AuthorLLMError as e:
+            assert "not valid JSON" in str(e), f"{label}: got {e}"
+
+
+def test_raw_control_characters_do_not_bypass_required_key_validation():
+    import json as _json
+    incomplete = {"post": "First paragraph.\n\nSecond paragraph."}  # no selected_cluster/reasoning/...
+    raw_text = _json.dumps(incomplete).replace("\\n", "\n")
+    response = _call_model_with_raw_text(raw_text)
+    assert response == incomplete
+    try:
+        author_llm.validate_structured_response(response, "fact")
+        raise AssertionError("expected AuthorLLMError for a response missing required keys")
+    except author_llm.AuthorLLMError as e:
+        assert "selected_cluster" in str(e), f"error should name the missing key(s), got: {e}"
+
+
 def test_call_model_skips_leading_thinking_block_and_extracts_text_block():
     # Regression test for the real bug the 2026-09-03 live run found:
     # response.content can carry a ThinkingBlock ahead of the TextBlock
@@ -1172,6 +1278,10 @@ if __name__ == "__main__":
         test_missing_api_key_env_var_raises_fail_fast_error_not_bare_keyerror,
         test_malformed_response_missing_keys_raises_clear_error,
         test_non_json_response_raises_clear_error_not_silent_fallback,
+        test_call_model_tolerates_raw_control_characters_in_string_values,
+        test_call_model_tolerates_raw_control_characters_inside_markdown_fence,
+        test_other_invalid_json_still_raises_author_llm_error_despite_tolerance,
+        test_raw_control_characters_do_not_bypass_required_key_validation,
         test_call_model_skips_leading_thinking_block_and_extracts_text_block,
         test_call_model_raises_clear_error_when_no_text_block_present,
         test_call_model_disables_thinking_and_logs_stop_reason,

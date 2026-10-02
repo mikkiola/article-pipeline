@@ -867,7 +867,13 @@ def call_model(prompt: str) -> dict:
     raw_text = _extract_text_block(response.content)
     text = _strip_markdown_fence(raw_text)
     try:
-        return json.loads(text)
+        # strict=False accepts raw control characters (literal line
+        # breaks, tabs) inside string values, which the model emits in a
+        # multi-paragraph "post" instead of escaping them (real failure,
+        # 2026-10-01 run). Everything else — structure, quoting, commas,
+        # truncation — is still rejected, and the required-key check in
+        # validate_structured_response() is unchanged.
+        return json.loads(text, strict=False)
     except json.JSONDecodeError as e:
         raise AuthorLLMError(
             f"Model response was not valid JSON: {e}\nRaw response: {raw_text!r}"
