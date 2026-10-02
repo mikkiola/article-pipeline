@@ -12,13 +12,14 @@ Restore the daily LinkedIn auto-publish after the two identified failure
 causes.
 
 ## CURRENT STEP
-Not started. Mission reconciled; evidence collection for the two causes
-follows in a separate task.
+Parser fix committed locally (`fdf308d`) and not pushed. It awaits the
+owner's push approval and the next scheduled run.
 
 ## WHY
-No post for 2026-10-01 (the model response was not parseable as JSON) or
-2026-10-02 (Collector emitted `schema_version` 3 while the consumer on
-`origin/main` expected 2, so the bootstrap gate blocked the day).
+No post for 2026-10-01 (the model response was not parseable) or 2026-10-02
+(the consumer at `aa14bb9` expected schema 2 while Collector emitted 3, so
+the bootstrap gate blocked the day). The schema mismatch is resolved on
+`origin/main` as of `880551c`. The remaining cause is the parser.
 
 ## DONE WHEN
 The first scheduled run after the fixes either publishes a real post, or
@@ -27,9 +28,8 @@ the Registry record.
 
 ## IN SCOPE
 - The failure to parse the model response
-- The Collector-to-Pipeline contract: schema version and rollout order
-- The misleading block reason in the Registry record, only where fixing
-  the contract requires it
+- Verify version alignment holds. No new rollout mechanism, per ADR-0056
+  order independence.
 
 ## OUT OF SCOPE
 - M4 in full, including its research session
@@ -38,6 +38,8 @@ the Registry record.
 - The `identity_state` writer
 - Changing the model used by `call_model`
 - A Registry record for the automation-only-day outcome
+- The misleading block reason in the Registry record, because fixing the
+  contract does not require it
 - SPEC.md drift
 - Any push other than one the owner approves explicitly
 
