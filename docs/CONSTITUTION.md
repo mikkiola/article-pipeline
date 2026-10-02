@@ -180,6 +180,25 @@ regardless of what the commit itself did. Found the hard way,
 M1-M7) shipped with zero `Closes:`/`Syncs:` trailers, caught only when
 `/session-end` ran afterward and found nothing to act on.
 
+`Syncs:`, `Closes:`, `Co-Authored-By:`, and any other trailer must
+appear as one single, contiguous block at the very end of the commit
+message — no blank line separating one trailer from another. Git's
+own trailer parser recognizes only the last contiguous,
+blank-line-free block at the end of a message as trailers; a blank
+line anywhere inside that block makes everything before the blank line
+invisible to `%(trailers:key=...)`, even though the text is still
+plainly there in the message body. Using `git commit --trailer "..."`
+(this section's own prescribed mechanism, not a manually-written
+heredoc line) avoids this failure by construction. **Added
+2026-10-02:** a blank line between `Syncs: SPEC.md`/`Syncs:
+docs/ARCHITECTURE.md` and `Co-Authored-By:` silently broke every
+`Syncs:` trailer across an entire session's commits (`abe480b`,
+`4bf4b71`, `b40d930`, and others) — confirmed via `git log
+--format="%(trailers:key=Syncs,valueonly)"` returning empty for all of
+them despite the `Syncs:` line being plainly present in each message;
+`/session-end`'s structural fact-sync half found nothing to act on for
+the entire session as a result.
+
 A mechanical process convention, not an architectural decision — no
 ADR needed for this rule itself, the same category as this project's
 existing commit-message format and structure, already followed in
