@@ -69,3 +69,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0059](0059-fact-mode-post-generation-evidence-grounded-reasoning-with-personal-position.md) | Fact-mode post generation uses a five-step evidence-grounded reasoning pipeline with a personal position | Accepted | [ADR-0057, "ADR-0044 (fact-mode only)"] | null |
 | [ADR-0060](0060-habr-edit-capture-as-its-own-component.md) | Habr Edit Capture — a new component, a Drive-metadata dedup key, and an explicit zero-diff record | Accepted | null | null |
 | [ADR-0061](0061-why-effect-trailers-activated-as-fact-mode-evidence-tier.md) | Why:/Effect: commit trailers activated as a fact-mode evidence tier | Accepted | null | null |
+| [ADR-0062](0062-classify-new-repository-content-as-product-capability-or-runtime.md) | New repository content is classified as a Reusable Product Capability or Customer/Personal Runtime | Accepted | null | null |
