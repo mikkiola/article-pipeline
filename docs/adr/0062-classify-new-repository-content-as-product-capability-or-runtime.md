@@ -26,8 +26,7 @@ repository.
 The repository already holds some installation-specific state and wiring: data
 branches written by scheduled workflows, and the definitions of those scheduled
 workflows. Nothing before this record stated how to decide where a new script,
-workflow, directory or integration belongs, so each addition was placed by
-convenience at the time it was made.
+workflow, directory or integration belongs.
 
 ## Decision
 
