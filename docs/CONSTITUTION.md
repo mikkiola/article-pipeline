@@ -301,6 +301,18 @@ targets, not test coverage as a blanket requirement.
 - State uncertainty as uncertainty. If something is a guess, say "not
   sure, this is a hypothesis" in plain language — not just a tag
   buried in the text.
+- Before creating any new script, workflow, directory, or
+  integration, classify it as either a Reusable Product Capability or
+  Customer/Personal Runtime, and state the classification and the
+  reason in the task's report. A Reusable Product Capability is
+  generic, is configured only through environment variables or
+  parameters, and is safe to publish. Customer/Personal Runtime is
+  anything specific to one installation: accounts, folder or
+  deployment identifiers, credentials, chat settings, schedules,
+  account-specific orchestration, and personal glue scripts. Runtime
+  items must not be created in this repository — including in hidden
+  or git-ignored directories — and live in a private location outside
+  it. *(Owner-directed 2026-10-02; added 2026-10-06.)*
 
 ## ToolTempest consumer obligation
 
