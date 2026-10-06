@@ -3243,3 +3243,104 @@ independent reason to track them apart from this entry's own gap or from each ot
 0050), 2026-10-01, following the M4 implementation pass that built `habr_edit_capture/`
 (commits `57021bb`, `964c390`, `4bf4b71`, `abe480b`) and found `telegram_send.py` had nothing
 real to send.
+
+### [B-072] P2 — Schema-version contract between Collector and the pipeline adapter, and gate-block observability
+
+Found: 2026-10-06, while closing G057 (LinkedIn auto-publish recovery), from the 2026-10-02
+run that produced no post. Filed as a finding only: it needs a more thorough verification
+before any fix is designed.
+
+Evidence status, per claim:
+
+- **FACT** (run `36955140664`, event `schedule`, `headSha` `aa14bb9`, 2026-10-02, literal log
+  lines; the `detail` line repeats for all seven units, shown here for `archi-kg`):
+  ```
+  gate_result: {'status': 'gated', 'gates': {'zero_included_units': True}}
+    archi-kg: integrity_status=invalid detail=daily_brief schema_version=3, expected 2; record not interpreted
+  Bootstrap gate blocked — no publish. Registry record: .../registry/output/linkedin-2026-10-02.json
+  ```
+- **FACT** (Registry record `linkedin-2026-10-02` on `registry-data`, literal field):
+  ```
+  "gate_status": "block",
+  "block_reason": "Bootstrap gate: zero included units (7/7 excluded). First excluded reason (collector:daily_brief:2026-10-02:archi-kg): integrity_status=invalid (ancestry_reconciliation) — an inauthentic/unprovenanced record can never be included, regardless of corroboration_status"
+  ```
+  The `block_reason` text does not contain `schema_version`.
+- **FACT** (same run): the workflow concluded `success` although the gate blocked and nothing
+  was published.
+- **FACT** (code read 2026-10-06, `aa14bb9` and current `main`): `block_reason` is assembled
+  from the first excluded unit's pre-filter reason. That reason is a fixed template that
+  prints the unit's `integrity_check_method`. The adapter assigns the constant
+  `INTEGRITY_CHECK_METHOD = "ancestry_reconciliation"` to every unit it builds, including a
+  unit it marks invalid for an unsupported schema version. So `(ancestry_reconciliation)` in
+  the `block_reason` is that constant label.
+- **UNKNOWN**: whether any ancestry check actually ran in the 2026-10-02 run. The log line
+  shows only the schema-version text as the unit's `detail`; it does not show whether the
+  check was called or skipped.
+- **UNKNOWN**: any causal link beyond the lines above. The log shows `integrity_status=invalid`
+  together with a schema-version `detail` on each unit, and the record shows `integrity_status=invalid`
+  in `block_reason`; this entry does not claim more than that both lines come from the same
+  invalid status.
+- **FACT** (code read 2026-10-06): two independent constants hold the version —
+  `SCHEMA_VERSION = 3` in `collector/scripts/daily_brief.py` and
+  `DAILY_BRIEF_SCHEMA_VERSION = 3` in `strategy_layer/adapters/collector.py`. The adapter
+  treats any other value as unsupported and marks every unit invalid by design; its own
+  comment calls this fail-closed.
+- **FACT** (re-verified 2026-10-06 by grep over `*.py`, `*.yml` and `*.md` in the `collector`
+  and `article-pipeline` working trees, excluding `docs/adr/`): no test or CI file references
+  both constants. Each side's tests assert a literal `3` (`collector/scripts/test_daily_brief.py`;
+  `strategy_layer/adapters/test_collector.py`, `test_metadata_whitelist.py`,
+  `author/test_no_message_bypass.py`).
+- **UNKNOWN**: whether any check outside those two working trees (another repository, a
+  workflow in another repository, a manual procedure) compares the two constants.
+- **UNKNOWN**: whether a blocked gate is meant to surface as a failed or otherwise flagged
+  workflow run, or whether `success` on a block is the intended contract.
+- **UNKNOWN**: whether the misleading `block_reason` and the green status on a block are one
+  problem or two.
+- **ASSUMPTION**: a future change to either constant on its own would repeat the 2026-10-02
+  outcome. Not observed beyond the 2026-10-02 run.
+
+- [ ] Verify more thoroughly before any fix is designed: resolve each UNKNOWN above against
+      the repositories and workflows, and re-check the ASSUMPTION against how the two
+      constants have actually changed over their history.
+- [ ] Only after that, decide whether a fix is warranted at all. No design is proposed here.
+
+Not part of G057's closure: its `OUT OF SCOPE` already excluded the misleading block reason
+because restoring publication did not require changing it.
+
+**Source.** G057 closing session, 2026-10-06: run logs, Registry record and code read directly
+in that session. No external AI contributed.
+
+### [B-073] P3 — Automation-only-day guard may misclassify on subject text alone — low priority, not reproduced
+
+Found: 2026-10-06, while verifying the 2026-10-04..06 automation-only-day skips for G057's
+closure. Filed as a finding only: it needs a more thorough verification before any fix is
+designed. Related to `[B-069]`, which covers a pre-call deterministic guard and is not
+resolved here.
+
+Evidence status, per claim:
+
+- **FACT**: the 2026-10-04, 2026-10-05 and 2026-10-06 skips (runs `37172049384`,
+  `37254188010`, `37407583220`) were correct. The only commits in those windows were
+  `github-actions[bot]` Collector data commits, `Radar Bot` commits, and one `vault backup:`
+  commit that touched only `.obsidian/graph.json`.
+- **FACT** (code read 2026-10-06): the guard is defined in the prompt text of
+  `_build_fact_prompt()` in `author/daily_linkedin_author.py`; the decision is the model's
+  `automation_only_day` output, and `linkedin_publisher/daily_publish.py` only acts on it.
+  `build_clusters()` offers the model, per repository, commit subjects, stated Why/Effect
+  facts, a commit count and a files-touched count. It offers no author and no file name.
+- **ASSUMPTION**: the model decides from commit subjects and counts only. The prompt also
+  carries identity state and recent posts, and nothing verified that those play no part.
+  Needs verification before any conclusion.
+- **ASSUMPTION**: a manual commit with a templated subject could be skipped as automation.
+  Not observed.
+- **ASSUMPTION**: a non-standard bot commit, with a subject that does not look automated,
+  could produce a post. Not observed.
+- **UNKNOWN**: the model's own stated reasoning for the 2026-10-04..06 skips. It is not in
+  the run logs or the Registry, and was not reviewed.
+
+- [ ] Verify more thoroughly before any fix is designed: establish what the model's decision
+      actually depends on, and whether either ASSUMPTION can be reproduced at all.
+- [ ] Deferred otherwise: P3, no reproduction and no observed wrong outcome.
+
+**Source.** G057 closing session, 2026-10-06: run logs, commit authorship from the GitHub API,
+and the code above read directly in that session. No external AI contributed.

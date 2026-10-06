@@ -12,8 +12,7 @@ Restore the daily LinkedIn auto-publish after the two identified failure
 causes.
 
 ## CURRENT STEP
-Parser fix committed locally (`fdf308d`) and not pushed. It awaits the
-owner's push approval and the next scheduled run.
+None — mission DONE. See COMPLETION below.
 
 ## WHY
 No post for 2026-10-01 (the model response was not parseable) or 2026-10-02
@@ -65,8 +64,42 @@ about whether the referenced goals (G061/G064) are themselves achieved
 completion, per the Mission Harness section's own
 Mission-Done-≠-Goal-Achieved rule.
 
+## COMPLETION
+DONE WHEN is satisfied by the first scheduled run after the fixes:
+- Workflow run `37088686351` (`linkedin-daily-publish.yml`, event `schedule`,
+  `headSha` `1d51f76`, created 2026-10-03T02:07:30Z) concluded `success`. Its
+  publish-step log contains
+  `Published: https://www.linkedin.com/feed/update/urn:li:share:7511970282216210432/`.
+- Registry record `linkedin-2026-10-03` on `registry-data` has
+  `gate_status: pass` and `block_reason: null`.
+- Post visibility on LinkedIn: confirmed visible by the Owner on 2026-10-06; not independently checked by Claude. The
+  closure rests on the run log and the Registry record above, which already
+  satisfy DONE WHEN.
+
+The next three scheduled runs (`37172049384` for 2026-10-04, `37254188010` for
+2026-10-05, `37407583220` for 2026-10-06; all on `1d51f76`) each logged
+`Automation-only day detected (selected_cluster='radar-vault')` and published
+nothing. Checked against commit authorship, those skips were correct: the only
+commits in those windows were `github-actions[bot]` Collector data commits,
+`Radar Bot` commits, and one `vault backup:` commit that touched only
+`.obsidian/graph.json`; no manual engineering commit existed in any tracked
+repository. Caveat for 2026-10-06: the only non-bot commit in the window was an
+automatic vault-backup commit under the Owner's name, touching only
+`.obsidian/graph.json`. The model classified the day correctly but could not see
+authors or file names, only commit subjects, stated Why/Effect lines and counts.
+The model's own stated
+reasoning for those days was not persisted and was not reviewed.
+
+Residual risks found while closing, recorded as `[B-072]` and `[B-073]` in
+`docs/BACKLOG.md` with per-claim evidence status, not fixed here.
+
+This says nothing about whether the referenced goal (G057) is itself achieved
+— that remains an owner decision, not implied by this mission's completion,
+per the Mission Harness section's own Mission-Done-≠-Goal-Achieved rule.
+`SYSTEM_GOALS.md` is not modified.
+
 ## STATUS
-ACTIVE
+DONE
 
 ## SCOPE RULE
 Discovered issues, ideas, opportunities, cleanup, refactors, and future work do not
