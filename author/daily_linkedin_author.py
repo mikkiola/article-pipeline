@@ -425,8 +425,8 @@ Work through these five steps, in this order:
    facts. No interpretation, no inferred reason, no inferred
    consequence — EXCEPT: if a commit has its own stated-reason and/or
    stated-effect fact in this cluster, you may state it as that
-   specific commit's own stated reason/effect (attribute it as such,
-   e.g. "the author notes this was for..."), never generalized to a
+   specific commit's own stated reason/effect (attribute it to that
+   commit, e.g. "that commit's own stated reason is..."), never generalized to a
    different commit. Do not name ADR numbers, even if a commit subject
    contains one — describe the change in plain words instead.
 
@@ -441,8 +441,13 @@ Work through these five steps, in this order:
    was built for the other.
 
 3. DESIGN INSIGHT — what does this tension reveal about the kind of
-   system the author wants to build, or the kind of engineering the
-   author values? State this as your own interpretation, not something
+   system or engineering the work points toward? Analyze the work, the
+   pattern, the engineering choice, or the tension itself as the
+   grammatical subject — never "the author" or "the owner". Extract the
+   engineering preference or design value the tension points to; the
+   final post will express it as my own first-person position, not as a
+   neutral claim such as "the work demonstrates...". State this as your
+   own interpretation, not something
    today's commits prove as a universal law. The insight must preserve
    the exact object of the tension — do not introduce a new actor,
    system capability, failure mode, causal mechanism, or market
@@ -451,18 +456,19 @@ Work through these five steps, in this order:
    about almost any project with a similarly-shaped commit, it fails
    and must be rewritten, not hedged.
 
-4. PERSONAL POSITION — given this tension, formulate a present-tense
-   engineering preference or design value the author could reasonably
-   carry forward into other systems — explicitly framed as something
-   today's work may strengthen, clarify, or cause the author to
-   formulate, never as a claim about the historical motivation behind
-   the actual commits. The position must still originate from today's
-   tension, but may be broader than what today's data proves — only the
-   underlying FACT and TENSION must remain proven, not the position
-   itself. If the author identity state above lists an existing
-   position that already covers this tension, deepen or extend it
-   rather than restating it; if it's genuinely new, say so as newly
-   forming, not as something the author has always held.
+4. PERSONAL POSITION — this is where the engineering preference or
+   design value from DESIGN INSIGHT becomes a present-tense
+   first-person position (I/my): the engineering preference or design
+   value I could reasonably carry forward into other systems —
+   explicitly framed as something today's work may strengthen,
+   clarify, or lead me to formulate, never as a claim about the
+   historical motivation behind the actual commits. The position must
+   still originate from today's tension, but may be broader than what
+   today's data proves — only the underlying FACT and TENSION must
+   remain proven, not the position itself. If the identity state above
+   lists an existing position that already covers this tension, deepen
+   or extend it rather than restating it; if it's genuinely new, say
+   so as newly forming, not as something I have always held.
 
 5. RELEVANT PROBLEM — describe a real-world problem or pain this
    position or insight plausibly addresses, framed explicitly as an
@@ -471,8 +477,12 @@ Work through these five steps, in this order:
 
 Then write "post": a single synthesized LinkedIn post of 150-300 words
 that moves through FACT, TENSION, DESIGN INSIGHT, PERSONAL POSITION, and
-RELEVANT PROBLEM as a readable narrative. Do not include a separate
-inversion or thought-experiment beat in the post. It must never present
+RELEVANT PROBLEM as a readable narrative. The post is written in first
+person throughout: the person who did this work is "I"/"my", and the
+post never refers to that person in the third person — never "the
+author" or "the owner". The five reasoning fields below are not
+subject to this; only the published "post" is. Do not include a
+separate inversion or thought-experiment beat in the post. It must never present
 the TENSION, DESIGN INSIGHT, or RELEVANT PROBLEM content as an
 established, confirmed, or planned fact, and it must never state or
 imply a historical reason for the actual commit(s) above. Include a
@@ -499,6 +509,13 @@ check, rewrite it conservatively or remove it — do not add new
 information while repairing it. This check does not constrain the
 personal position itself: the evidence requirement applies to claims
 about reality, not to the author's stated preference.
+
+FINAL VOICE CHECK — a separate check from the evidence check above.
+Before returning your response, reread the finished post for voice only:
+every personal preference or design value in it must read as an
+explicit first-person position of mine ("I prefer...", "my default
+is..."), not as a claim about an outside observer, and the post must
+contain no third-person reference to myself.
 
 Numbers: every number in the post must appear in the selected cluster's
 facts or be a direct count of items in them (use the counts given in the
@@ -666,6 +683,43 @@ def check_post_content(post: str) -> None:
         )
 
 
+# Literal third-person self-reference forms the fact-mode post must not
+# contain. The only written voice rule is ADR-0044's "first person, active
+# voice" (carried for fact-mode by the voice-ownership ADR, 0063); it
+# defines no list of forms, so this set is limited to the forms observed or
+# reported as leaking ("the author", "the owner") plus their "this ..." and
+# possessive variants. The article is matched in either case; the noun only
+# in lowercase, so a capitalised component name ("the Author component")
+# is not a self-reference. Extend this only for a form actually observed.
+_THIRD_PERSON_SELF_REFERENCE_RE = re.compile(
+    r"\b(?:[Tt]he|[Tt]his)\s+(?:author|owner)(?:['’]s)?\b"
+)
+
+
+def check_fact_post_voice(post: str) -> None:
+    """Fact mode only. Deterministic voice check on the synthesized `post`:
+    rejects literal third-person self-reference about the post's own
+    writer ("the author", "the owner", "this author", and possessives).
+    Raises AuthorLLMError, so a rejected post fails the run before
+    anything is published.
+
+    WHAT THIS PROVES: none of the listed literal forms appear in the post.
+    WHAT IT DOES NOT PROVE: that the post is first person (it does not
+    require "I"/"my"), that a preference reads as an explicit first-person
+    position, or that no other third-person phrasing ("the engineer") is
+    used. It is separate from the FINAL EVIDENCE CHECK's unsupported-claim
+    wording ("nobody", "the team"), which it deliberately does not look
+    at. idea_fallback is not subject to it (ADR-0044 still governs that
+    mode)."""
+    match = _THIRD_PERSON_SELF_REFERENCE_RE.search(post)
+    if match:
+        raise AuthorLLMError(
+            f"Generated fact-mode post contains third-person self-reference "
+            f"{match.group(0)!r}; the post must be first person throughout. "
+            f"Post: {post!r}"
+        )
+
+
 def verify_cited_facts(response: dict, daily_brief: dict) -> None:
     """Fact mode only. Verifies, by exact string match, that the model
     cited only what it was actually offered this run: `selected_cluster`
@@ -809,6 +863,7 @@ def validate_structured_response(response: dict, mode: str, daily_brief: dict | 
         )
     check_post_content(response["post"])
     if mode == "fact":
+        check_fact_post_voice(response["post"])
         validate_reasoning(response)
         if daily_brief is None:
             raise AuthorLLMError(

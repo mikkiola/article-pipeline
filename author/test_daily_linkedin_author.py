@@ -888,6 +888,159 @@ def test_post_check_is_applied_by_validate_structured_response_in_both_modes():
             assert "greeting" in str(e)
 
 
+# --- Fact-mode published-post voice: no third-person self-reference ---------
+# The gate under test checks the synthesized `post` string itself — the
+# actual output — not whether the prompt asks for first person.
+
+THIRD_PERSON_SELF_REFERENCE_POSTS = (
+    "The author treats scope correction as part of shipping. I changed three things today.",
+    "I shipped three commits today. This is what the owner's pipeline needed.",
+    "I bumped a header today.\n\nThe author's habit is to fail loudly before publication.",
+    "This author prefers checks that fail before anything is published.",
+    "I bumped a header today. Then the author noted that the old one had expired.",
+)
+
+FIRST_PERSON_POST_WITH_POSITION = (
+    "I merged three commits into article-pipeline today. One made the Publication "
+    "Registry accept a caller-supplied content_id.\n\n"
+    "Both changes leave a check running before anything is published, never after. "
+    "I prefer a gate that fails before publication over a review that happens after it. "
+    "Today's work strengthens that preference for me.\n\n"
+    "Where would you place the check in your own pipeline?"
+)
+
+# Legitimate wording that merely resembles the self-reference forms or the
+# FINAL EVIDENCE CHECK's "nobody"/"the team" wording — a different concern,
+# which this gate must not conflate with third-person self-reference.
+NON_SELF_REFERENCE_POSTS = (
+    "I noticed that nobody on the call mentioned the expired header.",
+    "The team reviewed the change before I merged it.",
+    "The Author component now reads the cluster IDs from the brief.",
+    "I moved the Owner Verdict Capture step ahead of the registry write.",
+)
+
+
+def test_fact_post_voice_rejects_third_person_self_reference():
+    for post in THIRD_PERSON_SELF_REFERENCE_POSTS:
+        try:
+            author_llm.check_fact_post_voice(post)
+            raise AssertionError(f"expected AuthorLLMError for {post!r}")
+        except author_llm.AuthorLLMError as e:
+            assert "third-person self-reference" in str(e), f"got: {e}"
+
+
+def test_fact_post_voice_accepts_first_person_posts():
+    author_llm.check_fact_post_voice(FIRST_PERSON_POST_WITH_POSITION)  # must not raise
+    author_llm.check_fact_post_voice(PLAIN_FACTS_ONLY_POST)  # must not raise
+
+
+def test_fact_post_voice_does_not_flag_wording_that_is_not_self_reference():
+    for post in NON_SELF_REFERENCE_POSTS:
+        author_llm.check_fact_post_voice(post)  # must not raise
+
+
+def test_fact_mode_validation_rejects_a_post_with_third_person_self_reference():
+    for post in THIRD_PERSON_SELF_REFERENCE_POSTS:
+        response = _cited("article-pipeline", ["article-pipeline:fact_01"])
+        response["post"] = post
+        _assert_rejected(response, SYNTHETIC_FACTS_BRIEF, "third-person self-reference")
+
+
+def test_fact_mode_validation_accepts_a_first_person_post():
+    response = _cited("article-pipeline", ["article-pipeline:fact_01"])
+    response["post"] = FIRST_PERSON_POST_WITH_POSITION
+    author_llm.validate_structured_response(response, "fact", SYNTHETIC_FACTS_BRIEF)  # must not raise
+
+
+def test_third_person_reasoning_fields_do_not_trip_the_post_voice_gate():
+    # `reasoning` is for the owner's own review and is not published; only
+    # the `post` field is checked for voice.
+    response = _cited("article-pipeline", ["article-pipeline:fact_01"])
+    response["post"] = FIRST_PERSON_POST_WITH_POSITION
+    response["reasoning"]["design_insight"] = "The author treats scope correction as part of shipping."
+    author_llm.validate_structured_response(response, "fact", SYNTHETIC_FACTS_BRIEF)  # must not raise
+
+
+def test_automation_only_day_response_is_unaffected_by_the_voice_gate():
+    author_llm.validate_structured_response(
+        dict(_GOOD_AUTOMATION_ONLY_RESPONSE), "fact", SYNTHETIC_FACTS_BRIEF
+    )  # must not raise
+
+
+def test_idea_fallback_validation_is_not_subject_to_the_fact_mode_voice_gate():
+    # ADR-0044 still governs idea_fallback; the fact-mode voice gate must
+    # not reach it.
+    author_llm.validate_structured_response(
+        {"post": "The author sees a reimagined use for this product.",
+         "fact_or_product": "Collector", "emergent_property": "x", "evidence_to_collect": "y"},
+        "idea_fallback",
+    )  # must not raise
+
+
+def _prompt_segment(prompt, start_marker, end_marker):
+    start = prompt.index(start_marker)
+    return prompt[start:prompt.index(end_marker, start)]
+
+
+def test_fact_prompt_reasoning_steps_do_not_use_the_author_or_owner_as_subject():
+    # Secondary prompt-shape check, NOT proof of the fix (the output gate
+    # above is): FACT, DESIGN INSIGHT and PERSONAL POSITION must not
+    # model third-person self-reference for the post.
+    prompt = _facts_prompt()
+    steps = _prompt_segment(prompt, "1. FACT", "5. RELEVANT PROBLEM")
+    # DESIGN INSIGHT names the forbidden forms once, in a prohibition; that
+    # one quoted mention is the only allowed occurrence.
+    prohibition = 'never "the author" or "the owner"'
+    assert steps.count(prohibition) == 1
+    steps = steps.replace(prohibition, "")
+    for forbidden in ("the author", "the owner", "The author", "The owner"):
+        assert forbidden not in steps, f"reasoning steps still use {forbidden!r} as a subject"
+
+
+def test_fact_prompt_design_insight_analyzes_the_work_and_hands_a_preference_to_the_first_person_position():
+    prompt = _facts_prompt()
+    design_insight = _prompt_segment(prompt, "3. DESIGN INSIGHT", "4. PERSONAL POSITION")
+    assert "the work" in design_insight and "the engineering choice" in design_insight
+    assert "engineering preference or design value" in design_insight
+    assert "first-person position" in design_insight
+    # Pinned instructions that must survive the rewording.
+    assert "The insight must preserve the exact object of the tension" in design_insight
+    assert "Specificity test" in design_insight
+
+
+def test_fact_prompt_personal_position_stays_the_explicit_first_person_bridge():
+    prompt = _facts_prompt()
+    position = _prompt_segment(prompt, "4. PERSONAL POSITION", "5. RELEVANT PROBLEM")
+    assert "present-tense first-person position" in position
+    assert "(I/my)" in position
+    assert "engineering preference or design value" in position
+    assert "The position must still originate from today's tension" in position
+
+
+def test_fact_prompt_states_first_person_as_a_hard_contract_at_post_synthesis():
+    prompt = _facts_prompt()
+    synthesis = _prompt_segment(prompt, 'Then write "post"', "FINAL EVIDENCE CHECK")
+    assert "first person throughout" in synthesis
+    assert 'never "the author" or "the owner"' in synthesis
+
+
+def test_fact_prompt_keeps_voice_check_separate_from_evidence_check():
+    prompt = _facts_prompt()
+    assert prompt.index("FINAL EVIDENCE CHECK") < prompt.index("FINAL VOICE CHECK")
+    evidence_check = _prompt_segment(prompt, "FINAL EVIDENCE CHECK", "FINAL VOICE CHECK")
+    # The evidence check keeps its own scope; voice is not folded into it.
+    assert "first-person" not in evidence_check and "first person" not in evidence_check
+    voice_check = _prompt_segment(prompt, "FINAL VOICE CHECK", "Numbers:")
+    assert "first-person position" in voice_check
+
+
+def test_idea_fallback_prompt_has_no_fact_mode_voice_contract_text():
+    with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
+        prompt = " ".join(author_llm.build_prompt(SAMPLE_IDEA_FALLBACK_DAILY_BRIEF).split())
+    assert "FINAL VOICE CHECK" not in prompt
+    assert "first person throughout" not in prompt
+
+
 def test_idea_fallback_prompt_contains_adr_0044_voice_contract():
     with mock.patch.object(author_llm, "_check_repo_visibility", return_value=False):
         prompt = author_llm.build_prompt(SAMPLE_IDEA_FALLBACK_DAILY_BRIEF)
@@ -1265,6 +1418,20 @@ if __name__ == "__main__":
         test_post_check_rejects_greeting,
         test_post_check_accepts_plain_facts_only_post,
         test_post_check_is_applied_by_validate_structured_response_in_both_modes,
+        test_fact_post_voice_rejects_third_person_self_reference,
+        test_fact_post_voice_accepts_first_person_posts,
+        test_fact_post_voice_does_not_flag_wording_that_is_not_self_reference,
+        test_fact_mode_validation_rejects_a_post_with_third_person_self_reference,
+        test_fact_mode_validation_accepts_a_first_person_post,
+        test_third_person_reasoning_fields_do_not_trip_the_post_voice_gate,
+        test_automation_only_day_response_is_unaffected_by_the_voice_gate,
+        test_idea_fallback_validation_is_not_subject_to_the_fact_mode_voice_gate,
+        test_fact_prompt_reasoning_steps_do_not_use_the_author_or_owner_as_subject,
+        test_fact_prompt_design_insight_analyzes_the_work_and_hands_a_preference_to_the_first_person_position,
+        test_fact_prompt_personal_position_stays_the_explicit_first_person_bridge,
+        test_fact_prompt_states_first_person_as_a_hard_contract_at_post_synthesis,
+        test_fact_prompt_keeps_voice_check_separate_from_evidence_check,
+        test_idea_fallback_prompt_has_no_fact_mode_voice_contract_text,
         test_idea_fallback_prompt_is_unchanged_by_the_facts_only_change,
         test_idea_fallback_prompt_contains_adr_0044_voice_contract,
         test_evidence_links_included_for_public_repo_only,
