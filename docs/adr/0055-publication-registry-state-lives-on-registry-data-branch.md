@@ -1,8 +1,8 @@
 ---
 id: ADR-0055
-status: Accepted
+status: Superseded
 supersedes: null
-superseded_by: null
+superseded_by: ADR-0064
 source_type: verbatim
 ---
 

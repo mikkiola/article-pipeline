@@ -62,7 +62,7 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0052](0052-pattern-thresholds-start-unset-observe-only.md) | Pattern-detection thresholds start unset (OBSERVE_ONLY), not a placeholder number | Accepted | ADR-0050 | null |
 | [ADR-0053](0053-content-id-ownership-moves-to-caller.md) | content_id ownership moves from Registry to caller | Accepted | null | null |
 | [ADR-0054](0054-m2-ships-core-linkedin-publishing-without-safety-pause-trigger-or-proactive-credential-alerting.md) | M2 ships core LinkedIn publishing without SAFETY_PAUSE's trigger or proactive token-expiry alerting | Accepted | null | null |
-| [ADR-0055](0055-publication-registry-state-lives-on-registry-data-branch.md) | Publication Registry state lives on the `registry-data` branch | Accepted | null | null |
+| [ADR-0055](0055-publication-registry-state-lives-on-registry-data-branch.md) | Publication Registry state lives on the `registry-data` branch | Superseded | null | ADR-0064 |
 | [ADR-0056](0056-collector-integrity-by-github-ancestry-and-per-repo-commit-messages.md) | Collector records are verified by GitHub ancestry, and commit messages are attributed per repository | Accepted | null | null |
 | [ADR-0057](0057-commit-body-why-effect-trailers-not-yet-accepted-as-evidence.md) | Commit-body Why:/Effect: trailers are not yet accepted as Evidence; facts-only publication stays in force | Superseded | null | ADR-0059 |
 | [ADR-0058](0058-fact-prompt-offers-per-repo-clusters-with-id-based-citation.md) | The fact prompt offers per-repository clusters of ID-tagged facts, and cited IDs are verified | Accepted | null | null |
@@ -71,3 +71,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0061](0061-why-effect-trailers-activated-as-fact-mode-evidence-tier.md) | Why:/Effect: commit trailers activated as a fact-mode evidence tier | Accepted | null | null |
 | [ADR-0062](0062-classify-new-repository-content-as-product-capability-or-runtime.md) | New repository content is classified as a Reusable Product Capability or Customer/Personal Runtime | Accepted | null | null |
 | [ADR-0063](0063-fact-mode-voice-ownership-first-person-and-subject-neutral-reasoning.md) | Fact-mode first-person voice is owned by this record, and its reasoning steps analyze the work, not "the author" | Accepted | null | null |
+| [ADR-0064](0064-linkedin-scheduled-workflow-and-registry-state-move-to-private-runtime-repository.md) | The LinkedIn scheduled workflow and its Registry state live in the private runtime repository | Accepted | ADR-0055 | null |
