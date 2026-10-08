@@ -70,3 +70,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0060](0060-habr-edit-capture-as-its-own-component.md) | Habr Edit Capture — a new component, a Drive-metadata dedup key, and an explicit zero-diff record | Accepted | null | null |
 | [ADR-0061](0061-why-effect-trailers-activated-as-fact-mode-evidence-tier.md) | Why:/Effect: commit trailers activated as a fact-mode evidence tier | Accepted | null | null |
 | [ADR-0062](0062-classify-new-repository-content-as-product-capability-or-runtime.md) | New repository content is classified as a Reusable Product Capability or Customer/Personal Runtime | Accepted | null | null |
+| [ADR-0063](0063-fact-mode-voice-ownership-first-person-and-subject-neutral-reasoning.md) | Fact-mode first-person voice is owned by this record, and its reasoning steps analyze the work, not "the author" | Accepted | null | null |
