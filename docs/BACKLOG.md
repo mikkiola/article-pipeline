@@ -3344,3 +3344,34 @@ Evidence status, per claim:
 
 **Source.** G057 closing session, 2026-10-06: run logs, commit authorship from the GitHub API,
 and the code above read directly in that session. No external AI contributed.
+
+### [B-074] P3 — L3 Market Evidence layer: learn from real audience reaction — deferred, not scoped, not started
+
+Found: 2026-10-08, owner task.
+
+Idea recorded so it is not lost. A future layer that lets the pipeline learn from real audience
+reaction to published posts: reach, saves, comments, and profile-view-to-follow conversion. The
+exact metric is undecided. Eventually it would cover all auto-publish channels, and it would feed
+from the Brain/Knowledge aggregation layer (`[B-070]`, not yet built).
+
+The term 'L3 Market Evidence' refers to the existing L3 market-signal concept in `ADR-0044`:
+evidence that emerges from real audience reaction and is never fabricated. This entry records the
+future layer intended to accumulate and act on that kind of evidence — not a new or competing
+concept.
+
+Status, stated plainly: deferred, not scoped, not started. No design, schema, metric choice, or
+data source is proposed by this entry.
+
+Reason for deferral: there are too few real posts to design against (3 as of 2026-10-08) and
+zero engagement data collected so far.
+
+`[B-045]`'s per-article reader metrics are a related, existing source of raw signal and a potential
+input once this layer is built — B-074 is broader than B-045's monetization MVP and does not depend
+on it.
+
+- [ ] Deferred — revisit only once there is enough signal (a meaningful number of real posts with
+      engagement data) and `[B-070]` exists. Until then, no work.
+
+**Depends on:** `[B-070]` (the aggregation layer this would feed from).
+
+**Source.** Owner task, 2026-10-08. No external AI contributed.
