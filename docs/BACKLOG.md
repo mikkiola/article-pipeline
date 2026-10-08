@@ -3003,7 +3003,8 @@ one-time task — it does not get closed via the usual `[B-NNN]` closure convent
 (no `Closes:` trailer applies; this entry stays open indefinitely as long as this
 pipeline publishes to LinkedIn).
 
-`LINKEDIN_ACCESS_TOKEN` (GitHub secret on this repo) has a hard 60-day expiry and no
+`LINKEDIN_ACCESS_TOKEN` (GitHub secret on the private `mikkiola/article-pipeline-runtime`
+repo only; no longer stored on this repo) has a hard 60-day expiry and no
 refresh-token flow on LinkedIn's self-serve tier — renewal is a manual OAuth
 authorization-code flow the operator must run periodically.
 `linkedin_publisher/linkedin_client.py`'s `check_token_preflight()` fails closed (no
