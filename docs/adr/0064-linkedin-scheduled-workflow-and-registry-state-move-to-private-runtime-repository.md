@@ -2,7 +2,7 @@
 id: ADR-0064
 status: Accepted
 supersedes: ADR-0055
-superseded_by: null
+superseded_by: "ADR-0065 (removal of the workflow file only; all other decisions remain governed by this ADR)"
 source_type: verbatim
 ---
 
