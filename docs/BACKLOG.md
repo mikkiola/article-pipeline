@@ -3376,3 +3376,17 @@ on it.
 **Depends on:** `[B-070]` (the aggregation layer this would feed from).
 
 **Source.** Owner task, 2026-10-08. No external AI contributed.
+
+### [B-075] P3 — `scripts/check-adr-citation.sh` does not match the `docs/adr/NNNN-slug.md` path form
+
+Found: 2026-10-09, while removing ADR citations from `docs/ARCHITECTURE.md` (Handoff 2).
+
+The script's pattern `ADR-[0-9]\+` matches only the literal `ADR-NNNN` token, not the
+`docs/adr/NNNN-slug.md` path form, so `docs/ARCHITECTURE.md` carried 18 such path citations
+(15 distinct ADRs) while the script exited 0.
+
+- [ ] Deferred — the script was deliberately not modified in Handoff 2; revisit when the
+      checker is next touched (extend the pattern to the path form, then mutation-test it).
+
+**Source.** Owner task, 2026-10-09; counts from `grep` on `docs/ARCHITECTURE.md` at `6e33a71`.
+No external AI contributed.
