@@ -60,3 +60,9 @@ author/output/
 # (verdict_20260828T211939.json, the M5 real-data validation run) is
 # unaffected -- .gitignore never untracks an already-tracked file.
 strategy_layer/output/
+
+# Author: identity-continuity state (real published post text). The
+# scheduled run keeps it with the runtime repository's data (ADR-0062: no
+# runtime content in this public repository), so a local run's copy is
+# not tracked here by design.
+author/state/

@@ -41,7 +41,14 @@ from __future__ import annotations
 import json
 import os
 
-STATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "state")
+# AUTHOR_STATE_DIR (when set and non-empty) points the state files at a
+# directory outside this checkout — the scheduled workflow uses it to keep
+# them on the same data branch as the Registry output, so they survive
+# between runs. Read once, at import time (same convention as
+# publication_registry/writer.py's REGISTRY_OUTPUT_DIR).
+STATE_DIR = os.environ.get("AUTHOR_STATE_DIR") or os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "state"
+)
 IDENTITY_STATE_FILE = os.path.join(STATE_DIR, "identity_state.json")
 RECENT_POSTS_FILE = os.path.join(STATE_DIR, "recent_posts.json")
 
