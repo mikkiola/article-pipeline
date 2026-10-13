@@ -3129,9 +3129,14 @@ generation before any call is made.
       exists only in the archived, now-deleted sandbox, not in this repository; this needs
       re-deriving or re-requesting from the owner, not assumed.
 - [ ] Add regression test coverage for both the skip path (automation-only day: no API call
-      made, no post, no Registry write attempted) and the non-skip path (any real manual
-      commit present: generation proceeds as normal), per this project's TDD threshold for a
-      correctness-sensitive gating change.
+      made, no post, and the pre-call guard, once built, does not invoke the Registry writer.
+      For reference, the only automation-only skip that exists today is the model-reported
+      one in `linkedin_publisher/daily_publish.py`; it runs after the model call and, on a
+      day the gate passes, writes no Registry record. The separate Registry-gap item
+      `[B-076]` may later introduce a record for this outcome, so this assertion specifies
+      the planned guard's own behavior, not a permanent prohibition on such a record) and the
+      non-skip path (any real manual commit present: generation proceeds as normal), per this
+      project's TDD threshold for a correctness-sensitive gating change.
 
 Not yet a P1 blocker on shipping the rest of ADR-0059's contract: the prompt-level guard
 already covers the correctness concern (no bad post gets published); this item is a cost
@@ -3390,3 +3395,55 @@ The script's pattern `ADR-[0-9]\+` matches only the literal `ADR-NNNN` token, no
 
 **Source.** Owner task, 2026-10-09; counts from `grep` on `docs/ARCHITECTURE.md` at `6e33a71`.
 No external AI contributed.
+
+### [B-076] P2 — Registry record type for the automation-only-day run outcome (separate from `[B-069]`)
+
+Found: 2026-10-09, owner decision; filed 2026-10-13. The gap itself was first named in
+`[B-058]`'s note on the automation-only-day guard ("No Registry record is written for this
+outcome ... a known, named gap, not an oversight") and in the matching comment in
+`linkedin_publisher/daily_publish.py`.
+
+Today, on a day the bootstrap gate passes and the model reports `automation_only_day: true`,
+no Registry record is written. That skip returns before `write_record()`, and
+`PublicationRecord.gate_status` is `Literal["pass", "block"]`
+(`publication_registry/contract.py`), so the outcome fits neither value. (A day on which the
+gate blocks does write a `block` record, before any model call.) Inference from the code, not
+checked against workflow logs: on that path the Registry alone cannot distinguish a
+deliberate skip from a run that never reached `write_record()`.
+
+Owner decision, 2026-10-09:
+
+- The automation-only-day run outcome gets a separate record type.
+- `PublicationRecord.gate_status` remains `pass`/`block`. No third value is introduced.
+
+This item is separate from `[B-069]` and is not part of its implementation scope. `[B-069]`'s
+planned pre-call guard is specified not to invoke the Registry writer; the guard and its test
+are not built yet. Which skip paths write the new record (the model-reported one,
+`[B-069]`'s pre-call one, or both) is part of this item's integration design and is not
+decided here.
+
+- [ ] Inventory every Registry consumer before any design. Starting list, from a grep on
+      2026-10-13 and not the audit itself: `publication_registry/writer.py` (`read_record()`,
+      the field-agreement conflict check in `write_record()`),
+      `publication_registry/contract.py` (the schema), `linkedin_publisher/daily_publish.py`
+      (the read-before-publish check on `gate_status == "pass"`), and
+      `linkedin_publisher/linkedin_client.py` (a documented dependency on `write_record()`'s
+      existing-file behavior as its only idempotency protection). Not established by that
+      grep and still to be checked: the weekly report, Analyzer, and any other reader,
+      including workflows in the private runtime repository.
+- [ ] Define the integration design: the record type's shape, where it is stored, how each
+      consumer tells it apart from a `PublicationRecord`, and which skip paths write it.
+- [ ] Reconcile the outcome representation and every affected consumer, so the new type does
+      not create a second source of truth for what a run did on a given day.
+
+Completion criterion: the Registry outcome representation and the affected consumers have
+been reconciled so the new record type creates no second source of truth. Implementation
+requires its own approved scope; this entry implements nothing.
+
+**Depends on:** the consumer audit and a defined integration design, in that order, before
+implementation of the new record type. No code dependency on `[B-069]`.
+
+**Source.** Owner decision of 2026-10-09, relayed in the 2026-10-13 filing task; the
+originating discussion is not in this repository. Consumer list and `gate_status` values read
+directly from the working tree on 2026-10-13. Priority P2 was assigned at filing; the owner
+did not state one.
