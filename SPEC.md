@@ -115,9 +115,12 @@ grep — none exist here today):
    no `scope: external` distinction — and must never be presented to the
    owner or in any report as R6. `gate_policy = bootstrap` on every
    record it produces makes this structurally unambiguous.
-9. Bootstrap-gate block → no publish; a structured record still writes
-   to the Registry (`gate_status = block`, `block_reason` from
-   `pre_filter`'s own `_EXCLUDE_REASON`).
+9. Bootstrap-gate block → no publish. When the block is not caused by
+   an integrity violation, a structured record still writes to the
+   Registry (`gate_status = block`, `block_reason` from `pre_filter`'s
+   own `_EXCLUDE_REASON`). When the block is caused by an integrity
+   violation (`integrity_status = invalid`), the run outcome is
+   `FAILED_INTEGRITY` and no Registry record is written (FR41).
 10. **Circuit breaker — `SAFETY_PAUSE`.** One explicit `trash` Owner
     Verdict on an already-published LinkedIn post opens the circuit:
     future scheduled auto-publish runs are skipped while `SAFETY_PAUSE`
@@ -138,6 +141,44 @@ grep — none exist here today):
     expires; renewal itself is manual re-auth by the owner. No
     refresh-token flow is built (not confirmed to exist for the
     Share-on-LinkedIn product).
+
+41. **Run outcome.** (M2; the next free requirement number, so no existing
+    FR number changes.) Every run of the scheduled LinkedIn publish resolves to
+    exactly one outcome, with this exit code:
+
+    | Outcome | Exit |
+    |---|---|
+    | `PUBLISHED` | 0 |
+    | `SKIPPED_NO_ELIGIBLE_CONTENT` | 0 |
+    | `SKIPPED_SAFETY_PAUSE` | 0 |
+    | `SKIPPED_ALREADY_PUBLISHED` | 0 |
+    | `SKIPPED_AUTOMATION_ONLY` | 0 |
+    | `FAILED_INTEGRITY` | 1 |
+    | `FAILED` | 1 |
+
+    Decision order: an open `SAFETY_PAUSE` skips the run; an existing
+    `pass` Registry record for the `content_id` wins over any input
+    problem found later (`SKIPPED_ALREADY_PUBLISHED`); the bootstrap gate
+    (FR8) keeps its mechanism unchanged. A gate block caused by an
+    `integrity_status = invalid` exclusion is `FAILED_INTEGRITY`: no
+    model call, no publish, no block `PublicationRecord`, and the
+    specific diagnostic (for example `schema_version=3, expected 2`)
+    is kept in the run outcome. A gate block with no integrity
+    violation is `SKIPPED_NO_ELIGIBLE_CONTENT` and writes the block
+    record (FR9). `FAILED_INTEGRITY` fires only on a gate block caused
+    by a confirmed integrity violation; existing per-unit exclusion with
+    valid-unit continuation is unchanged. Any other unexpected failure
+    is `FAILED`.
+    The outcome is additional signal: `gate_status` stays
+    `pass`/`block`. Publication and Registry persistence are separate
+    events. A persistence failure after a confirmed publish is `FAILED`
+    with the post URL preserved in the diagnostics; the run neither
+    retries nor publishes a second time. `SKIPPED_AUTOMATION_ONLY`
+    writes no Registry record (a record type for it is `[B-076]`, not
+    built). Known limit: the `FAILED_INTEGRITY` diagnostic lives only in
+    the run outcome, the job summary and the run log, within the GitHub
+    Actions retention configured for the repository; it is not a
+    durable archive.
 
 ### Functional Requirements — M3: Owner Verdict (LinkedIn)
 

@@ -8,64 +8,74 @@ Goals version: 2026-09-30.v1
 Reference: docs/PROJECT.md
 
 ## NOW
-Restore the daily LinkedIn auto-publish after the two identified failure
-causes.
+Make every run of linkedin_publisher/daily_publish.py resolve to exactly one
+named outcome with a fixed exit code, and expose that outcome in the scheduled
+workflow, instead of relying on bare process exit and "no files to commit".
 
 ## CURRENT STEP
-None — mission DONE. See COMPLETION below.
+Implemented and tested locally in this repository, uncommitted. Owner review of
+the diff. The runtime workflow change is prepared as a diff only and not applied.
 
 ## WHY
-No post for 2026-10-01 (the model response was not parseable) or 2026-10-02
-(the consumer at `aa14bb9` expected schema 2 while Collector emitted 3, so
-the bootstrap gate blocked the day). The schema mismatch is resolved on
-`origin/main` as of `880551c`. The remaining cause is the parser.
+The previous G057 mission restored publishing and logged [B-072] and [B-073]
+as residual risks, not fixed. Gate-blocked days and automation-only days end
+`success` with no trace beyond the run log (scheduled runs 2026-10-11 to
+2026-10-14 are four such days), and a schema-incompatible brief on 2026-10-02
+produced a green run with a generic block reason.
+The diagnostic of a failed integrity check is kept only in the run log and,
+once the runtime workflow exposes them, the job summary and the outcome file,
+within the GitHub Actions retention of the repository; it is not a durable
+archive.
 
 ## DONE WHEN
-The first scheduled run after the fixes either publishes a real post, or
-skips correctly. The result must be confirmed by literal workflow logs and
-the Registry record.
+- daily_publish.py resolves each run to one of PUBLISHED,
+  SKIPPED_NO_ELIGIBLE_CONTENT, SKIPPED_SAFETY_PAUSE,
+  SKIPPED_ALREADY_PUBLISHED, SKIPPED_AUTOMATION_ONLY (exit 0) or
+  FAILED_INTEGRITY, FAILED (exit 1), each proven by a named test.
+- FAILED_INTEGRITY fires only on a gate block caused by a confirmed integrity
+  violation; existing per-unit exclusion with valid-unit continuation is
+  unchanged.
+- A schema-incompatible brief yields FAILED_INTEGRITY carrying the specific
+  "schema_version=<n>, expected <m>" diagnostic, with no model call, no
+  publish and no block PublicationRecord.
+- A persistence failure after a confirmed publish fails the job, preserves the
+  returned URL, and makes exactly one publish call.
+- The runtime workflow exposes the outcome and persists Registry and state
+  files on a failed run, confirmed by the literal log or job summary of the
+  first scheduled run after rollout. The FAILED_INTEGRITY diagnostic there is
+  retained only within the repository's GitHub Actions retention.
+- The SPEC.md run-outcome requirement, the ADR and the BACKLOG status note
+  listed in the plan are in place.
 
 ## IN SCOPE
-- The failure to parse the model response
-- Verify version alignment holds. No new rollout mechanism, per ADR-0056
-  order independence.
+- linkedin_publisher/daily_publish.py and its tests
+- the runtime repository's scheduled workflow (separate repository, separate
+  change)
+- SPEC.md run-outcome requirement and FR9 clarification, one ADR, a status
+  note under [B-072]
 
 ## OUT OF SCOPE
-- M4 in full, including its research session
-- M5 through M8
-- B-069 and B-070
-- The `identity_state` writer
-- Changing the model used by `call_model`
-- A Registry record for the automation-only-day outcome
-- The misleading block reason in the Registry record, because fixing the
-  contract does not require it
-- SPEC.md drift
+- [B-073] (stays a separate backlog item) and [B-069]
+- [B-076]'s record type, any new Registry record, any new gate_status value
+- the PublicationRecord schema, writer semantics, pre_filter, the Collector
+  adapter
+- Collector repository changes, including a cross-repository schema-constant
+  check
+- retries, a write-ahead intent record, new channels, observability redesign
+- the Habr Draft Automation track
+- closing [B-072] on the strength of this mission alone
 - Any push other than one the owner approves explicitly
 
 ## BLOCKERS
-- None known.
+- Owner review of the diff before any commit or push.
+- The runtime workflow change is not applied; until it is, only the run log
+  carries the outcome.
+- Rollout order: the runtime workflow change goes out before or together with
+  the code, never after. Without its `if: !cancelled()` guard, local Registry
+  and state writes made before a failed step are dropped silently.
 
-## PREVIOUS MISSION COMPLETION (B-058, historical — superseded by this mission)
-DONE WHEN is satisfied: all four of [B-058]'s checkboxes are checked and the
-entry is closed in `docs/BACKLOG.md` (commit `5ab85f9`, `Closes: B-058`).
-This says nothing about whether the referenced goals (G052/G055) are
-themselves achieved — that remains an owner decision, not implied by this
-mission's completion, per the Mission Harness section's own
-Mission-Done-≠-Goal-Achieved rule.
-
-## PREVIOUS MISSION COMPLETION (M3, historical — superseded by this mission)
-DONE WHEN is satisfied: SPEC.md's M3 checkbox is checked (`[x]`) and its
-`status:` line reads `done`, per commits `07aec0e` (verdict/ package,
-15/15 tests, real demonstration against real M2-published `content_id`s
-`linkedin-2026-09-29`/`linkedin-2026-09-28`) and `23c216b`
-(docs/ARCHITECTURE.md's Owner Verdict Capture row). This says nothing
-about whether the referenced goals (G061/G064) are themselves achieved
-— that remains an owner decision, not implied by this mission's
-completion, per the Mission Harness section's own
-Mission-Done-≠-Goal-Achieved rule.
-
-## COMPLETION
-DONE WHEN is satisfied by the first scheduled run after the fixes:
+## PREVIOUS MISSION COMPLETION (G057 restore of the daily LinkedIn auto-publish, historical — superseded by this mission)
+DONE WHEN was satisfied by the first scheduled run after the fixes:
 - Workflow run `37088686351` (`linkedin-daily-publish.yml`, event `schedule`,
   `headSha` `1d51f76`, created 2026-10-03T02:07:30Z) concluded `success`. Its
   publish-step log contains
@@ -91,15 +101,34 @@ The model's own stated
 reasoning for those days was not persisted and was not reviewed.
 
 Residual risks found while closing, recorded as `[B-072]` and `[B-073]` in
-`docs/BACKLOG.md` with per-claim evidence status, not fixed here.
+`docs/BACKLOG.md` with per-claim evidence status, not fixed there.
 
 This says nothing about whether the referenced goal (G057) is itself achieved
 — that remains an owner decision, not implied by this mission's completion,
 per the Mission Harness section's own Mission-Done-≠-Goal-Achieved rule.
 `SYSTEM_GOALS.md` is not modified.
 
+## PREVIOUS MISSION COMPLETION (B-058, historical — superseded by this mission)
+DONE WHEN is satisfied: all four of [B-058]'s checkboxes are checked and the
+entry is closed in `docs/BACKLOG.md` (commit `5ab85f9`, `Closes: B-058`).
+This says nothing about whether the referenced goals (G052/G055) are
+themselves achieved — that remains an owner decision, not implied by this
+mission's completion, per the Mission Harness section's own
+Mission-Done-≠-Goal-Achieved rule.
+
+## PREVIOUS MISSION COMPLETION (M3, historical — superseded by this mission)
+DONE WHEN is satisfied: SPEC.md's M3 checkbox is checked (`[x]`) and its
+`status:` line reads `done`, per commits `07aec0e` (verdict/ package,
+15/15 tests, real demonstration against real M2-published `content_id`s
+`linkedin-2026-09-29`/`linkedin-2026-09-28`) and `23c216b`
+(docs/ARCHITECTURE.md's Owner Verdict Capture row). This says nothing
+about whether the referenced goals (G061/G064) are themselves achieved
+— that remains an owner decision, not implied by this mission's
+completion, per the Mission Harness section's own
+Mission-Done-≠-Goal-Achieved rule.
+
 ## STATUS
-DONE
+ACTIVE
 
 ## SCOPE RULE
 Discovered issues, ideas, opportunities, cleanup, refactors, and future work do not

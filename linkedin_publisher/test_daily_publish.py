@@ -1,6 +1,8 @@
 """Tests for linkedin_publisher/daily_publish.py's extracted, testable
 functions — resolve_daily_brief_path(), build_content_id(),
-pick_representative_claim_id(), build_block_record(), build_pass_record().
+pick_representative_claim_id(), build_block_record(), build_pass_record(),
+classify_gate_block() — and for the run-outcome contract (one Outcome and
+one exit code per run, via main()).
 
 main() itself is thin I/O + network wiring (read a file, call already-
 tested library functions, write a record) — not exhaustively tested
@@ -319,7 +321,7 @@ def test_main_raises_and_does_not_publish_when_record_is_unparseable(monkeypatch
     mocks = _setup_main(monkeypatch, tmp_path)
 
     with pytest.raises(daily_publish.registry_writer.PublicationRegistryConflictError):
-        daily_publish.main()
+        daily_publish.run()
 
     mocks["publish_post"].assert_not_called()
     mocks["call_model"].assert_not_called()
@@ -447,7 +449,7 @@ def test_failed_fact_verification_raises_before_publish_and_before_any_registry_
     mocks, calls = _setup_real_validation(monkeypatch, tmp_path, bad_response)
 
     with pytest.raises(daily_publish.daily_linkedin_author.AuthorLLMError):
-        daily_publish.main()
+        daily_publish.run()
 
     assert calls == ["validate"], f"only validation may have run, got {calls}"
     daily_publish.daily_linkedin_author.call_model.assert_called_once()
@@ -465,7 +467,7 @@ def test_write_record_raising_if_called_is_never_reached_on_a_failed_verificatio
     monkeypatch.setattr(daily_publish.registry_writer, "write_record", boom)
 
     with pytest.raises(daily_publish.daily_linkedin_author.AuthorLLMError, match="other:fact_01"):
-        daily_publish.main()
+        daily_publish.run()
 
     boom.assert_not_called()
 
@@ -513,3 +515,499 @@ def test_main_does_not_append_recent_post_on_automation_only_day(monkeypatch, tm
     daily_publish.main()
 
     assert daily_publish.identity_state.load_recent_posts() == []
+
+
+# --- main(): run-outcome contract (SPEC.md run-outcome requirement) ---------
+#
+# One Outcome and one exit code per run. gate_status stays pass/block; the
+# outcome is additional signal only.
+#
+# FACT about reachability: through the real Collector adapter + pre_filter, a
+# valid unit is always `include` (valid + corroboration_status
+# "not_applicable"), so a gate block caused ONLY by non-integrity exclusion of
+# valid units cannot be produced from real Collector data today. The
+# SKIPPED_NO_ELIGIBLE_CONTENT branch is therefore tested by injecting
+# gate_result / pre_filter_results (as _gated_run does), not by fabricating a
+# data shape the real pipeline cannot emit.
+
+_REAL_ADAPT = daily_publish.collector_adapter.adapt_daily_brief
+_REAL_RUN_PRE_FILTER = daily_publish.pre_filter.run_pre_filter
+_REAL_CHECK_GATE = daily_publish.pre_filter.check_gate_condition
+
+
+def _exclude_all(units, reason="excluded"):
+    return [
+        {"claim_id": u.unit_id, "pre_filter_classification": "exclude", "reason": reason}
+        for u in units
+    ]
+
+
+def _inject_gated(monkeypatch, units, reason="excluded"):
+    monkeypatch.setattr(daily_publish.collector_adapter, "adapt_daily_brief", lambda brief: units)
+    monkeypatch.setattr(daily_publish.pre_filter, "run_pre_filter", lambda us: _exclude_all(us, reason))
+    monkeypatch.setattr(
+        daily_publish.pre_filter,
+        "check_gate_condition",
+        lambda results: {"status": "gated", "gates": {"zero_included_units": True}},
+    )
+
+
+def _valid_unit(unit_id="u1", repo="r"):
+    return SimpleNamespace(
+        unit_id=unit_id,
+        integrity_status="valid",
+        integrity_check_method="ancestry_reconciliation",
+        corroboration_status="not_applicable",
+        metadata={
+            "repo": repo, "commit_count": 1, "diffstat": 10, "branch": "main",
+            "integrity_check_detail": "identical",
+        },
+    )
+
+
+def _invalid_unit(unit_id="u2", repo="archi-kg", detail="daily_brief schema_version=3, expected 2"):
+    return SimpleNamespace(
+        unit_id=unit_id,
+        integrity_status="invalid",
+        integrity_check_method="ancestry_reconciliation",
+        corroboration_status="not_applicable",
+        metadata={
+            "repo": repo, "commit_count": 1, "diffstat": 10, "branch": "main",
+            "integrity_check_detail": detail,
+        },
+    )
+
+
+def _registry_is_empty(tmp_path):
+    registry_dir = tmp_path / "registry"
+    return not registry_dir.exists() or list(registry_dir.iterdir()) == []
+
+
+def test_published_outcome_exit_0_and_pass_record(monkeypatch, tmp_path, capsys):
+    mocks = _setup_main(monkeypatch, tmp_path)
+
+    code = daily_publish.main()
+
+    assert code == 0
+    assert "OUTCOME=PUBLISHED exit_code=0" in capsys.readouterr().out
+    mocks["publish_post"].assert_called_once_with("post text")
+    written = json.loads((tmp_path / "registry" / f"{_CONTENT_ID}.json").read_text(encoding="utf-8"))
+    assert written["gate_status"] == "pass"
+
+
+def test_exit_code_map_matches_the_accepted_contract():
+    zero = {
+        "PUBLISHED", "SKIPPED_NO_ELIGIBLE_CONTENT", "SKIPPED_SAFETY_PAUSE",
+        "SKIPPED_ALREADY_PUBLISHED", "SKIPPED_AUTOMATION_ONLY",
+    }
+    one = {"FAILED_INTEGRITY", "FAILED"}
+    assert {o.value for o in daily_publish.Outcome} == zero | one
+    for outcome, code in daily_publish.EXIT_CODES.items():
+        assert code == (0 if outcome.value in zero else 1)
+
+
+# SKIPPED_NO_ELIGIBLE_CONTENT
+
+def test_gate_block_without_integrity_violation_is_skipped_no_eligible_and_writes_block_record(
+    monkeypatch, tmp_path, capsys
+):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    _inject_gated(monkeypatch, [_valid_unit("u1", "r")], reason="Disputed evidence")
+
+    code = daily_publish.main()
+
+    assert code == 0
+    assert "OUTCOME=SKIPPED_NO_ELIGIBLE_CONTENT exit_code=0" in capsys.readouterr().out
+    written = json.loads((tmp_path / "registry" / f"{_CONTENT_ID}.json").read_text(encoding="utf-8"))
+    assert written["gate_status"] == "block"
+    mocks["call_model"].assert_not_called()
+    mocks["publish_post"].assert_not_called()
+
+
+def test_classify_gate_block_valid_units_only_is_skipped_no_eligible():
+    units = [_valid_unit("u1"), _valid_unit("u3", "other")]
+    results = _exclude_all(units, reason="Pending")
+
+    result = daily_publish.classify_gate_block(units, results)
+
+    assert result.outcome is daily_publish.Outcome.SKIPPED_NO_ELIGIBLE_CONTENT
+    assert result.diagnostics["excluded_units"] == 2
+    assert result.diagnostics["exclusion_reasons"] == ["Pending"]
+
+
+# SKIPPED_SAFETY_PAUSE
+
+def test_safety_pause_open_is_skipped_before_any_io(monkeypatch, tmp_path, capsys):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    monkeypatch.setattr(daily_publish, "check_safety_pause_state", lambda: daily_publish.SafetyPauseState.OPEN)
+    preflight = mock.Mock(side_effect=RuntimeError("preflight must not run"))
+    adapt = mock.Mock(side_effect=RuntimeError("adapter must not run"))
+    monkeypatch.setattr(daily_publish.linkedin_client, "check_token_preflight", preflight)
+    monkeypatch.setattr(daily_publish.collector_adapter, "adapt_daily_brief", adapt)
+
+    code = daily_publish.main()
+
+    assert code == 0
+    assert "OUTCOME=SKIPPED_SAFETY_PAUSE exit_code=0" in capsys.readouterr().out
+    preflight.assert_not_called()
+    adapt.assert_not_called()
+    mocks["publish_post"].assert_not_called()
+    assert _registry_is_empty(tmp_path)
+
+
+# SKIPPED_ALREADY_PUBLISHED
+
+def test_already_published_outcome_exit_0(monkeypatch, tmp_path, capsys):
+    registry_dir = tmp_path / "registry"
+    monkeypatch.setattr(daily_publish.registry_writer, "OUTPUT_DIR", str(registry_dir))
+    daily_publish.registry_writer.write_record(_pass_record())
+
+    mocks, _ = _run_main(monkeypatch, tmp_path)
+    out = capsys.readouterr().out
+
+    assert "OUTCOME=SKIPPED_ALREADY_PUBLISHED exit_code=0" in out
+    assert _POST_URL in out
+    mocks["publish_post"].assert_not_called()
+
+
+def test_already_published_wins_over_invalid_input(monkeypatch, tmp_path, capsys):
+    registry_dir = tmp_path / "registry"
+    monkeypatch.setattr(daily_publish.registry_writer, "OUTPUT_DIR", str(registry_dir))
+    daily_publish.registry_writer.write_record(_pass_record())
+    record_file = registry_dir / f"{_CONTENT_ID}.json"
+    original_bytes = record_file.read_bytes()
+    mocks = _setup_main(monkeypatch, tmp_path)
+    _inject_gated(monkeypatch, [_invalid_unit("u1", "r")])
+
+    code = daily_publish.main()
+
+    assert code == 0
+    assert "OUTCOME=SKIPPED_ALREADY_PUBLISHED exit_code=0" in capsys.readouterr().out
+    mocks["call_model"].assert_not_called()
+    mocks["publish_post"].assert_not_called()
+    assert record_file.read_bytes() == original_bytes
+
+
+# SKIPPED_AUTOMATION_ONLY
+
+def test_automation_only_day_outcome_exit_0_and_no_registry_record(monkeypatch, tmp_path, capsys):
+    _setup_real_validation(monkeypatch, tmp_path, dict(_GOOD_AUTOMATION_ONLY_RESPONSE))
+
+    code = daily_publish.main()
+    out = capsys.readouterr().out
+
+    assert code == 0
+    assert "OUTCOME=SKIPPED_AUTOMATION_ONLY exit_code=0" in out
+    assert "selected_cluster: r" in out
+    assert _registry_is_empty(tmp_path)
+
+
+# FAILED_INTEGRITY
+
+def test_schema_mismatch_is_failed_integrity_with_specific_diagnostic(monkeypatch, tmp_path, capsys):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    # Real adapter, real pre_filter, real gate: a schema-incompatible brief.
+    monkeypatch.setattr(daily_publish.collector_adapter, "adapt_daily_brief", _REAL_ADAPT)
+    monkeypatch.setattr(daily_publish.pre_filter, "run_pre_filter", _REAL_RUN_PRE_FILTER)
+    monkeypatch.setattr(daily_publish.pre_filter, "check_gate_condition", _REAL_CHECK_GATE)
+    expected = daily_publish.collector_adapter.DAILY_BRIEF_SCHEMA_VERSION
+    brief = {
+        "date": "2026-09-24",
+        "schema_version": expected - 1,
+        "mode": "fact",
+        "commit_messages": [],
+        "per_repo": [
+            {"name": "archi-kg", "branch": "main", "head_sha": "a" * 40, "commit_count": 1,
+             "diffstat": 10, "files_touched": ["a.py"]},
+            {"name": "brain", "branch": "main", "head_sha": "b" * 40, "commit_count": 2,
+             "diffstat": 20, "files_touched": ["b.py"]},
+        ],
+    }
+    brief_path = tmp_path / "daily_brief_2026-09-24.json"
+    brief_path.write_text(json.dumps(brief), encoding="utf-8")
+    outcome_file = tmp_path / "outcome.json"
+    monkeypatch.setenv(daily_publish.OUTCOME_PATH_ENV, str(outcome_file))
+
+    code = daily_publish.main()
+    out = capsys.readouterr().out
+
+    assert code == 1
+    assert "gate_result: {'status': 'gated', 'gates': {'zero_included_units': True}}" in out
+    assert "OUTCOME=FAILED_INTEGRITY exit_code=1" in out
+    specific = f"schema_version={expected - 1}, expected {expected}"
+    payload = json.loads(outcome_file.read_text(encoding="utf-8"))
+    assert payload["outcome"] == "FAILED_INTEGRITY"
+    assert payload["exit_code"] == 1
+    violations = payload["diagnostics"]["integrity_violations"]
+    assert {v["repo"] for v in violations} == {"archi-kg", "brain"}
+    assert all(specific in v["detail"] for v in violations)
+    assert specific in out
+    mocks["call_model"].assert_not_called()
+    mocks["publish_post"].assert_not_called()
+
+
+def test_mixed_invalid_and_excluded_is_failed_integrity(monkeypatch, tmp_path, capsys):
+    # Injected: not producible from real Collector data (see the FACT above).
+    mocks = _setup_main(monkeypatch, tmp_path)
+    _inject_gated(monkeypatch, [_invalid_unit("u2"), _valid_unit("u1")])
+
+    code = daily_publish.main()
+
+    assert code == 1
+    assert "OUTCOME=FAILED_INTEGRITY exit_code=1" in capsys.readouterr().out
+    mocks["call_model"].assert_not_called()
+    mocks["publish_post"].assert_not_called()
+
+
+def test_classify_gate_block_any_invalid_excluded_unit_is_failed_integrity():
+    units = [_valid_unit("u1"), _invalid_unit("u2", "brain", "no head_sha recorded")]
+
+    result = daily_publish.classify_gate_block(units, _exclude_all(units))
+
+    assert result.outcome is daily_publish.Outcome.FAILED_INTEGRITY
+    assert result.diagnostics["integrity_violations"] == [
+        {"repo": "brain", "detail": "no head_sha recorded"}
+    ]
+
+
+def test_failed_integrity_does_not_write_block_registry_record(monkeypatch, tmp_path):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    _inject_gated(monkeypatch, [_invalid_unit("u1", "r")])
+
+    code = daily_publish.main()
+
+    assert code == 1
+    assert _registry_is_empty(tmp_path)
+    mocks["call_model"].assert_not_called()
+    mocks["publish_post"].assert_not_called()
+    assert daily_publish.identity_state.load_recent_posts() == []
+
+
+def test_failed_integrity_outcome_states_retention_limit(monkeypatch, tmp_path, capsys):
+    _setup_main(monkeypatch, tmp_path)
+    _inject_gated(monkeypatch, [_invalid_unit("u1", "r")])
+    outcome_file = tmp_path / "outcome.json"
+    monkeypatch.setenv(daily_publish.OUTCOME_PATH_ENV, str(outcome_file))
+
+    daily_publish.main()
+
+    assert daily_publish.RETENTION_NOTE in capsys.readouterr().out
+    payload = json.loads(outcome_file.read_text(encoding="utf-8"))
+    assert payload["retention_note"] == daily_publish.RETENTION_NOTE
+    assert "not a durable archive" in payload["retention_note"]
+
+
+def test_partial_invalid_with_one_included_still_publishes(monkeypatch, tmp_path, capsys):
+    # Per-unit exclusion policy is unchanged: an invalid unit is excluded and
+    # the valid one still goes through. Real pre_filter and real gate.
+    mocks = _setup_main(monkeypatch, tmp_path)
+    units = [_invalid_unit("u2"), _valid_unit("u1")]
+    monkeypatch.setattr(daily_publish.collector_adapter, "adapt_daily_brief", lambda brief: units)
+    monkeypatch.setattr(daily_publish.pre_filter, "run_pre_filter", _REAL_RUN_PRE_FILTER)
+    monkeypatch.setattr(daily_publish.pre_filter, "check_gate_condition", _REAL_CHECK_GATE)
+
+    code = daily_publish.main()
+
+    assert code == 0
+    assert "OUTCOME=PUBLISHED exit_code=0" in capsys.readouterr().out
+    mocks["publish_post"].assert_called_once_with("post text")
+
+
+# FAILED
+
+def _boom_preflight(monkeypatch, mocks):
+    monkeypatch.setattr(
+        daily_publish.linkedin_client,
+        "check_token_preflight",
+        mock.Mock(side_effect=daily_publish.linkedin_client.LinkedInPublisherError("token expired")),
+    )
+
+
+def _missing_brief(monkeypatch, mocks):
+    monkeypatch.setattr(
+        daily_publish,
+        "parse_args",
+        lambda: argparse.Namespace(daily_brief_path="/nonexistent/daily_brief.json"),
+    )
+
+
+def _unparseable_model_response(monkeypatch, mocks):
+    monkeypatch.setattr(
+        daily_publish.daily_linkedin_author,
+        "call_model",
+        mock.Mock(side_effect=daily_publish.daily_linkedin_author.AuthorLLMError("not parseable")),
+    )
+
+
+def _publish_error(monkeypatch, mocks):
+    monkeypatch.setattr(
+        daily_publish.linkedin_client,
+        "publish_post",
+        mock.Mock(side_effect=daily_publish.linkedin_client.LinkedInPublisherError("LinkedIn 403")),
+    )
+
+
+@pytest.mark.parametrize(
+    "break_it",
+    [
+        pytest.param(_boom_preflight, id="token-preflight"),
+        pytest.param(_missing_brief, id="missing-brief-file"),
+        pytest.param(_unparseable_model_response, id="model-response-unparseable"),
+        pytest.param(_publish_error, id="publish-call-fails"),
+    ],
+)
+def test_unexpected_error_is_failed_exit_1(monkeypatch, tmp_path, capsys, break_it):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    break_it(monkeypatch, mocks)
+
+    code = daily_publish.main()
+
+    assert code == 1
+    assert "OUTCOME=FAILED exit_code=1" in capsys.readouterr().out
+    assert _registry_is_empty(tmp_path)
+
+
+def test_registry_write_failure_after_confirmed_publish_fails_job_and_keeps_url(
+    monkeypatch, tmp_path, capsys
+):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        daily_publish.registry_writer,
+        "write_record",
+        mock.Mock(side_effect=daily_publish.registry_writer.PublicationRegistryConflictError("disk")),
+    )
+    outcome_file = tmp_path / "outcome.json"
+    monkeypatch.setenv(daily_publish.OUTCOME_PATH_ENV, str(outcome_file))
+
+    code = daily_publish.main()
+    out = capsys.readouterr().out
+
+    assert code == 1
+    assert "OUTCOME=FAILED exit_code=1" in out
+    assert _POST_URL in out
+    mocks["publish_post"].assert_called_once_with("post text")
+    payload = json.loads(outcome_file.read_text(encoding="utf-8"))
+    diagnostics = payload["diagnostics"]
+    assert diagnostics["publication"] == "confirmed"
+    assert diagnostics["url"] == _POST_URL
+    assert diagnostics["persistence"] == "failed"
+    assert [f["stage"] for f in diagnostics["persistence_failures"]] == ["registry_record"]
+    # The published text is still remembered: persistence steps are independent.
+    assert daily_publish.identity_state.load_recent_posts() == ["post text"]
+
+
+def test_recent_post_append_failure_after_publish_is_reported_not_swallowed(
+    monkeypatch, tmp_path, capsys
+):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    monkeypatch.setattr(
+        daily_publish.identity_state, "append_recent_post", mock.Mock(side_effect=OSError("read-only fs"))
+    )
+
+    code = daily_publish.main()
+    out = capsys.readouterr().out
+
+    assert code == 1
+    assert _POST_URL in out
+    assert "recent_posts" in out
+    mocks["publish_post"].assert_called_once_with("post text")
+    # The Registry record (the duplicate-publish guard) was still written.
+    written = json.loads((tmp_path / "registry" / f"{_CONTENT_ID}.json").read_text(encoding="utf-8"))
+    assert written["gate_status"] == "pass"
+
+
+def test_existing_block_record_then_publish_reports_persistence_conflict_with_url(
+    monkeypatch, tmp_path, capsys
+):
+    # Real writer: a block record already at this content_id disagrees with
+    # the pass record (writer outcome 4). Documents the persistence conflict;
+    # it must fail the job with the URL preserved and publish exactly once.
+    registry_dir = tmp_path / "registry"
+    monkeypatch.setattr(daily_publish.registry_writer, "OUTPUT_DIR", str(registry_dir))
+    daily_publish.registry_writer.write_record(_block_record())
+    record_file = registry_dir / f"{_CONTENT_ID}.json"
+    original_bytes = record_file.read_bytes()
+
+    mocks = _run_main_returning_code(monkeypatch, tmp_path)
+    out = capsys.readouterr().out
+
+    assert mocks["code"] == 1
+    assert "OUTCOME=FAILED exit_code=1" in out
+    assert _POST_URL in out
+    mocks["publish_post"].assert_called_once_with("post text")
+    assert record_file.read_bytes() == original_bytes
+
+
+def _run_main_returning_code(monkeypatch, tmp_path):
+    mocks = _setup_main(monkeypatch, tmp_path)
+    mocks["code"] = daily_publish.main()
+    return mocks
+
+
+# Outcome file
+
+def test_outcome_file_is_written_when_env_set_and_not_in_registry_dir(monkeypatch, tmp_path):
+    _setup_main(monkeypatch, tmp_path)
+    outcome_file = tmp_path / "out" / "outcome.json"
+    outcome_file.parent.mkdir()
+    monkeypatch.setenv(daily_publish.OUTCOME_PATH_ENV, str(outcome_file))
+
+    daily_publish.main()
+
+    payload = json.loads(outcome_file.read_text(encoding="utf-8"))
+    assert payload["outcome"] == "PUBLISHED"
+    assert "retention_note" not in payload
+    assert [p.name for p in (tmp_path / "registry").iterdir()] == [f"{_CONTENT_ID}.json"]
+
+
+def test_no_outcome_file_when_env_unset(monkeypatch, tmp_path):
+    _setup_main(monkeypatch, tmp_path)
+    monkeypatch.delenv(daily_publish.OUTCOME_PATH_ENV, raising=False)
+
+    daily_publish.main()
+
+    assert not list(tmp_path.glob("**/outcome*.json"))
+
+
+def test_outcome_file_write_failure_does_not_change_exit_code(monkeypatch, tmp_path, capsys):
+    _setup_main(monkeypatch, tmp_path)
+    monkeypatch.setenv(daily_publish.OUTCOME_PATH_ENV, str(tmp_path / "no" / "such" / "dir" / "o.json"))
+
+    code = daily_publish.main()
+
+    assert code == 0
+    assert "WARNING: could not write outcome file" in capsys.readouterr().out
+
+
+# main()-level coverage of failures that the run()-level tests only cover
+# through the exception.
+
+def test_failed_fact_verification_through_main_is_failed_exit_1_before_publish(
+    monkeypatch, tmp_path, capsys
+):
+    mocks, calls = _setup_real_validation(
+        monkeypatch, tmp_path, {**_GOOD_CITATION, "supporting_facts": ["other:fact_01"]}
+    )
+
+    code = daily_publish.main()
+
+    assert code == 1
+    assert "OUTCOME=FAILED exit_code=1" in capsys.readouterr().out
+    assert calls == ["validate"]
+    assert _registry_is_empty(tmp_path)
+
+
+def test_unparseable_registry_record_through_main_is_failed_exit_1_and_does_not_publish(
+    monkeypatch, tmp_path, capsys
+):
+    registry_dir = tmp_path / "registry"
+    registry_dir.mkdir()
+    (registry_dir / f"{_CONTENT_ID}.json").write_text("{not valid json", encoding="utf-8")
+    mocks = _setup_main(monkeypatch, tmp_path)
+
+    code = daily_publish.main()
+
+    assert code == 1
+    assert "OUTCOME=FAILED exit_code=1" in capsys.readouterr().out
+    mocks["publish_post"].assert_not_called()
+    mocks["call_model"].assert_not_called()

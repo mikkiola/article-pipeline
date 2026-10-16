@@ -34,6 +34,14 @@ network call is attempted (docs/adr/0054's Decision section covers
 why this task builds the check but not SAFETY_PAUSE's trigger, and why
 the preflight, not a proactive alert, is M2's complete answer to token
 expiry).
+
+Every run resolves to exactly one `Outcome` (SPEC.md's run-outcome
+requirement): PUBLISHED and the five SKIPPED_* outcomes exit 0,
+FAILED_INTEGRITY and FAILED exit 1. The outcome is additional signal,
+not a new `PublicationRecord.gate_status` value. Publication and
+Registry persistence are separate events: a persistence failure after
+a confirmed publish is reported as FAILED with the post URL preserved,
+and nothing in this module retries or publishes a second time.
 """
 
 from __future__ import annotations
@@ -43,7 +51,10 @@ import importlib.util
 import json
 import os
 import sys
+import traceback
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -93,6 +104,50 @@ import linkedin_client  # noqa: E402
 from safety_pause import SafetyPauseState, check_safety_pause_state  # noqa: E402
 
 GATE_VERSION = "v1"
+
+# Where a caller (the scheduled workflow) wants the machine-readable
+# outcome. Deliberately NOT inside the Registry output directory: an
+# outcome file there would be a second source of truth beside
+# PublicationRecord for every Registry consumer (see [B-076]).
+OUTCOME_PATH_ENV = "RUN_OUTCOME_PATH"
+
+# A failed run's diagnostic is not archived anywhere durable. Said plainly
+# in every place the outcome is reported. The job summary and the outcome
+# file exist only where the calling workflow exposes them; the run log
+# always carries it.
+RETENTION_NOTE = (
+    "This diagnostic is retained only in this run's log and, where the "
+    "calling workflow exposes them, in its job summary and outcome file, "
+    "within the repository's GitHub Actions retention. It is not a durable "
+    "archive."
+)
+
+
+class Outcome(str, Enum):
+    PUBLISHED = "PUBLISHED"
+    SKIPPED_NO_ELIGIBLE_CONTENT = "SKIPPED_NO_ELIGIBLE_CONTENT"
+    SKIPPED_SAFETY_PAUSE = "SKIPPED_SAFETY_PAUSE"
+    SKIPPED_ALREADY_PUBLISHED = "SKIPPED_ALREADY_PUBLISHED"
+    SKIPPED_AUTOMATION_ONLY = "SKIPPED_AUTOMATION_ONLY"
+    FAILED_INTEGRITY = "FAILED_INTEGRITY"
+    FAILED = "FAILED"
+
+
+EXIT_CODES = {
+    Outcome.PUBLISHED: 0,
+    Outcome.SKIPPED_NO_ELIGIBLE_CONTENT: 0,
+    Outcome.SKIPPED_SAFETY_PAUSE: 0,
+    Outcome.SKIPPED_ALREADY_PUBLISHED: 0,
+    Outcome.SKIPPED_AUTOMATION_ONLY: 0,
+    Outcome.FAILED_INTEGRITY: 1,
+    Outcome.FAILED: 1,
+}
+
+
+@dataclass(frozen=True)
+class RunResult:
+    outcome: Outcome
+    diagnostics: dict = field(default_factory=dict)
 
 
 def resolve_daily_brief_path(
@@ -201,6 +256,43 @@ def build_pass_record(
     )
 
 
+def classify_gate_block(units: list, pre_filter_results: list[dict]) -> RunResult:
+    """Decides what a bootstrap-gate block (zero included units) means.
+
+    Called only when the gate has already blocked, so every unit is
+    excluded. If any excluded unit is `integrity_status=invalid`, the
+    block is a confirmed integrity-contract violation: FAILED_INTEGRITY,
+    carrying each such unit's own `integrity_check_detail` verbatim (for
+    example "schema_version=3, expected 2"), not a generic label. If no
+    excluded unit is an integrity violation, the day is valid but has
+    nothing eligible: SKIPPED_NO_ELIGIBLE_CONTENT.
+
+    This does not change per-unit exclusion: a run that still has at
+    least one included unit never reaches this function.
+    """
+    excluded_ids = {
+        r["claim_id"] for r in pre_filter_results if r["pre_filter_classification"] == "exclude"
+    }
+    violations = [
+        {
+            "repo": unit.metadata.get("repo", "<missing>"),
+            "detail": unit.metadata.get("integrity_check_detail", "<missing>"),
+        }
+        for unit in units
+        if unit.integrity_status == "invalid" and unit.unit_id in excluded_ids
+    ]
+    if violations:
+        return RunResult(
+            Outcome.FAILED_INTEGRITY,
+            {"integrity_violations": violations, "excluded_units": len(excluded_ids)},
+        )
+    reasons = sorted({r["reason"] for r in pre_filter_results if r["reason"]})
+    return RunResult(
+        Outcome.SKIPPED_NO_ELIGIBLE_CONTENT,
+        {"excluded_units": len(excluded_ids), "exclusion_reasons": reasons},
+    )
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description=(
@@ -218,13 +310,15 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main() -> None:
+def run() -> RunResult:
+    """One scheduled run, resolved to exactly one Outcome. Unexpected
+    failures propagate as exceptions; main() turns them into FAILED."""
     args = parse_args()
 
     state = check_safety_pause_state()
     if state == SafetyPauseState.OPEN:
         print("SAFETY_PAUSE is OPEN — skipping this run, no publish attempted.")
-        return
+        return RunResult(Outcome.SKIPPED_SAFETY_PAUSE)
 
     linkedin_client.check_token_preflight()
 
@@ -253,21 +347,34 @@ def main() -> None:
     # runs after a post is already live. A `pass` record means this
     # content_id already published; a `block` record does not (nothing
     # was posted). An unparseable record raises inside read_record().
+    # This check deliberately precedes the gate: an existing successful
+    # publication wins over any integrity problem found in today's input.
     existing_record = registry_writer.read_record(content_id)
     if existing_record is not None and existing_record.gate_status == "pass":
         print(
             f"Registry already has a published record for {content_id} — "
             f"skipping, no publish attempted."
         )
-        return
+        return RunResult(
+            Outcome.SKIPPED_ALREADY_PUBLISHED,
+            {"content_id": content_id, "url": existing_record.url},
+        )
 
     now = datetime.now(timezone.utc)
 
     if gate_result["status"] == "gated":
+        block = classify_gate_block(units, pre_filter_results)
+        if block.outcome is Outcome.FAILED_INTEGRITY:
+            # A confirmed integrity violation, not a content judgment: no
+            # model call, no publish, and no block PublicationRecord (a
+            # block record at this content_id would conflict with a later
+            # same-day pass record in write_record()).
+            print("Bootstrap gate blocked by an integrity violation — no publish, no Registry record.")
+            return block
         record = build_block_record(content_id, pre_filter_results, now)
         path = registry_writer.write_record(record)
         print(f"Bootstrap gate blocked — no publish. Registry record: {path}")
-        return
+        return RunResult(block.outcome, {**block.diagnostics, "registry_record": path})
 
     results_by_id = {r["claim_id"]: r for r in pre_filter_results}
     claim_treatments = []
@@ -325,20 +432,31 @@ def main() -> None:
     # today rather than fabricating a post. No Registry record is written
     # for this outcome — PublicationRecord's gate_status is only
     # `pass`/`block` (a bootstrap/R6 gate outcome), and this is neither;
-    # inventing a third value would mean changing that schema, out of this
-    # change's scope. This is a known, named gap, not an oversight.
+    # inventing a third value would mean changing that schema. The outcome
+    # is reported through the run outcome only; a Registry record type for
+    # it is [B-076], not built.
     if response.get("automation_only_day"):
         print(
             f"Automation-only day detected (selected_cluster="
             f"{response.get('selected_cluster')!r}) — no post generated, "
             f"no publish attempted, no Registry record written."
         )
-        return
+        return RunResult(
+            Outcome.SKIPPED_AUTOMATION_ONLY,
+            {"selected_cluster": response.get("selected_cluster")},
+        )
 
     post_text = response["post"]
 
     post_url = linkedin_client.publish_post(post_text)
     print(f"Published: {post_url}")
+
+    # From here on the post is live. Publication and persistence are
+    # separate events: each persistence step is attempted on its own, a
+    # failure of one never skips the other, and nothing here retries or
+    # publishes again. A failure is reported as FAILED with the URL kept.
+    persistence_failures: list[dict] = []
+    registry_path = None
 
     # Persist the real published text so it's available as "the author's
     # real recent published posts" input on a future run (ADR-0059
@@ -346,13 +464,79 @@ def main() -> None:
     # explains why this file, not PublicationRecord, is where this
     # lives. Only reached after a real publish succeeded above, so
     # every stored entry is genuinely published, never a draft.
-    identity_state.append_recent_post(post_text)
+    try:
+        identity_state.append_recent_post(post_text)
+    except Exception as error:  # noqa: BLE001 — reported, never retried
+        persistence_failures.append(
+            {"stage": "recent_posts", "error": f"{type(error).__name__}: {error}"}
+        )
 
-    included_claim_id = pick_representative_claim_id([ctx.claim_id for ctx in contexts])
-    record = build_pass_record(content_id, post_url, included_claim_id, now)
-    path = registry_writer.write_record(record)
-    print(f"Registry record: {path}")
+    try:
+        included_claim_id = pick_representative_claim_id([ctx.claim_id for ctx in contexts])
+        record = build_pass_record(content_id, post_url, included_claim_id, now)
+        registry_path = registry_writer.write_record(record)
+        print(f"Registry record: {registry_path}")
+    except Exception as error:  # noqa: BLE001 — reported, never retried
+        persistence_failures.append(
+            {"stage": "registry_record", "error": f"{type(error).__name__}: {error}"}
+        )
+
+    if persistence_failures:
+        return RunResult(
+            Outcome.FAILED,
+            {
+                "publication": "confirmed",
+                "url": post_url,
+                "persistence": "failed",
+                "persistence_failures": persistence_failures,
+                "content_id": content_id,
+            },
+        )
+    return RunResult(
+        Outcome.PUBLISHED,
+        {"publication": "confirmed", "url": post_url, "registry_record": registry_path},
+    )
+
+
+def _emit_outcome(result: RunResult) -> None:
+    """Prints the run's single outcome, and writes it as JSON to
+    $RUN_OUTCOME_PATH when set. Best-effort: failing to write the file
+    never changes the exit code and never masks the outcome itself."""
+    exit_code = EXIT_CODES[result.outcome]
+    failed = result.outcome in (Outcome.FAILED_INTEGRITY, Outcome.FAILED)
+    print(f"OUTCOME={result.outcome.value} exit_code={exit_code}")
+    for key, value in result.diagnostics.items():
+        print(f"  {key}: {value}")
+    if failed:
+        print(RETENTION_NOTE)
+
+    path = os.environ.get(OUTCOME_PATH_ENV)
+    if not path:
+        return
+    payload = {
+        "outcome": result.outcome.value,
+        "exit_code": exit_code,
+        "diagnostics": result.diagnostics,
+    }
+    if failed:
+        payload["retention_note"] = RETENTION_NOTE
+    try:
+        Path(path).write_text(json.dumps(payload, indent=2, default=str) + "\n", encoding="utf-8")
+    except OSError as error:
+        print(f"WARNING: could not write outcome file {path}: {error}")
+
+
+def main() -> int:
+    try:
+        result = run()
+    except Exception as error:  # noqa: BLE001 — every unexpected failure is FAILED
+        traceback.print_exc()
+        result = RunResult(
+            Outcome.FAILED, {"error": f"{type(error).__name__}: {error}"}
+        )
+    _emit_outcome(result)
+    return EXIT_CODES[result.outcome]
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

@@ -3313,6 +3313,36 @@ Evidence status, per claim:
 Not part of G057's closure: its `OUT OF SCOPE` already excluded the misleading block reason
 because restoring publication did not require changing it.
 
+Status update, 2026-10-15 (run-outcome contract of `docs/adr/0067-daily-linkedin-publish-run-resolves-to-one-outcome-and-only-an-integrity-caused-gate-block-fails.md`, implemented and
+tested locally, not committed, not yet confirmed by a scheduled run). This entry stays open.
+Per UNKNOWN above:
+
+- **Resolved by the implementation:** whether a blocked gate should surface as a failed run.
+  A gate block caused by `integrity_status=invalid` is now `FAILED_INTEGRITY`, exit 1, with the
+  unit's own `integrity_check_detail` kept in the run outcome and no block Registry record. A
+  gate block without an integrity violation stays exit 0 (`SKIPPED_NO_ELIGIBLE_CONTENT`). Not yet
+  observed in a scheduled run.
+- **Resolved by the implementation:** whether the misleading `block_reason` and the green status
+  are one problem or two. They are two coupled problems: on the integrity path no block record is
+  written any more, so the generic label no longer reaches the Registry; the exit status is
+  handled separately by the outcome.
+- **Answered by a code read, not by the implementation:** whether an ancestry check ran in the
+  2026-10-02 run. At `aa14bb9` the adapter's unsupported-schema branch did not call
+  `check_integrity` (`git show aa14bb9:strategy_layer/adapters/collector.py`, lines 281-285).
+  The run log itself was not re-read for this.
+- **Still open:** whether any check outside the two working trees compares the two schema
+  constants. The implementation adds none and the Collector repository was read-only in that
+  task. Read directly on 2026-10-15: `SCHEMA_VERSION = 3` on `mikkiola/collector` `main` equals
+  `DAILY_BRIEF_SCHEMA_VERSION = 3` here. A drift now produces a red run, it is not prevented.
+- **Still open:** the causal link beyond the logged lines, and the ASSUMPTION that a future
+  change to either constant would repeat the 2026-10-02 outcome.
+- The diagnostic of `FAILED_INTEGRITY` is kept only in the run log and, once the runtime
+  workflow exposes them, the job summary and the outcome file, within the GitHub Actions
+  retention of the repository. It is not a durable archive.
+
+Source of this status update: owner-approved plan for the run-outcome contract, 2026-10-15; code,
+tests and the Collector's current constant read directly that day. No external AI contributed.
+
 **Source.** G057 closing session, 2026-10-06: run logs, Registry record and code read directly
 in that session. No external AI contributed.
 
