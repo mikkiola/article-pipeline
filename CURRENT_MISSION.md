@@ -13,8 +13,11 @@ named outcome with a fixed exit code, and expose that outcome in the scheduled
 workflow, instead of relying on bare process exit and "no files to commit".
 
 ## CURRENT STEP
-Implemented and tested locally in this repository, uncommitted. Owner review of
-the diff. The runtime workflow change is prepared as a diff only and not applied.
+Code, tests, SPEC.md FR41 and ADR-0067 are in `dbd9027` on `main` (2026-10-16);
+this status text is in the docs commit that follows it. The runtime workflow
+change was pushed to the runtime repository before the code push, as required.
+Awaiting the first scheduled run after rollout to confirm the outcome in its
+literal log or job summary; [B-072] stays open.
 
 ## WHY
 The previous G057 mission restored publishing and logged [B-072] and [B-073]
@@ -67,12 +70,12 @@ archive.
 - Any push other than one the owner approves explicitly
 
 ## BLOCKERS
-- Owner review of the diff before any commit or push.
-- The runtime workflow change is not applied; until it is, only the run log
-  carries the outcome.
-- Rollout order: the runtime workflow change goes out before or together with
-  the code, never after. Without its `if: !cancelled()` guard, local Registry
-  and state writes made before a failed step are dropped silently.
+- Not yet confirmed by a scheduled run: DONE WHEN's workflow criterion needs the
+  literal log or job summary of the first scheduled run after rollout.
+- Rollout order (followed on 2026-10-16: runtime workflow first, then the code):
+  the runtime workflow change goes out before or together with the code, never
+  after; without it, local Registry and state writes made before a failed run
+  are dropped silently.
 
 ## PREVIOUS MISSION COMPLETION (G057 restore of the daily LinkedIn auto-publish, historical — superseded by this mission)
 DONE WHEN was satisfied by the first scheduled run after the fixes:

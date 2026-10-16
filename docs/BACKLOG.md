@@ -3313,8 +3313,9 @@ Evidence status, per claim:
 Not part of G057's closure: its `OUT OF SCOPE` already excluded the misleading block reason
 because restoring publication did not require changing it.
 
-Status update, 2026-10-15 (run-outcome contract of `docs/adr/0067-daily-linkedin-publish-run-resolves-to-one-outcome-and-only-an-integrity-caused-gate-block-fails.md`, implemented and
-tested locally, not committed, not yet confirmed by a scheduled run). This entry stays open.
+Status update, 2026-10-15, revised 2026-10-16 (run-outcome contract of `docs/adr/0067-daily-linkedin-publish-run-resolves-to-one-outcome-and-only-an-integrity-caused-gate-block-fails.md`, committed as `dbd9027` and
+pushed to `main` on 2026-10-16, the runtime workflow change pushed first; not yet confirmed by a
+scheduled run). This entry stays open.
 Per UNKNOWN above:
 
 - **Resolved by the implementation:** whether a blocked gate should surface as a failed run.
