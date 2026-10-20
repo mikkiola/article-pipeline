@@ -1358,6 +1358,106 @@ def test_call_model_disables_thinking_and_logs_stop_reason():
     assert "stop_reason: end_turn" in captured.getvalue()
 
 
+# --- call_model's keyword-only parameters (used by the Habr draft path,
+# habr_draft/llm.py). Defaults must leave the LinkedIn request byte-for-byte
+# what it was; the keywords must reach the request as the Habr path expects.
+
+_CALL_MODEL_PAYLOAD = {"post": "some post"}
+
+
+def _run_call_model(*args, response=None, env=None, patch_key=True, **kwargs):
+    """Runs call_model() against a mocked Anthropic client. Returns
+    (result, messages.create kwargs, Anthropic constructor kwargs, the
+    api-key lookup mock or None)."""
+    fake_response = response or _fake_response(_CALL_MODEL_PAYLOAD)
+    fake_response.stop_reason = "end_turn"
+    patches = [mock.patch("daily_linkedin_author.anthropic.Anthropic")]
+    if patch_key:
+        patches.append(mock.patch.object(author_llm, "_get_api_key", return_value="fake-key"))
+    if env is not None:
+        patches.append(mock.patch.dict(os.environ, env))
+    with contextlib.ExitStack() as stack:
+        entered = [stack.enter_context(p) for p in patches]
+        MockAnthropic = entered[0]
+        key_lookup = entered[1] if patch_key else None
+        MockAnthropic.return_value.messages.create.return_value = fake_response
+        with contextlib.redirect_stdout(io.StringIO()):
+            result = author_llm.call_model(*args, **kwargs)
+        return (result, MockAnthropic.return_value.messages.create.call_args.kwargs,
+                MockAnthropic.call_args.kwargs, key_lookup)
+
+
+def test_call_model_defaults_leave_the_linkedin_request_unchanged():
+    result, request, _, key_lookup = _run_call_model("the prompt")
+    assert result == _CALL_MODEL_PAYLOAD
+    assert request == {
+        "model": author_llm.MODEL,
+        "max_tokens": 4096,
+        "thinking": {"type": "disabled"},
+        "messages": [{"role": "user", "content": "the prompt"}],
+    }
+    assert "system" not in request
+    key_lookup.assert_called_once_with()  # the default key variable, as before
+
+
+def test_call_model_accepts_the_keyword_parameters_the_habr_path_passes():
+    sink = {}
+    result, request, client_kwargs, key_lookup = _run_call_model(
+        "the prompt", model="habr-model", max_tokens=321, api_key_env="HABR_TEST_KEY",
+        system="the system text", usage_sink=sink,
+    )
+    assert result == _CALL_MODEL_PAYLOAD
+    assert request["model"] == "habr-model"
+    assert request["max_tokens"] == 321
+    assert request["system"] == "the system text"
+    assert request["messages"] == [{"role": "user", "content": "the prompt"}]
+    assert request["thinking"] == {"type": "disabled"}  # still never adaptive thinking
+    key_lookup.assert_called_once_with("HABR_TEST_KEY")
+
+
+def test_call_model_reads_the_api_key_from_the_named_variable_only():
+    env = {"HABR_TEST_KEY": "habr-secret", "ANTHROPIC_API_KEY_DAILY_AUTHOR": "linkedin-secret"}
+    _, _, client_kwargs, _ = _run_call_model("p", api_key_env="HABR_TEST_KEY", env=env, patch_key=False)
+    assert client_kwargs == {"api_key": "habr-secret"}
+    _, _, client_kwargs, _ = _run_call_model("p", env=env, patch_key=False)
+    assert client_kwargs == {"api_key": "linkedin-secret"}
+
+
+def test_call_model_missing_custom_key_variable_names_that_variable():
+    env = {k: v for k, v in os.environ.items() if k != "HABR_TEST_KEY"}
+    with mock.patch.dict(os.environ, env, clear=True):
+        try:
+            author_llm.call_model("p", api_key_env="HABR_TEST_KEY")
+            raise AssertionError("expected AuthorLLMError, got no exception")
+        except author_llm.AuthorLLMError as e:
+            assert "HABR_TEST_KEY" in str(e)
+            assert "ANTHROPIC_API_KEY_DAILY_AUTHOR" not in str(e)
+
+
+def test_call_model_fills_usage_sink_with_the_response_token_counts():
+    response = _fake_response(_CALL_MODEL_PAYLOAD)
+    response.usage = mock.Mock(input_tokens=11, output_tokens=7)
+    sink = {}
+    result, _, _, _ = _run_call_model("p", response=response, usage_sink=sink)
+    assert result == _CALL_MODEL_PAYLOAD
+    assert sink == {"input_tokens": 11, "output_tokens": 7}
+
+    # a response without usage leaves explicit None values, not an exception
+    response = _fake_response(_CALL_MODEL_PAYLOAD)
+    response.usage = None
+    sink = {}
+    _run_call_model("p", response=response, usage_sink=sink)
+    assert sink == {"input_tokens": None, "output_tokens": None}
+
+
+def test_call_model_extra_parameters_are_keyword_only():
+    try:
+        author_llm.call_model("p", "habr-model")
+        raise AssertionError("expected TypeError for a positional second argument")
+    except TypeError:
+        pass
+
+
 def test_unknown_mode_raises_clear_error():
     try:
         author_llm.build_prompt({"mode": "silence", "total_diffstat": 0})
@@ -1452,6 +1552,12 @@ if __name__ == "__main__":
         test_call_model_skips_leading_thinking_block_and_extracts_text_block,
         test_call_model_raises_clear_error_when_no_text_block_present,
         test_call_model_disables_thinking_and_logs_stop_reason,
+        test_call_model_defaults_leave_the_linkedin_request_unchanged,
+        test_call_model_accepts_the_keyword_parameters_the_habr_path_passes,
+        test_call_model_reads_the_api_key_from_the_named_variable_only,
+        test_call_model_missing_custom_key_variable_names_that_variable,
+        test_call_model_fills_usage_sink_with_the_response_token_counts,
+        test_call_model_extra_parameters_are_keyword_only,
         test_unknown_mode_raises_clear_error,
     ]
     failures = 0
