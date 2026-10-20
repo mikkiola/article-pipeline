@@ -1,0 +1,31 @@
+{
+  "paid_calls_enabled": false,
+  "model": "claude-sonnet-5-5",
+  "api_key_env": "ANTHROPIC_API_KEY_HABR_DRAFT",
+  "q_threshold": null,
+  "a_rules": {
+    "max_paragraph_chars": null,
+    "max_code_block_lines": null,
+    "spoiler_markup": null
+  },
+  "budget": {
+    "max_run_spend_usd": null,
+    "max_fragment_chars_per_attempt": null,
+    "max_tokens_generation": null,
+    "max_tokens_judge": null,
+    "price_in_per_mtok": 2.0,
+    "price_out_per_mtok": 10.0
+  },
+  "allow_list": [
+    {"repo": "article-pipeline", "branch": "main", "content_safety_checked": false, "authorship_checked": false},
+    {"repo": "radar", "branch": "main", "content_safety_checked": false, "authorship_checked": false},
+    {"repo": "tooltempest", "branch": "main", "content_safety_checked": false, "authorship_checked": false}
+  ],
+  "owner_identities": [
+    {"login": "mikkiola"},
+    {"login": "OStroganova"},
+    {"email": "82107567+mikkiola@users.noreply.github.com"}
+  ],
+  "owner_authorization": null,
+  "calibration_approval": null
+}

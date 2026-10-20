@@ -47,6 +47,11 @@ pre-spec check):**
 - [ ] M8 — Quality Gate enforces the full formal R6 rule, replacing M2's
       bootstrap gate for new publications, without retroactively
       reclassifying M2-M7's history.
+- [ ] M9 — Habr Draft Automation produces an internal Habr draft from
+      real Collector data and fetched code fragments, checks it
+      (L1, Habr platform rules, project requirements, Q), revises it
+      within a fixed bound, and saves a run report that never claims
+      publication approval.
 
 ## Tech Stack
 
@@ -68,6 +73,17 @@ grep — none exist here today):
 - **GitHub Actions** — scheduling for LinkedIn's daily run, Habr's
   outbox check, and Weekly's cadence, matching Collector's existing
   `daily.yml`/`weekly.yml` cron pattern.
+- **M9 reuses, and adds no new service for:** the existing GitHub REST
+  API client path in `strategy_layer/adapters/collector.py`
+  (`GITHUB_APP_TOKEN`, ADR-0056 point 6; stage 2 receives a narrower
+  token from the same GitHub App, requirement 53), the Anthropic Messages
+  API call Author already uses (with a separate key
+  `ANTHROPIC_API_KEY_HABR_DRAFT`, model `claude-sonnet-5-5`, owner
+  decision 2026-10-15), the existing one-way Telegram send, and Linkup
+  through `evidence_package/` as an optional retrieval mechanism only
+  (not performed in the MVP). Whether the GitHub App installation
+  reaches the unattended runtime with read access to the three
+  allow-listed repositories is a stated precondition (requirement 43).
 
 ## Detailed Requirements
 
@@ -385,6 +401,263 @@ grep — none exist here today):
     - This distinction matters especially early on, while Path B Claim
       Extraction is new: R6 legitimately failing on "no external claim
       found today" must never be conflated with real system breakage.
+    - **Scope note (added 2026-10-15, `docs/adr/0071-*`).** Requirements
+      36-40 define M8 for the publication path they were written for and
+      are unchanged. They are not applied to M9's Habr draft path, which
+      has its own acceptance contract (requirements 41-52). In particular,
+      M8's `QUALITY_BLOCK` (run-level, R6 failed) and M9's `QUALITY_BLOCK`
+      (per-attempt, correctable) are different things that share a name;
+      and "Linkup unavailable" is `SYSTEM_FAILURE` in M8 but only a skipped
+      optional enrichment in M9. Neither definition changes the other.
+
+### Functional Requirements — M9: Habr Draft Automation
+
+Owner-confirmed decisions, 2026-10-14/15 (recorded with their rationale in
+`docs/adr/0071-habr-draft-acceptance-contract-separate-from-r6-and-from-publication-approval.md`).
+Habr's own rules were read from `habr.com/docs/help/rules` (last edited
+2026-07-08) on 2026-10-15; the text of the rules is not restated here and
+must be re-read from the page when the checks are planned.
+
+41. **Purpose and boundary.** M9 produces an *internal* Habr draft from
+    real Collector data, checks it, revises it within a bound, and saves
+    a run report. It is the generation precondition FR17 consumes — gap
+    (1) of FR17's own note, `docs/BACKLOG.md`'s `[B-071]`. It does not
+    post to Habr, never approves a draft for publication, and does not
+    build FR17's remaining gaps: when generation is triggered (gap 2),
+    the real call site of `send_habr_draft()` (gap 3) and the Drive
+    credentials (gap 4) stay as FR17's note states them. Writing the
+    draft into Google Docs is done by the architect chat's own connected
+    tools and is outside this spec.
+42. **A separate contract.** M9's acceptance contract is not R6 and does
+    not reuse M8's outcomes (see the M8 scope note). The LinkedIn path's
+    contract, ADR-0044 (including its L2 public-link tier) and ADR-0047
+    are unchanged. Linkup stays a `retrieval_source` (requirement 38),
+    never evidence or a verifier.
+43. **Code source (owner decision: variant B).** Collector's output
+    carries no code or diff content (manifest: counts and file paths;
+    `daily_brief` schema 3: commit subjects, `why`/`effect`, file paths
+    and diffstat; verified by direct read of Collector's `data/`,
+    2026-10-14). Collector's schema is not changed. article-pipeline
+    fetches the diffs/fragments it needs through the existing GitHub
+    credential path (`GITHUB_APP_TOKEN`). No separate token is created
+    unless a concrete need is demonstrated and recorded. Each fetched
+    fragment carries its provenance: repository, commit SHA, file path,
+    and the fetched content. **Precondition, to be confirmed before
+    implementation and not assumed here:** in the unattended production
+    runtime, (i) the credential reaches the job that generates the draft,
+    (ii) it has read access to every repository from which a fragment is
+    fetched (requirement 53 later limited these to the allow-listed
+    public repositories), and (iii) the behavior on HTTP
+    403/404, rate limit and request failure is defined. Local success
+    does not satisfy this. `docs/adr/0056-*` records that the App
+    installation's access to the other repositories was evidenced only
+    by Collector's own workflow, not by a run of this pipeline.
+44. **Four mandatory automated checks, each executed in full every
+    round.** All four must pass for success.
+    - **L1 — fact verification.** Every factual statement in the draft
+      traces to evidence from the run's own inputs: a Collector unit with
+      `integrity_status = valid`, or a fragment fetched under
+      requirement 43. A statement with no such trace is unverified and
+      fails L1. L1 does not require an external source, `scope =
+      external` or `activity_anchor` (those are R6's conditions) and
+      does not use Linkup. The tracing mechanism is a planning decision.
+    - **(a) Habr platform rules.** Only requirements that can be checked
+      objectively from the rules' own text. Identified on 2026-10-15,
+      from rule 3: paragraphs of one or two sentences are not used; text
+      is split into paragraphs rather than left as a wall of text; long
+      code blocks and large images are hidden in a spoiler. Rule 2's
+      limit on code listings as the main content and rules 1 and 4 are
+      not in (a); they are (c). The rules give no number for "wall of
+      text", "long" or "large"; each such value is a required
+      configuration with no default (requirement 50).
+    - **(b) Project acceptance requirements.** Russian-language output;
+      at least one evidence-backed code/artifact fragment, meaning a
+      verbatim excerpt of content fetched under requirement 43 with its
+      provenance recorded. These are this project's own bar and are
+      reported as such, never as Habr rules. No other content requirement
+      has been confirmed by the owner as of 2026-10-15; "at least one
+      externally sourced enrichment" is not one (requirement 46).
+    - **Q — quality (infostyle).** An LLM-based assessment of the draft
+      against the criteria of the owner's `human-text` practice (facts
+      instead of evaluations, one thought per sentence, markers of
+      AI-generated text, unambiguity). It yields a score and itemized
+      findings and is not presented as an objectively proven metric. The
+      paid Glavred API is not integrated at this stage. `human-text` is
+      a conversational skill prompt, not a callable function, and it
+      lives outside this repository; the minimal reuse is to carry its
+      criteria as the rubric of the Q check's own prompt, not to build a
+      separate scoring engine. Whether materializing the rubric inside
+      this repository meets the revisit condition of ADR-0042 is left
+      open (ADR-0068); a superseding ADR is needed only if the owner
+      judges that it does. Q makes a
+      billable model call: the model and authentication method are
+      stated and the owner's authorization obtained before any real call.
+45. **(c) Human review — not automated.** Compliance with Habr rule 4
+    (generated material), rule 1 (self-promotion), rule 2's judgment
+    parts, authorship character and suitability for publication are the
+    owner's review. Whether a draft is an engineering case study or
+    promotional material is an editorial judgment and is not attempted by
+    any check. "Differs from the LinkedIn post" is not a rule and not a
+    check; it may appear only as an optional editorial note. Owner review
+    is not publication approval.
+46. **Optional enrichment.** Linkup enrichment, where performed, never
+    blocks and never fails a run. Its absence, an unsupportive result, or
+    an outage is recorded in the run outcome record as skipped
+    enrichment with the reason, and triggers neither `QUALITY_BLOCK`,
+    `BLOCKED` nor `SYSTEM_FAILURE`. A `SYSTEM_FAILURE` arises only when
+    a mandatory check (L1, (a), (b) or Q) cannot execute.
+47. **Outcomes and the bounded loop.**
+    - A *round* is one draft plus one full execution of L1, (a), (b) and
+      Q. A round passes only if all four pass.
+    - **Iteration limit: at most 2 correction cycles after the initial
+      draft** — at most 3 rounds. Each correction is followed by a full
+      re-run of all four checks.
+    - `QUALITY_BLOCK` is a per-attempt verdict from an executed check
+      that found a failure. If correction cycles remain, it triggers a
+      correction and a new round.
+    - `BLOCKED` is the terminal outcome when the limit is exhausted
+      without a round that passes all four checks.
+    - `SYSTEM_FAILURE` is the terminal outcome when any mandatory check
+      could not be executed (crash, missing input, dependency outage,
+      unset required configuration per requirement 50). It takes
+      precedence over a content failure seen in the same round, does not
+      consume a correction cycle, is never converted to `QUALITY_BLOCK`
+      or `BLOCKED`, and "Q did not run" is never reported as "Q failed".
+    - `INTERNAL_DRAFT_READY_FOR_OWNER_REVIEW` is the terminal outcome of
+      a passing round. It means only that L1, (a), (b) and Q passed.
+48. **What the saved report must say.** Every run's report states, in
+    plain words, that the outcome is not publication approval, and for
+    `INTERNAL_DRAFT_READY_FOR_OWNER_REVIEW` also that Habr rule 4 and
+    rule 1 are not established by any check and that the draft is not to
+    be represented as publication-ready for Habr unless the owner has
+    independently created or substantially authored the final technical
+    article, with any AI-generated material limited to what the current
+    Habr rules permit.
+49. **Storage of attempts and the run outcome record (smallest fit).**
+    Each attempt's draft is written as its own immutable file and never
+    overwritten; a name collision raises, the pattern
+    `strategy_layer/write_verdict.py` and `evidence_package/` already
+    use. One run outcome record (JSON, one per run, immutable) references
+    each attempt file by name and content hash and carries: the topic and
+    its selection basis; per attempt, each check's status (executed or
+    not, pass or fail), itemized findings and the Q score; the
+    enrichment status; the terminal outcome; the report text of
+    requirement 48. On `BLOCKED` all attempt files are preserved; the
+    "best" attempt is the one with the fewest failed mandatory checks,
+    ties going to the latest. Nothing is embedded in an existing
+    contract: `PublicationRecord` requires `url` and `published_at`, which
+    an unpublished draft does not have, and the Strategy Verdict is
+    produced upstream of generation as Author's input, so referencing
+    downstream drafts from it would reverse its direction. Neither is
+    changed. The directory is set by an environment variable, following
+    the pattern of `REGISTRY_OUTPUT_DIR` and `AUTHOR_STATE_DIR`
+    (ADR-0066); where it persists between runs is confirmed at plan time.
+50. **Open calibration items; unset means not executable.** The numeric
+    Q-acceptance threshold is **not set** and is not guessed here. It
+    requires owner calibration against real examples, today's manually
+    written article included, before it is final. The same holds for each
+    value (a) needs that Habr's rules do not give. Each is a required
+    configuration with no default. While any is unset, the check that
+    needs it cannot reach pass or fail and the run ends `SYSTEM_FAILURE`
+    with a reason naming the missing value; the score and findings are
+    still recorded so calibration data accrues (same observe-only
+    precedent as ADR-0052). Planning and building the mechanisms is not
+    blocked by this; declaring production acceptance validated is.
+51. **Automatic topic selection.** The run chooses its topic from
+    Collector units without a manual step. The selection rule is a
+    planning decision; the chosen topic and the basis are recorded
+    (requirement 49).
+52. **Reuse.** The existing Strategy Layer chain, framing, language check
+    and Habr digest rendering, `evidence_package/` and the GitHub client
+    path are reused where they fit. No general-purpose quality engine and
+    no abstraction beyond this one path is built.
+53. **Source boundary and credential separation (owner decisions,
+    2026-10-15).** Code fragments come only from an owner-approved
+    allow-list of public repositories the owner owns or has a confirmed
+    right to use: `article-pipeline@main`, `radar@main`,
+    `tooltempest@main`; private repositories and `radar@vault` are
+    excluded. Each fragment is taken from one specific commit SHA, never
+    the branch tip, and carries that SHA. An allow-list entry is unusable
+    until the owner records a content-safety check and an authorship
+    check for it. Generated files, secrets and sensitive configuration
+    are excluded (path denylist and a secret-pattern scan). Admission
+    rule (owner decision 2026-10-16, simplifying the decision of
+    2026-10-15; a content-admission rule of this internal pipeline, not a
+    sole-authorship claim and not a legal determination): the commit's
+    author must be an owner identity, established by a GitHub login or an
+    address (a display name never counts); any other author, or none, is
+    excluded, and no per-commit permission mechanism exists (an owner
+    decision does not override a third party's rights; admitting a third
+    party's work would need its own decision). The committer and the
+    commit message, including `Co-authored-by` trailers, are not read, and
+    no AI-assistant or bot policy exists: this spec does not require
+    disclosing AI involvement in a code fragment. Basis: each allow-listed
+    repository has one account with write access, the owner's, so a third
+    party's commit can reach `main` only when the owner merges it, and a
+    merge keeps the original author. The identity `Radar Bot
+    <radar@gitlab.com>` is not an owner identity until the owner confirms
+    it. The run is three workflow jobs, each holding one credential set: `prepare`
+    (broad GitHub App token, no model call, no fragment fetch) validates
+    input and applies the allow-list and passes only the scrubbed
+    selection input on as a build artifact; `draft` (a separate
+    short-lived read-only token scoped to the three repositories, plus the
+    Habr API key; no registry-data checkout, no write permission) fetches
+    fragments and calls the model and passes only the attempt files and
+    the run record on; `deliver` (registry-data write and the Telegram
+    secrets; no model key, no Collector) validates the artifact, commits
+    only the run's output directory and notifies after a successful push.
+    The broad token is never present in `draft`, and the model key and the
+    private Collector are never present in `deliver`. Known residual: the
+    GitHub App private key is read by `prepare` and by `draft` (to mint its
+    narrow token) as an input of the token action only; closing that needs a
+    separate narrow App and is an owner decision (ADR-0070).
+54. **Run modes.** `production` refuses to start any paid call while a
+    mandatory configuration value is unset (the run ends `SYSTEM_FAILURE`
+    with failure kind `missing_configuration`, which reports and counts
+    separately from a service outage; no new status). `calibration` is
+    one bounded paid round, allowed only with the owner's recorded
+    approval of the paid call and its budget; it records check results,
+    the Q score and a hash of the owner's reference text, makes no
+    correction cycle on an unapproved threshold, never emits
+    `INTERNAL_DRAFT_READY_FOR_OWNER_REVIEW`, and writes
+    `terminal_outcome: null` with `calibration_result: recorded`. The
+    reference text is supplied from a non-public location, is never
+    committed or copied to the output directory, and only its hash,
+    length and per-criterion scores are recorded.
+55. **Input validation and observability.** An expected input failure
+    (missing, malformed, wrong-date or unsupported-schema daily brief, or
+    an unreadable selection input) does not abort the workflow: it yields
+    a structured preflight result, a `SYSTEM_FAILURE` run record with
+    failure kind `input_validation` and the specific reason, and the same
+    commit and notification as any other outcome. The failure kinds are
+    `missing_configuration`, `execution_error`, `budget_limit` and
+    `input_validation`, and only a `SYSTEM_FAILURE` carries one.
+    Incomplete mandatory configuration is checked before any candidate is
+    looked at and always ends `SYSTEM_FAILURE` / `missing_configuration`.
+    A run ends `NO_ELIGIBLE_TOPIC` only when the configuration is
+    complete, every candidate was checked, no technical error occurred
+    (fragment fetch, repository-visibility check, stage 1 integrity
+    verification) and no candidate had a usable fragment (not a
+    `SYSTEM_FAILURE`; no model call; no Registry record; no draft status).
+    Technical errors are recorded distinctly from "no eligible topic": a
+    technical error that leaves no candidate with a usable fragment ends
+    the run as `SYSTEM_FAILURE` / `execution_error`; a topic found among
+    the other candidates is still used, with the errors recorded. The run record also carries the article-pipeline commit, the
+    Collector commit, the daily-brief hash and the hashes of the
+    acceptance configuration and the rubric.
+56. **Output-side safety and spend guard.** Generated text passes the
+    same secret-pattern scan as input fragments before it is saved,
+    logged or sent to a judge; a hit discards it (only the pattern id and
+    count are recorded). The model's raw response text never appears in
+    an exception message, log line or record. Commit text and code are
+    declared untrusted data in every prompt. Before each paid call a
+    conservative worst-case cost is estimated from the UTF-8 byte count
+    of all billable input text, the configured maximum output and the
+    SDK's retry allowance; a call that does not fit the remaining budget
+    is not made. The limit is a best-effort guard, not a guaranteed
+    maximum (billing of retried requests is not established). The
+    per-run spend limit and the fragment-volume cap are owner
+    configuration with no default.
 
 ## UI/UX Specification
 
@@ -421,6 +694,7 @@ project's existing convention (`evidence_package/output/`,
 | `verdict/output/` | M3 | `content_id`, `verdict_type`, `received_at`, comment |
 | `weekly/output/` | M6 | immutable per-run snapshot; `verdict_status` per publication; `PatternCandidate[]` |
 | `change_proposals/output/` | M7 | `target_prompt_version`, per-channel `prompt_version`, proposed diff, `status` (`pending`/`applied`/`STALE`/`rejected`) |
+| Habr draft run output (directory name and component fixed at plan time; location set by an environment variable, requirement 49) | M9 | per attempt: one immutable draft file; per run: one run outcome record — topic and selection basis, per-attempt check results, enrichment status, terminal outcome, report text |
 
 ## Security Considerations
 
@@ -435,6 +709,16 @@ project's existing convention (`evidence_package/output/`,
 - Google Drive access is read-only and scoped to the owner's existing
   Habr-article folders — no write/delete capability needed by this
   pipeline.
+- M9 fetches repository content through the existing read-only GitHub
+  credential; it creates no new token without a recorded, demonstrated
+  need (requirement 43). The credential is not exposed under
+  `GH_TOKEN`/`GITHUB_TOKEN` (ADR-0056 point 6).
+- M9's attempt files and run outcome record persist only where the
+  runtime repository's own boundary allows (ADR-0062, ADR-0066), never in
+  this public repository. Fragments come only from the owner-approved
+  allow-list of public repositories (requirement 53), so private
+  repository content is not an input; the owner's calibration reference
+  text is never persisted (requirement 54).
 
 ## Test Plan
 
@@ -454,6 +738,16 @@ per that rule's own note) needs a test written first, not after:
 - `PatternCandidate`'s `OBSERVE_ONLY` default: a test proving no Change
   Proposal is drafted while `action_policy: disabled`, regardless of how
   high `occurrence_count` climbs.
+- M9's outcome state machine (requirements 47 and 50): tests written
+  first proving that a failed executed check is `QUALITY_BLOCK` and
+  triggers correction; that exhausting 2 correction cycles ends
+  `BLOCKED` with all attempt files preserved; that a check that could
+  not execute (including an unset threshold) ends `SYSTEM_FAILURE`, is
+  never counted as a pass or as a content failure, and does not consume
+  a cycle; that a Linkup failure changes none of the above; and that
+  `INTERNAL_DRAFT_READY_FOR_OWNER_REVIEW` is reachable only when L1,
+  (a), (b) and Q all passed and its report carries the non-approval
+  statement of requirement 48.
 
 Everything else follows this project's existing convention: real-data
 validation once each milestone's mechanism is implemented (matching
@@ -576,6 +870,17 @@ end-to-end.
   - scope: 0.0
   - combined: 0.0
 
+### M9: Habr Draft Automation
+- [ ] Draft generation from Collector data and fetched fragments, L1/(a)/(b)/Q checks, bounded revision (2 correction cycles), immutable attempt files and run outcome record, non-approval report
+- verify: one real run end to end on real data, with the run report showing each of L1, (a), (b) and Q executed and the terminal outcome recorded
+- done-when: the saved report of a real run carries a terminal outcome from requirement 47; any `BLOCKED` run has all attempt files preserved; the report states it is not publication approval. Production acceptance is not declared validated until the Q threshold (and each unset (a) value) is calibrated by the owner
+- status: code and unit tests written 2026-10-15 (`habr_draft/`; model and GitHub calls mocked in tests); no real run, no paid call, workflow not added to the runtime repository. Requirements 41-56. Real run blocked on the preconditions listed in ADR-0069 and the open items below
+- drift:
+  - goal: 0.0
+  - constraint: 0.0
+  - scope: 0.0
+  - combined: 0.0
+
 ## Open Questions / Decisions Needed
 
 - Habr-multiple-articles-per-day: the `YYYY-MM-DD-draft`/`-final`
@@ -594,3 +899,59 @@ end-to-end.
   the prompt-fix-confirmation window are deliberately not set anywhere
   in this spec (ADR-0052) — they are owner policy, set later from real
   operating data, not a default this spec should guess at.
+
+M9 (Habr Draft Automation) — opened 2026-10-15:
+
+- **Q threshold — open calibration item (owner).** The numeric
+  Q-acceptance threshold is not set. It requires owner confirmation
+  against real examples, today's manual article included, before it is
+  final. Does not block planning or building the check; blocks declaring
+  production acceptance validated.
+- **(a) values — open calibration item (owner).** Habr's rules give no
+  number for "wall of text", a "long" code block or a "large" image; each
+  value the machine-checkable parts need is unset (requirement 50).
+- **Unset threshold ends the run as `SYSTEM_FAILURE` — owner statement
+  2026-10-15.** `q_threshold_unset` is a missing-configuration state,
+  distinguished from a service outage in reports and analytics, with no
+  new status (requirement 54). Production mode stops before any paid
+  call; calibration mode is the separate, owner-approved way to obtain
+  scores.
+- **GitHub credential in the unattended runtime — precondition.**
+  Requirement 43 (i)-(iii). Not confirmed.
+- **Which repositories may supply a fragment — decided 2026-10-15.**
+  Requirement 53: owner-approved allow-list of public repositories only.
+  Open remains the owner's recorded content-safety and authorship checks
+  for each entry (a precondition of the first real run).
+- **Relation between FR17's Telegram hand-off and the Google Docs
+  hand-off — decided 2026-10-15 for M9.** Telegram is a one-way
+  notification of a completed result (status and a stable reference to
+  the committed artifacts, not the draft text); Google Docs remains the
+  destination for review and is written by the architect chat's tools,
+  outside this pipeline. The production runtime has no access to that
+  connector and no Drive/Docs mechanism is added. FR17 itself is
+  unchanged.
+- **Alerting for M9's `SYSTEM_FAILURE`.** M8's immediate Telegram alert
+  and transition-based alerting (requirement 40) are not extended to M9
+  by this spec; M5, the alert transport, is blocked on `[B-065]`.
+- **Whether the MVP performs Linkup enrichment at all.**
+  `evidence_package/driver.py` runs only the search phase; assigning a
+  status and source to a result is an interactive step today, so no
+  automated path from a Linkup result to a verified item exists.
+  Requirement 46 fixes only what a failure or absence means.
+- **Closing `[B-071]` — criteria confirmed 2026-10-15, BACKLOG not
+  edited.** (1) The entry point runs on current Collector data without a
+  hardcoded manifest date; (2) each run saves a draft and a report with a
+  run ID, check results and a final status; (3) in a test end-to-end run
+  claims trace back to source data and approved code, and failed checks
+  are never disguised as passing; (4) private code never reaches the
+  material. Having an entry point does not close the item, publication is
+  not approved by it, and it does not replace M9's own completion
+  criteria.
+- **Documents this spec does not edit and that now lag.**
+  `docs/ROADMAP.md` still lists the Habr "externally-sourced
+  enrichment" as committed and "no source exists for code/diff content"
+  as undecided; both are changed by requirements 43 and 46.
+  `docs/adr/0042-*` states the `human-text` practice has no file under
+  `~/.claude/skills/`; a `SKILL.md` for it now exists under
+  `~/.claude/skills/synced/`. A separate documentation task reconciles
+  them.

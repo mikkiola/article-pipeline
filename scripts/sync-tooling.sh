@@ -39,6 +39,8 @@ PINNED_SHA="$(grep '"commit"' "$LOCK_FILE" | sed -E 's/.*"commit"[[:space:]]*:[[
 
 echo "Pinned commit: ${PINNED_SHA}"
 
+# BEGIN CACHE PREPARATION
+# Cache writes are permitted; installation destinations remain untouched.
 if [ -d "${CACHE_DIR}/.git" ]; then
   echo "Using existing cache at ${CACHE_DIR}"
   git -C "${CACHE_DIR}" fetch --quiet origin "$PINNED_SHA" || fail "git fetch of ${PINNED_SHA} failed"
@@ -52,28 +54,23 @@ git -C "${CACHE_DIR}" checkout --quiet --detach "$PINNED_SHA" || fail "checkout 
 
 ACTUAL_SHA="$(git -C "${CACHE_DIR}" rev-parse HEAD)"
 [ "$ACTUAL_SHA" = "$PINNED_SHA" ] || fail "checked-out SHA (${ACTUAL_SHA}) does not match lock file (${PINNED_SHA})"
+# END CACHE PREPARATION
 
+# BEGIN READ-ONLY PREFLIGHT
+# Validate the complete prepared manifest before creating or copying any
+# installation target. Compare the same source files cp will use below.
 MANIFEST_FILE="${CACHE_DIR}/${MANIFEST_NAME}"
 [ -f "$MANIFEST_FILE" ] || fail "${MANIFEST_NAME} not found in ToolTempest at ${PINNED_SHA} (expected at repo root)"
 
-# Portable array read, not `mapfile` -- macOS ships bash 3.2, which
-# lacks it (see the same pattern in test-sync-tooling-manifest.sh).
-VENDORED_FILES=()
-while IFS= read -r line; do
-  [ -n "$line" ] && VENDORED_FILES+=("$line")
-done < "$MANIFEST_FILE"
-[ "${#VENDORED_FILES[@]}" -gt 0 ] || fail "${MANIFEST_NAME} at ${PINNED_SHA} lists no files"
-
-INSTALLED_COUNT=0
+INSTALL_FILES=()
+INSTALL_DESTINATIONS=()
+CONFLICTS=()
 SKIPPED_COUNT=0
-for rel in "${VENDORED_FILES[@]}"; do
+while IFS= read -r rel; do
+  [ -n "$rel" ] || continue
   case "$rel" in
-    skills/*|rules/*)
-      dest="${CLAUDE_DIR}/${rel}"
-      ;;
-    scripts/*|schemas/*)
-      dest="${REPO_ROOT}/${rel}"
-      ;;
+    skills/*|rules/*) dest="${CLAUDE_DIR}/${rel}" ;;
+    scripts/*|schemas/*) dest="${REPO_ROOT}/${rel}" ;;
     docs/reference/*)
       echo "SKIP: ${rel} is reference documentation (ToolTempest ADR-0008) -- consulted in place, not vendored"
       SKIPPED_COUNT=$((SKIPPED_COUNT + 1))
@@ -83,10 +80,39 @@ for rel in "${VENDORED_FILES[@]}"; do
       fail "MANIFEST.txt entry \"${rel}\" is outside the known skills/rules/scripts/schemas/docs-reference destinations -- update sync-tooling.sh's mapping before proceeding"
       ;;
   esac
+  [ -f "${CACHE_DIR}/${rel}" ] \
+    || fail "pinned source unavailable: ${rel} (no installation destinations written)"
+  INSTALL_FILES+=("$rel")
+  INSTALL_DESTINATIONS+=("$dest")
+done < "$MANIFEST_FILE"
+[ "$((${#INSTALL_FILES[@]} + SKIPPED_COUNT))" -gt 0 ] \
+  || fail "${MANIFEST_NAME} at ${PINNED_SHA} lists no files"
+for ((i=0; i<${#INSTALL_FILES[@]}; i++)); do
+  rel="${INSTALL_FILES[$i]}"
+  dest="${INSTALL_DESTINATIONS[$i]}"
+  if [ -e "$dest" ] || [ -L "$dest" ]; then
+    if ! cmp -s "${CACHE_DIR}/${rel}" "$dest"; then
+      CONFLICTS+=("$dest")
+    fi
+  fi
+done
+if [ "${#CONFLICTS[@]}" -gt 0 ]; then
+  echo "FAIL: divergent sync destinations (no installation destinations written):" >&2
+  printf '  - %s\n' "${CONFLICTS[@]}" >&2
+  fail "reconcile the pinned source and destination contents before retrying; sync will not overwrite divergent files"
+fi
+# END READ-ONLY PREFLIGHT
+
+# BEGIN INSTALL TARGETS
+INSTALLED_COUNT=0
+for ((i=0; i<${#INSTALL_FILES[@]}; i++)); do
+  rel="${INSTALL_FILES[$i]}"
+  dest="${INSTALL_DESTINATIONS[$i]}"
   mkdir -p "$(dirname "$dest")"
   cp "${CACHE_DIR}/${rel}" "$dest" || fail "failed to copy ${rel}"
   INSTALLED_COUNT=$((INSTALLED_COUNT + 1))
 done
+# END INSTALL TARGETS
 
 echo "OK: installed ${INSTALLED_COUNT} ToolTempest file(s), skipped ${SKIPPED_COUNT} reference doc(s) (commit ${ACTUAL_SHA}) per ${MANIFEST_NAME} into ${REPO_ROOT} and ${CLAUDE_DIR}"
 exit 0

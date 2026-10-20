@@ -1,0 +1,318 @@
+# EXAMPLE ONLY - not active. This file is a reviewed draft of the workflow that
+# would live in the private runtime repository
+# (mikkiola/article-pipeline-runtime/.github/workflows/habr-draft.yml). It is
+# deliberately kept outside .github/workflows so it never runs from this repo.
+# Adding it to the runtime repository is a push the owner must approve.
+#
+# Design (docs/adr/0069-*, SPEC.md M9): three jobs, so that each credential
+# exists in exactly one job and a job's filesystem never holds another job's
+# credential.
+#
+#   prepare  broad GitHub App token (private Collector + integrity checks).
+#            No model call, no registry-data. Hands the next job ONE file:
+#            the validated, scrubbed selection_input.json.
+#   draft    narrow read-only token (three allow-listed public repos) and the
+#            Habr Anthropic key. No registry-data checkout, no write
+#            permission, no broad token. Hands the next job ONE directory:
+#            the attempt files and the run record.
+#   deliver  registry-data write (default GITHUB_TOKEN) and the Telegram
+#            secrets. No Anthropic key, no Collector. Validates the artifact
+#            (habr_draft/deliver.py), commits only output/habr_draft/<run id>/,
+#            and notifies only after a successful push.
+#
+# Jobs share data only through GitHub Actions build artifacts. Every checkout
+# uses persist-credentials: false except the registry-data checkout in
+# `deliver`, whose write credential is the only one in that job's workspace.
+# The App private key secret is read by `prepare` (broad token) and `draft`
+# (narrow token) as an action input; neither job's Python steps receive it.
+#
+# `permission-contents` is documented for the current action README; confirm
+# it exists in the pinned action version before use (README examples show @v3,
+# the LinkedIn workflow pins @v1).
+
+name: Habr Draft (internal)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "production | calibration (calibration needs calibration_approval in the config)"
+        required: true
+        default: production
+      date:
+        description: "Brief date YYYY-MM-DD (UTC); empty = today"
+        required: false
+        default: ""
+
+# No workflow-level grant beyond read; `deliver` raises contents to write for
+# itself only.
+permissions:
+  contents: read
+
+concurrency:
+  group: habr-draft
+  cancel-in-progress: false
+
+jobs:
+  # --------------------------------------------------------------- Job 1
+  prepare:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      date: ${{ steps.ctx.outputs.date }}
+      mode: ${{ steps.ctx.outputs.mode }}
+      article_pipeline_sha: ${{ steps.code.outputs.sha }}
+      collector_sha: ${{ steps.provenance.outputs.collector_sha }}
+    steps:
+      - name: Resolve and validate inputs
+        id: ctx
+        env:
+          INPUT_DATE: ${{ inputs.date }}
+          INPUT_MODE: ${{ inputs.mode }}
+        run: |
+          DATE="$INPUT_DATE"
+          if [ -z "$DATE" ]; then DATE="$(date -u +%Y-%m-%d)"; fi
+          case "$DATE" in
+            [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+            *) echo "invalid date" >&2; exit 1 ;;
+          esac
+          case "$INPUT_MODE" in
+            production|calibration) ;;
+            *) echo "invalid mode" >&2; exit 1 ;;
+          esac
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          echo "mode=$INPUT_MODE" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout article-pipeline
+        uses: actions/checkout@v4
+        with:
+          repository: mikkiola/article-pipeline
+          ref: main            # resolved to a SHA below; later jobs use that SHA
+          path: article-pipeline
+          persist-credentials: false
+
+      - name: Record the code SHA the later jobs must use
+        id: code
+        run: echo "sha=$(git -C article-pipeline rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Broader token: private Collector checkout + stage 1 integrity checks.
+      - name: Generate broad GitHub App installation token
+        id: broad-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: mikkiola
+          repositories: |
+            article-pipeline
+            collector
+            tooltempest
+            radar
+            archi-kg
+            brain
+
+      # persist-credentials: false keeps the broad token out of
+      # collector/.git/config. It is read once, here, and never written to disk.
+      - name: Checkout collector
+        uses: actions/checkout@v4
+        with:
+          repository: mikkiola/collector
+          ref: main
+          path: collector
+          token: ${{ steps.broad-token.outputs.token }}
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # No `requests`: the Habr path imports only urllib, pydantic and anthropic.
+      - name: Install pinned dependencies
+        run: pip install pydantic==2.13.4 anthropic==0.105.2
+
+      - name: Record collector SHA
+        id: provenance
+        run: echo "collector_sha=$(git -C collector rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Stage 1: broad token, no model call, no fragment fetch. An expected
+      # input failure exits 0 with a structured preflight result.
+      - name: Stage 1 - prepare selection input
+        working-directory: ${{ github.workspace }}/article-pipeline
+        env:
+          GITHUB_APP_TOKEN: ${{ steps.broad-token.outputs.token }}
+          HABR_DATE: ${{ steps.ctx.outputs.date }}
+        run: |
+          python3 habr_draft/prepare.py \
+            --daily-brief-path "${{ github.workspace }}/collector/data/daily_brief_${HABR_DATE}.json" \
+            --date "$HABR_DATE" \
+            --out "${{ runner.temp }}/selection/selection_input.json"
+
+      # The only thing that leaves this job: units that are integrity-valid,
+      # allow-listed, on main and source-cleared. No token, no private source.
+      - name: Hand selection input to the draft job
+        uses: actions/upload-artifact@v4
+        with:
+          name: habr-selection-input
+          path: ${{ runner.temp }}/selection/selection_input.json
+          if-no-files-found: error
+          retention-days: 1
+
+  # --------------------------------------------------------------- Job 2
+  draft:
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout article-pipeline at the prepared SHA
+        uses: actions/checkout@v4
+        with:
+          repository: mikkiola/article-pipeline
+          ref: ${{ needs.prepare.outputs.article_pipeline_sha }}
+          path: article-pipeline
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install pinned dependencies
+        run: pip install pydantic==2.13.4 anthropic==0.105.2
+
+      - name: Receive selection input
+        uses: actions/download-artifact@v4
+        with:
+          name: habr-selection-input
+          path: ${{ runner.temp }}/selection
+
+      # Narrow token: read-only, one hour, three public allow-listed repos.
+      # There is no registry-data checkout and no Collector in this job.
+      - name: Generate narrow read-only GitHub App installation token
+        id: narrow-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+          owner: mikkiola
+          repositories: |
+            article-pipeline
+            radar
+            tooltempest
+          permission-contents: read
+
+      # Calibration only: the owner's reference text arrives from a secret into
+      # RUNNER_TEMP (mode 600). It is never copied to the output directory,
+      # never committed and never printed.
+      - name: Stage reference text (calibration only)
+        if: ${{ needs.prepare.outputs.mode == 'calibration' }}
+        env:
+          HABR_CALIBRATION_REFERENCE: ${{ secrets.HABR_CALIBRATION_REFERENCE }}
+        run: |
+          umask 077
+          printf '%s' "$HABR_CALIBRATION_REFERENCE" > "${{ runner.temp }}/calibration_reference.md"
+          echo "HABR_CALIBRATION_REFERENCE_PATH=${{ runner.temp }}/calibration_reference.md" >> "$GITHUB_ENV"
+
+      # Stage 2: narrow token + Habr key. Output goes to a scratch directory,
+      # never to a registry checkout.
+      - name: Stage 2 - topic, draft, checks, record
+        working-directory: ${{ github.workspace }}/article-pipeline
+        env:
+          GITHUB_APP_TOKEN: ${{ steps.narrow-token.outputs.token }}
+          ANTHROPIC_API_KEY_HABR_DRAFT: ${{ secrets.ANTHROPIC_API_KEY_HABR_DRAFT }}
+          HABR_DRAFT_OUTPUT_DIR: ${{ runner.temp }}/habr_draft_out
+          ARTICLE_PIPELINE_SHA: ${{ needs.prepare.outputs.article_pipeline_sha }}
+          COLLECTOR_SHA: ${{ needs.prepare.outputs.collector_sha }}
+          HABR_DATE: ${{ needs.prepare.outputs.date }}
+          HABR_MODE: ${{ needs.prepare.outputs.mode }}
+        run: |
+          python3 habr_draft/run_habr_draft.py \
+            --selection-input "${{ runner.temp }}/selection/selection_input.json" \
+            --date "$HABR_DATE" \
+            --mode "$HABR_MODE"
+
+      # Handled outcomes (including SYSTEM_FAILURE and NO_ELIGIBLE_TOPIC) exit
+      # 0 and leave a run record. An unexpected crash leaves none: the job
+      # fails and nothing is delivered.
+      - name: Hand artifacts to the deliver job
+        uses: actions/upload-artifact@v4
+        with:
+          name: habr-draft-output
+          path: ${{ runner.temp }}/habr_draft_out
+          if-no-files-found: error
+          retention-days: 1
+
+  # --------------------------------------------------------------- Job 3
+  deliver:
+    needs: [prepare, draft]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout article-pipeline at the prepared SHA
+        uses: actions/checkout@v4
+        with:
+          repository: mikkiola/article-pipeline
+          ref: ${{ needs.prepare.outputs.article_pipeline_sha }}
+          path: article-pipeline
+          persist-credentials: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # Default GITHUB_TOKEN, same mechanism as the LinkedIn workflow. This
+      # is the only credential kept in a workspace of this job.
+      - name: Checkout registry-data
+        uses: actions/checkout@v4
+        with:
+          ref: registry-data
+          path: registry
+
+      - name: Receive draft artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: habr-draft-output
+          path: ${{ runner.temp }}/habr_draft_in
+
+      # Untrusted input: only attempt_<N>.md and exactly one run record, no
+      # subdirectory or symlink, a consistent outcome, no secret pattern.
+      - name: Validate and stage artifacts
+        working-directory: ${{ github.workspace }}/article-pipeline
+        run: |
+          python3 habr_draft/deliver.py \
+            --artifact-dir "${{ runner.temp }}/habr_draft_in" \
+            --destination "${{ github.workspace }}/registry/output/habr_draft/${{ github.run_id }}"
+
+      # Pushes only to registry-data, and only this run's directory.
+      - name: Commit and push Habr draft artifacts
+        id: push
+        working-directory: ${{ github.workspace }}/registry
+        env:
+          HABR_DATE: ${{ needs.prepare.outputs.date }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          RUN_DIR="output/habr_draft/${{ github.run_id }}"
+          git add -- "$RUN_DIR"
+          if git diff --cached --quiet -- "$RUN_DIR"; then
+            echo "No new output files to commit."
+            exit 0
+          fi
+          git commit -m "chore(habr-draft): run ${{ github.run_id }} for ${HABR_DATE}"
+          git push origin registry-data
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Only after a successful push: the message carries a stable reference.
+      # Only the Telegram secrets are in this step's environment.
+      - name: Notify owner (Telegram, one-way)
+        if: ${{ steps.push.outputs.sha != '' }}
+        working-directory: ${{ github.workspace }}/article-pipeline
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          RECORD="$(ls ${{ github.workspace }}/registry/output/habr_draft/${{ github.run_id }}/run_*.json | head -n 1)"
+          python3 habr_draft/notify.py \
+            --run-record "$RECORD" \
+            --reference "mikkiola/article-pipeline-runtime@${{ steps.push.outputs.sha }}:output/habr_draft/${{ github.run_id }}/"
