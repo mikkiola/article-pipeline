@@ -58,15 +58,15 @@ archive.
   note under [B-072]
 - Owner-directed 2026-10-16 and 2026-10-20, under [B-071] (SPEC.md M9):
   simplifying the Habr draft fragment-admission rule to an author check, and
-  committing the previously uncommitted Habr draft track that carries it:
-  `habr_draft/` code and tests, ADR-0068 to ADR-0071, SPEC.md M9
-  (requirements 41-56), the regenerated ADR index, and the two items filed as
-  [B-077] and [B-078]. The same work also touches
-  `author/daily_linkedin_author.py` (`call_model` gained keyword-only
-  parameters for the Habr path; LinkedIn defaults unchanged), which is
-  committed separately and only after the owner's confirmation, and ADR-0068
-  (the Q rubric decision, committed with the track). A one-time exception to
-  the Habr line below; further Habr Draft Automation work stays out of scope.
+  the Habr draft track that carries it: `habr_draft/` code and tests, ADR-0068
+  to ADR-0071, SPEC.md M9 (requirements 41-56), the regenerated ADR index, and
+  the two items filed as [B-077] and [B-078]. The owner committed and pushed
+  the track to `main` on 2026-10-20 (`c2314b3`, `a098689`, `2bd02c4`,
+  `48b2712`), including `author/daily_linkedin_author.py` (`call_model`
+  keyword-only parameters for the Habr path; LinkedIn defaults unchanged;
+  their tests are in `3432cfa`) and ADR-0068 (the Q rubric decision). A
+  one-time exception to the Habr line below; further Habr Draft Automation
+  work stays out of scope.
 
 ## OUT OF SCOPE
 - [B-073] (stays a separate backlog item) and [B-069]
