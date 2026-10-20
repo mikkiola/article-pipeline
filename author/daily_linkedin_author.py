@@ -110,11 +110,14 @@ Voice contract (ADR-0044), apply these strictly and do not deviate:
   (emerges from reaction, never fabricated)."""
 
 
-def _get_api_key() -> str:
-    key = os.environ.get("ANTHROPIC_API_KEY_DAILY_AUTHOR")
+API_KEY_ENV = "ANTHROPIC_API_KEY_DAILY_AUTHOR"
+
+
+def _get_api_key(env_name: str = API_KEY_ENV) -> str:
+    key = os.environ.get(env_name)
     if not key:
         raise AuthorLLMError(
-            "ANTHROPIC_API_KEY_DAILY_AUTHOR not set in environment. Export it "
+            f"{env_name} not set in environment. Export it "
             "before running (e.g. via Bitwarden locally, or a CI secret "
             "variable in production)."
         )
@@ -901,7 +904,18 @@ def _extract_text_block(content: list) -> str:
     )
 
 
-def call_model(prompt: str) -> dict:
+def call_model(
+    prompt: str,
+    *,
+    model: str = MODEL,
+    max_tokens: int = 4096,
+    api_key_env: str = API_KEY_ENV,
+    system: str | None = None,
+    usage_sink: dict | None = None,
+) -> dict:
+    # The keyword-only parameters default to this function's original
+    # behaviour (LinkedIn path unchanged); the Habr draft path passes its own
+    # model, token limit, API-key variable and system instructions.
     # thinking={"type": "disabled"} is required, not optional, on
     # claude-sonnet-5: unlike earlier Sonnet models, a request with no
     # `thinking` field runs with adaptive thinking (effort: high) by
@@ -911,14 +925,22 @@ def call_model(prompt: str) -> dict:
     # the entire budget on its thinking block before producing any
     # text — confirmed as the actual cause of a real production
     # failure (block_types: ['thinking'], 2026-09-24 workflow run).
-    client = anthropic.Anthropic(api_key=_get_api_key())
-    response = client.messages.create(
-        model=MODEL,
-        max_tokens=4096,
-        thinking={"type": "disabled"},
-        messages=[{"role": "user", "content": prompt}],
-    )
+    api_key = _get_api_key() if api_key_env == API_KEY_ENV else _get_api_key(api_key_env)
+    client = anthropic.Anthropic(api_key=api_key)
+    request = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "thinking": {"type": "disabled"},
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    if system is not None:
+        request["system"] = system
+    response = client.messages.create(**request)
     print(f"stop_reason: {response.stop_reason}")
+    if usage_sink is not None:
+        usage = getattr(response, "usage", None)
+        usage_sink["input_tokens"] = getattr(usage, "input_tokens", None)
+        usage_sink["output_tokens"] = getattr(usage, "output_tokens", None)
     raw_text = _extract_text_block(response.content)
     text = _strip_markdown_fence(raw_text)
     try:
