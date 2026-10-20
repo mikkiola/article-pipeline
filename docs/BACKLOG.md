@@ -3250,7 +3250,7 @@ independent reason to track them apart from this entry's own gap or from each ot
 (commits `57021bb`, `964c390`, `4bf4b71`, `abe480b`) and found `telegram_send.py` had nothing
 real to send.
 
-### [B-072] P2 — Schema-version contract between Collector and the pipeline adapter, and gate-block observability
+### [B-072] P3 — Schema-version drift between Collector and the pipeline adapter: optional pre-publish early detection (lowered from P2 on 2026-10-20; post-hoc detection implemented in code, failing-run observation pending)
 
 Found: 2026-10-06, while closing G057 (LinkedIn auto-publish recovery), from the 2026-10-02
 run that produced no post. Filed as a finding only: it needs a more thorough verification
@@ -3305,10 +3305,10 @@ Evidence status, per claim:
 - **ASSUMPTION**: a future change to either constant on its own would repeat the 2026-10-02
   outcome. Not observed beyond the 2026-10-02 run.
 
-- [ ] Verify more thoroughly before any fix is designed: resolve each UNKNOWN above against
+- [ ] (Superseded 2026-10-20, see the closure condition in the status update below.) Verify more thoroughly before any fix is designed: resolve each UNKNOWN above against
       the repositories and workflows, and re-check the ASSUMPTION against how the two
       constants have actually changed over their history.
-- [ ] Only after that, decide whether a fix is warranted at all. No design is proposed here.
+- [ ] (Superseded 2026-10-20.) Only after that, decide whether a fix is warranted at all. No design is proposed here.
 
 Not part of G057's closure: its `OUT OF SCOPE` already excluded the misleading block reason
 because restoring publication did not require changing it.
@@ -3343,6 +3343,71 @@ Per UNKNOWN above:
 
 Source of this status update: owner-approved plan for the run-outcome contract, 2026-10-15; code,
 tests and the Collector's current constant read directly that day. No external AI contributed.
+
+Status update, 2026-10-20 (supersedes the framing of the two "Still open" bullets above and of
+the two checklist items under the evidence list; the text above is kept as the record of 2026-10-15/16):
+
+- **Fact** (code read at `af635cd`; `dbd9027` and HEAD do not differ in `linkedin_publisher/` or
+  `strategy_layer/`): a `schema_version` mismatch is not a silent success. Path: the adapter's
+  unsupported-schema branch marks every unit `integrity_status="invalid"` with the
+  `schema_version=<n>, expected <m>; record not interpreted` detail without calling
+  `check_integrity` (`strategy_layer/adapters/collector.py:311-315`); the pre-filter excludes every
+  invalid unit first (`strategy_layer/pre_filter.py:60`); the gate fires on zero included units
+  (`strategy_layer/pre_filter.py:91-108`); `classify_gate_block` returns `FAILED_INTEGRITY` when an
+  excluded unit is invalid (`linkedin_publisher/daily_publish.py:259-293`, called at line 366);
+  that branch returns before any model call, publish or block record, and `main()` returns exit 1
+  (`linkedin_publisher/daily_publish.py:529-542`).
+- **Fact** (ran offline, 6 passed): `python3 -m pytest linkedin_publisher -q -k "schema_mismatch or
+  failed_integrity or classify_gate_block"`. The named proof is
+  `test_schema_mismatch_is_failed_integrity_with_specific_diagnostic`
+  (`linkedin_publisher/test_daily_publish.py:707`), which uses the real adapter, pre-filter and gate
+  with `schema_version` one below the expected value and asserts exit 1, `OUTCOME=FAILED_INTEGRITY`,
+  the specific diagnostic, and no `call_model` or `publish_post` call.
+- **Fact** (read-only, `mikkiola/collector` `main`, 2026-10-20): Collector publishes its version only as
+  the constant `SCHEMA_VERSION` in `scripts/daily_brief.py`, the `schema_version` field of each
+  `data/daily_brief_<date>.json`, and `SPEC.md` prose. It has no tag, version manifest or version file (its `data/manifest_<date>.json` files are scan
+  manifests without a version field), and
+  its workflows do not reference the schema version. The payload is the only machine-readable signal
+  outside the source.
+- **Corrected framing:** post-hoc detection is implemented, not an open gap. By the code path above
+  a drift in either constant produces a `FAILED_INTEGRITY` run (exit 1) with the specific
+  diagnostic and no publication. The unresolved part is only optional pre-publish early warning
+  (noticing a changed Collector constant before the next scheduled run instead of at it), at P3:
+  the failure mode is loud, not silent, and the owner-reported fix for the 2026-10-02 incident was
+  realigning the constant (`5fb70ae`). **Inference:** nothing observed shows the silent outcome can
+  recur through the pipeline's own code path, so no cross-repository check is proposed.
+- **Scope note:** the original title's "gate-block observability" is not open here. A gate block
+  without an integrity violation stays exit 0 by decision (ADR-0067); the integrity-caused block is
+  the `FAILED_INTEGRITY` path above.
+- **Closure condition:** this entry closes only on the owner's explicit go-ahead, after (a) the
+  owner decides to implement or decline the optional pre-publish early warning, and (b) a real
+  failing scheduled run has shown the red job and the outcome, or the owner accepts the code path,
+  tests and workflow YAML as sufficient. The post-hoc `FAILED_INTEGRITY` path alone does not close
+  it. The two checklist items under the evidence list are superseded by this condition.
+- **Fact** (read-only, `mikkiola/article-pipeline-runtime` `main` at `1721000`, 2026-10-20):
+  the workflow `.github/workflows/linkedin-daily-publish.yml` does not swallow the exit code of
+  `daily_publish.py`: no `continue-on-error`, `|| true` or `set +e`; the publish step is a single
+  command (lines 123-140), and the later persistence and report steps run after a failed publish
+  (`if: !cancelled() && steps.publish.conclusion != 'skipped'`, lines 152 and 177) without
+  changing the job result.
+- **Fact** (literal logs, scheduled runs on `1721000`, 2026-10-17 to 2026-10-20, run ids
+  `38990893242`, `39086377548`, `39185785021`, `39356536429`): the log carries
+  `OUTCOME=PUBLISHED exit_code=0` (three runs) and `OUTCOME=SKIPPED_AUTOMATION_ONLY exit_code=0`
+  (one run); the publish, persistence and report steps concluded `success` in the two runs whose
+  steps were inspected (`38990893242`, `39356536429`). So the outcome exposure is observed on
+  scheduled runs. The job summary content itself was not read.
+- **Still pending, and why this entry is not closed:** no scheduled run has yet ended in
+  `FAILED_INTEGRITY` or `FAILED`; none of the 30 most recent workflow runs concluded other than
+  `success`. The claim "a schema drift turns the job red" therefore rests on the code path, the
+  offline tests and the workflow YAML above, not on an observed failing run. It can be confirmed
+  only by a real failing run, which this entry does not induce.
+- **Unknown:** the Habr draft path (`habr_draft/prepare.py`) returns a `failed` result with reason
+  `daily_brief_schema_unsupported` on a mismatch; how that result becomes a job exit code was not
+  traced.
+
+Source of this status update: owner-directed correction of 2026-10-20, from a read-only
+investigation the same day (code, tests, the Collector repository, the runtime workflow YAML and
+the logs of four scheduled runs read directly). No external AI contributed.
 
 **Source.** G057 closing session, 2026-10-06: run logs, Registry record and code read directly
 in that session. No external AI contributed.
