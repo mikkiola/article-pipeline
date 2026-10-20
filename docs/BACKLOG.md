@@ -3397,7 +3397,7 @@ the two checklist items under the evidence list; the text above is kept as the r
   steps were inspected (`38990893242`, `39356536429`). So the outcome exposure is observed on
   scheduled runs. The job summary content itself was not read.
 - **Not observed (accepted by the owner at closure, see below):** no scheduled run has yet ended in
-  `FAILED_INTEGRITY` or `FAILED`; none of the 30 most recent workflow runs concluded other than
+  `FAILED_INTEGRITY` or `FAILED`; none of the 14 workflow runs on record in the runtime repository (2026-10-07 to 2026-10-20; corrected 2026-10-20, an earlier text said 30) concluded other than
   `success`. The claim "a schema drift turns the job red" therefore rests on the code path, the
   offline tests and the workflow YAML above, not on an observed failing run. It can be confirmed
   only by a real failing run, which this entry does not induce.
@@ -3418,13 +3418,22 @@ Closure, 2026-10-20 (owner decision, `Closes: B-072` in the closing commit):
 - **Observed:** the outcome line is present in the literal logs of the four scheduled runs of
   2026-10-17 to 2026-10-20 (`PUBLISHED` on 10-17, 10-18 and 10-20; `SKIPPED_AUTOMATION_ONLY` on
   10-19; all exit 0).
-- **Not implemented, not tracked under this ID:** the optional pre-publish early warning and any
-  cross-repository schema-constant check. The owner closed the entry without a separate recorded
-  decision to implement or decline condition (a) above; the early warning is simply left
-  unimplemented. If wanted later, file a new entry.
-- **Carried, not resolved, and not tracked under an open ID:** how the Habr draft path's
-  `daily_brief_schema_unsupported` result becomes an exit code; the causal-link UNKNOWN and the
-  original ASSUMPTION about future constant changes. File a new entry if any is to be pursued.
+- **Condition (a) resolved: declined** (owner decision, 2026-10-20, recorded in a follow-up
+  commit; the closing commit above recorded no decision on (a)). The optional pre-publish early
+  warning and any cross-repository schema-constant check are not built. Owner's basis: the
+  2026-10-02 incident class has not recurred since the code fix landed, and building
+  early-detection infrastructure for a non-recurring risk is not warranted now. Re-open only if a
+  real recurrence is observed. Verified support (read-only, 2026-10-20): the runtime repository
+  holds 14 workflow runs of `linkedin-daily-publish.yml` (2026-10-07 to 2026-10-20), all
+  concluded `success`, and the logs of all 14 show `gate_result: {'status': 'normal', ...}`, no
+  gate block and no `record not interpreted` line. The owner's "30/30" figure was corrected to
+  14/14: only 14 runs exist in that repository, and the 2026-10-02 run belongs to the original
+  repository. A `success` conclusion alone does not show non-recurrence, since the 2026-10-02 run
+  was also `success`; the `gate_result` lines are what support it. Runs of 2026-10-03 to
+  2026-10-06 (original repository) were not rechecked.
+- **Carried, not resolved:** the causal-link UNKNOWN and the original ASSUMPTION about future
+  constant changes (not tracked under an open ID; file a new entry if pursued). The Habr draft
+  path's exit-code mapping is tracked in `[B-079]`.
 
 **Source.** G057 closing session, 2026-10-06: run logs, Registry record and code read directly
 in that session. No external AI contributed.
@@ -3616,3 +3625,34 @@ excluded at stage 1, and these commits predate every Collector daily brief (the 
 **Source.** Flagged in the 2026-10-16 investigation report (Mission B-071); not an owner
 decision. Commit counts and dates from the GitHub API on 2026-10-16. No external AI
 contributed.
+
+### [B-079] P3 — Habr draft path: handling of `daily_brief_schema_unsupported` after a deliberate exit 0 is not verified (informational)
+
+Found: 2026-10-20, incidentally during the `[B-072]` investigation; out of that entry's scope.
+Informational only: no action is needed until the trigger below occurs.
+
+- **FACT** (code read 2026-10-20): `habr_draft/prepare.py` `validate_brief` returns
+  `("daily_brief_schema_unsupported", ...)` for a brief whose `schema_version` is not the expected
+  one (line 79); `prepare` returns it through `_failed` (defined at line 37, called at line 126).
+- **FACT** (code read 2026-10-20, a correction of the owner's "not traced" premise): by design this
+  is not a process failure. The module docstring (lines 10-13) says an expected input-validation
+  failure produces a structured preflight result (`status: failed`) and exit code 0, "so the
+  workflow goes on to record the SYSTEM_FAILURE, commit it and notify"; `main()` (lines 226-243)
+  has no `sys.exit` and does not raise on a failed result. The example workflow
+  (`habr_draft/runtime_workflow.example.yml`, lines 138-139 and 234-236) states the same. So a
+  schema mismatch on the Habr path is meant to surface as a recorded SYSTEM_FAILURE and a
+  notification, not as a red job.
+- **UNKNOWN**: whether the downstream record-commit-notify steps actually fire on a schema mismatch
+  once the workflow runs. They were not traced end to end, because that workflow is not deployed
+  and the track (`[B-071]`, SPEC.md M9) is separate from the LinkedIn run-outcome contract.
+- **FACT** (read-only, 2026-10-20): the Habr workflow is not deployed. The runtime repository's only
+  workflow is `linkedin-daily-publish.yml`; `habr_draft/runtime_workflow.example.yml` states it is an
+  example that would live in the runtime repository, and adding it is a push the owner must approve.
+
+Deferred: P3, no current trigger. **Trigger to revisit:** the Habr runtime workflow is actually
+deployed to the runtime repository. At that point trace the path from `prepare` through the
+workflow's record, commit and notify steps, and check that a schema mismatch actually produces the
+SYSTEM_FAILURE record and notification, not a silent green job.
+
+**Source.** Found during the `[B-072]` investigation of 2026-10-20 (code and runtime workflow list
+read directly); filed on the owner's instruction the same day. No external AI contributed.
