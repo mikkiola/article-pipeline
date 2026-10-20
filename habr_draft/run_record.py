@@ -1,5 +1,5 @@
 """Immutable attempt files and the run outcome record
-(SPEC.md M9 requirements 48-49).
+(SPEC.md M9 requirements 49-50).
 
 Every file is created with exclusive-create semantics: a name collision raises
 FileExistsError and nothing is ever overwritten (the pattern of

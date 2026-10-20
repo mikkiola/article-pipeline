@@ -1,4 +1,4 @@
-"""Automatic topic selection (SPEC.md M9 requirement 51).
+"""Automatic topic selection (SPEC.md M9 requirement 52).
 
 Deterministic and recorded. Candidates are the repositories stage 1 delivered
 (already: integrity valid, allow-listed, branch main). They are ranked, then

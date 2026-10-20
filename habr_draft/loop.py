@@ -1,5 +1,5 @@
 """The bounded revision loop and its outcome state machine
-(SPEC.md M9 requirement 47; ADR-0071).
+(SPEC.md M9 requirement 48; ADR-0071).
 
 Pure orchestration over injected callables, so the whole state machine is
 testable without a network or a model.

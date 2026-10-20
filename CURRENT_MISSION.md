@@ -59,7 +59,7 @@ archive.
 - Owner-directed 2026-10-16 and 2026-10-20, under [B-071] (SPEC.md M9):
   simplifying the Habr draft fragment-admission rule to an author check, and
   the Habr draft track that carries it: `habr_draft/` code and tests, ADR-0068
-  to ADR-0071, SPEC.md M9 (requirements 41-56), the regenerated ADR index, and
+  to ADR-0071, SPEC.md M9 (requirements 42-57), the regenerated ADR index, and
   the two items filed as [B-077] and [B-078]. The owner committed and pushed
   the track to `main` on 2026-10-20 (`c2314b3`, `a098689`, `2bd02c4`,
   `48b2712`), including `author/daily_linkedin_author.py` (`call_model`

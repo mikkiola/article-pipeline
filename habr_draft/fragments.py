@@ -1,4 +1,4 @@
-"""Code-fragment retrieval for the Habr draft path (SPEC.md M9 requirement 43).
+"""Code-fragment retrieval for the Habr draft path (SPEC.md M9 requirement 44).
 
 Fragments come from ONE specific commit SHA each (never a branch tip), through
 the existing GitHub client path (`collector._github_get`, `TOKEN_ENV`). A

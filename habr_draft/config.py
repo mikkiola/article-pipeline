@@ -1,4 +1,4 @@
-"""Habr draft acceptance/runtime configuration (SPEC.md M9 requirement 50).
+"""Habr draft acceptance/runtime configuration (SPEC.md M9 requirement 51).
 
 Every value the owner has not set is `null` and has no default: a check or a
 paid call that needs it cannot execute. Nothing here invents a number. The

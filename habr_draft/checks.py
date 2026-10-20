@@ -1,10 +1,10 @@
-"""The four mandatory checks (SPEC.md M9 requirement 44): L1, (a), (b), Q.
+"""The four mandatory checks (SPEC.md M9 requirement 45): L1, (a), (b), Q.
 
 Pure functions over a draft and already-obtained judge output; the paid model
 calls themselves are made elsewhere (run_habr_draft.py, loop.py) through llm.HabrLLM.
 
 A check result separates three states that must never be conflated
-(requirement 47): it ran and passed, it ran and failed (a content finding),
+(requirement 48): it ran and passed, it ran and failed (a content finding),
 or it could not run (`executed == False`: either a technical `error`, or a
 required configuration value that is unset, listed in `missing_config`).
 """
