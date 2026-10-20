@@ -3478,3 +3478,59 @@ implementation of the new record type. No code dependency on `[B-069]`.
 originating discussion is not in this repository. Consumer list and `gate_status` values read
 directly from the working tree on 2026-10-13. Priority P2 was assigned at filing; the owner
 did not state one.
+
+### [B-077] P3 — `Radar Bot <radar@gitlab.com>`: confirm provenance and decide whether it becomes an owner identity
+
+Found: 2026-10-16, while simplifying the Habr draft fragment-admission rule (Mission B-071);
+deferred by the owner in that task.
+
+The Habr draft path admits a code fragment only when its commit's author is an owner identity
+(`habr_draft/acceptance_config.json`, `owner_identities`). `Radar Bot <radar@gitlab.com>` is
+not one: it has no GitHub login, and its address is not in the list. Its commits on `main`
+(13 in `radar`, 18 in `tooltempest`, 2026-07-05 to 2026-08-24) are therefore excluded as
+`authorship:author_not_owner`. Two `radar` commits authored by the owner and committed by
+`Radar Bot` are admitted, because the committer is not read.
+
+What is known: the identity is a git-config identity (the Actions action in `radar` uses
+`radar@github.com` and writes only to the `vault` branch); the first `tooltempest` commit under
+it says it migrated files from the article-pipeline development environment; every push to
+`main` in the retained event window (from 2026-09-15) came from the `mikkiola` account. Not
+established: what created the identity, and who pushed those commits (the GitHub events window
+does not reach back to July and August).
+
+Today the exclusion costs nothing observable: none of these commits appears in a Collector
+daily brief (2026-09-03 to 2026-10-01), and `radar` is uncleared (`authorship_checked: false`),
+so it is excluded at stage 1 anyway.
+
+- [ ] Deferred — revisit when the owner confirms the provenance of the `Radar Bot` commits or
+      a daily brief first contains one. If confirmed: add `{"email": "radar@gitlab.com"}` to
+      `owner_identities` and update `test_repository_configuration_reflects_the_admission_rule`,
+      which pins the address's absence.
+
+**Source.** Flagged in the 2026-10-16 investigation report (Mission B-071); not an owner
+decision. Facts read from the GitHub API, the three repositories' local `main` history and the
+Collector's `data/daily_brief_*.json` on 2026-10-16. No external AI contributed.
+
+### [B-078] P3 — Possible employer rights in `radar` commits written under the owner's second account
+
+Found: 2026-10-16, while simplifying the Habr draft fragment-admission rule (Mission B-071);
+deferred by the owner in that task.
+
+`radar` holds 73 commits authored by the GitHub account `OStroganova`, written under a
+work-domain address (2026-06-02 to 2026-06-26). The account is configured as an owner identity,
+so the author check admits them; ADR-0070 records that the owner's confirmation of the account
+does not cover rights an employer may hold in code written under it. No code check can
+establish those rights. This is a legal question about the content of the commits, not a code
+question, and it is not decided here.
+
+Effect today: `radar` is uncleared (`authorship_checked: false`), so the whole repository is
+excluded at stage 1, and these commits predate every Collector daily brief (the earliest is
+2026-09-03).
+
+- [ ] Deferred — the owner decides outside this repository whether she holds the rights in
+      those commits, before recording the authorship check for `radar`. If she does not,
+      `radar` stays uncleared; no code change is implied either way.
+
+**Source.** Flagged in the 2026-10-16 investigation report (Mission B-071); not an owner
+decision. Commit counts and dates from the GitHub API on 2026-10-16. No external AI
+contributed.
