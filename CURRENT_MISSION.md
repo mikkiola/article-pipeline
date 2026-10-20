@@ -16,8 +16,12 @@ workflow, instead of relying on bare process exit and "no files to commit".
 Code, tests, SPEC.md FR41 and ADR-0067 are in `dbd9027` on `main` (2026-10-16);
 this status text is in the docs commit that follows it. The runtime workflow
 change was pushed to the runtime repository before the code push, as required.
-Awaiting the first scheduled run after rollout to confirm the outcome in its
-literal log or job summary; [B-072] stays open.
+Four scheduled runs have occurred on the runtime workflow at `1721000`
+(2026-10-17, 10-18, 10-19, 10-20): `OUTCOME=PUBLISHED` on 10-17, 10-18 and 10-20,
+`OUTCOME=SKIPPED_AUTOMATION_ONLY` on 10-19, all `exit_code=0`, read from their
+literal logs. No run has ended in a failed outcome, so a red job on
+`FAILED_INTEGRITY` is not observed. [B-072] was closed on 2026-10-20 on
+owner-accepted code, test and workflow-YAML evidence, not on an observed failure.
 
 ## WHY
 The previous G057 mission restored publishing and logged [B-072] and [B-073]
@@ -46,7 +50,9 @@ archive.
 - The runtime workflow exposes the outcome and persists Registry and state
   files on a failed run, confirmed by the literal log or job summary of the
   first scheduled run after rollout. The FAILED_INTEGRITY diagnostic there is
-  retained only within the repository's GitHub Actions retention.
+  retained only within the repository's GitHub Actions retention. (2026-10-20: the
+  failed-run part is accepted by the owner on code, tests and workflow YAML, not
+  observed on a failed run; see BLOCKERS.)
 - The SPEC.md run-outcome requirement, the ADR and the BACKLOG status note
   listed in the plan are in place.
 
@@ -77,12 +83,16 @@ archive.
   check
 - retries, a write-ahead intent record, new channels, observability redesign
 - the Habr Draft Automation track, except the work listed under IN SCOPE
-- closing [B-072] on the strength of this mission alone
+- closing [B-072] on the strength of this mission alone (it was closed on
+  2026-10-20 by owner decision, not on this mission's evidence alone)
 - Any push other than one the owner approves explicitly
 
 ## BLOCKERS
-- Not yet confirmed by a scheduled run: DONE WHEN's workflow criterion needs the
-  literal log or job summary of the first scheduled run after rollout.
+- Scheduled-run confirmation is partial: the outcome line is observed in the literal
+  logs of the runs of 2026-10-17 to 2026-10-20 (all exit 0). Not observed: a
+  failed run, so the job going red and the Registry and state persistence on a
+  failed run are accepted on code, tests and workflow YAML, not on a
+  demonstrated failure ([B-072], owner decision 2026-10-20).
 - Rollout order (followed on 2026-10-16: runtime workflow first, then the code):
   the runtime workflow change goes out before or together with the code, never
   after; without it, local Registry and state writes made before a failed run

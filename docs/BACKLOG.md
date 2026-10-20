@@ -3250,7 +3250,7 @@ independent reason to track them apart from this entry's own gap or from each ot
 (commits `57021bb`, `964c390`, `4bf4b71`, `abe480b`) and found `telegram_send.py` had nothing
 real to send.
 
-### [B-072] P3 — Schema-version drift between Collector and the pipeline adapter: optional pre-publish early detection (lowered from P2 on 2026-10-20; post-hoc detection implemented in code, failing-run observation pending)
+### [B-072] P3 — Schema-version drift between Collector and the pipeline adapter: optional pre-publish early detection (lowered from P2 on 2026-10-20; closed 2026-10-20 on owner-accepted code, test and workflow-YAML evidence, not on an observed failing run) — RESOLVED
 
 Found: 2026-10-06, while closing G057 (LinkedIn auto-publish recovery), from the 2026-10-02
 run that produced no post. Filed as a finding only: it needs a more thorough verification
@@ -3305,17 +3305,17 @@ Evidence status, per claim:
 - **ASSUMPTION**: a future change to either constant on its own would repeat the 2026-10-02
   outcome. Not observed beyond the 2026-10-02 run.
 
-- [ ] (Superseded 2026-10-20, see the closure condition in the status update below.) Verify more thoroughly before any fix is designed: resolve each UNKNOWN above against
+- [x] (Closed under the owner's decision of 2026-10-20, not completed in full: the causal-link UNKNOWN, the ASSUMPTION re-check against the constants' history and the Habr-path exit trace were not done and are carried in the Closure block below.) Verify more thoroughly before any fix is designed: resolve each UNKNOWN above against
       the repositories and workflows, and re-check the ASSUMPTION against how the two
       constants have actually changed over their history.
-- [ ] (Superseded 2026-10-20.) Only after that, decide whether a fix is warranted at all. No design is proposed here.
+- [x] (Closed under the owner's decision of 2026-10-20: the run-outcome contract of ADR-0067 is the fix made; the optional pre-publish early warning was not implemented.) Only after that, decide whether a fix is warranted at all. No design is proposed here.
 
 Not part of G057's closure: its `OUT OF SCOPE` already excluded the misleading block reason
 because restoring publication did not require changing it.
 
 Status update, 2026-10-15, revised 2026-10-16 (run-outcome contract of `docs/adr/0067-daily-linkedin-publish-run-resolves-to-one-outcome-and-only-an-integrity-caused-gate-block-fails.md`, committed as `dbd9027` and
 pushed to `main` on 2026-10-16, the runtime workflow change pushed first; not yet confirmed by a
-scheduled run). This entry stays open.
+scheduled run). This entry stays open. (Superseded 2026-10-20, see the Closure block below.)
 Per UNKNOWN above:
 
 - **Resolved by the implementation:** whether a blocked gate should surface as a failed run.
@@ -3379,7 +3379,7 @@ the two checklist items under the evidence list; the text above is kept as the r
 - **Scope note:** the original title's "gate-block observability" is not open here. A gate block
   without an integrity violation stays exit 0 by decision (ADR-0067); the integrity-caused block is
   the `FAILED_INTEGRITY` path above.
-- **Closure condition:** this entry closes only on the owner's explicit go-ahead, after (a) the
+- **Closure condition** (set earlier on 2026-10-20; the Closure block below records how the owner closed it, and which part was not met): this entry closes only on the owner's explicit go-ahead, after (a) the
   owner decides to implement or decline the optional pre-publish early warning, and (b) a real
   failing scheduled run has shown the red job and the outcome, or the owner accepts the code path,
   tests and workflow YAML as sufficient. The post-hoc `FAILED_INTEGRITY` path alone does not close
@@ -3396,7 +3396,7 @@ the two checklist items under the evidence list; the text above is kept as the r
   (one run); the publish, persistence and report steps concluded `success` in the two runs whose
   steps were inspected (`38990893242`, `39356536429`). So the outcome exposure is observed on
   scheduled runs. The job summary content itself was not read.
-- **Still pending, and why this entry is not closed:** no scheduled run has yet ended in
+- **Not observed (accepted by the owner at closure, see below):** no scheduled run has yet ended in
   `FAILED_INTEGRITY` or `FAILED`; none of the 30 most recent workflow runs concluded other than
   `success`. The claim "a schema drift turns the job red" therefore rests on the code path, the
   offline tests and the workflow YAML above, not on an observed failing run. It can be confirmed
@@ -3408,6 +3408,23 @@ the two checklist items under the evidence list; the text above is kept as the r
 Source of this status update: owner-directed correction of 2026-10-20, from a read-only
 investigation the same day (code, tests, the Collector repository, the runtime workflow YAML and
 the logs of four scheduled runs read directly). No external AI contributed.
+
+Closure, 2026-10-20 (owner decision, `Closes: B-072` in the closing commit):
+
+- **Basis:** the owner accepted the code path, the offline tests (`test_schema_mismatch_is_failed_integrity_with_specific_diagnostic`
+  and the other five selected tests) and the runtime workflow YAML (no swallowed exit code) as
+  sufficient. This is not closure by observation: no scheduled run has ended in `FAILED_INTEGRITY` or
+  `FAILED`, so a red job on a schema drift has never been seen and remains undemonstrated.
+- **Observed:** the outcome line is present in the literal logs of the four scheduled runs of
+  2026-10-17 to 2026-10-20 (`PUBLISHED` on 10-17, 10-18 and 10-20; `SKIPPED_AUTOMATION_ONLY` on
+  10-19; all exit 0).
+- **Not implemented, not tracked under this ID:** the optional pre-publish early warning and any
+  cross-repository schema-constant check. The owner closed the entry without a separate recorded
+  decision to implement or decline condition (a) above; the early warning is simply left
+  unimplemented. If wanted later, file a new entry.
+- **Carried, not resolved, and not tracked under an open ID:** how the Habr draft path's
+  `daily_brief_schema_unsupported` result becomes an exit code; the causal-link UNKNOWN and the
+  original ASSUMPTION about future constant changes. File a new entry if any is to be pursued.
 
 **Source.** G057 closing session, 2026-10-06: run logs, Registry record and code read directly
 in that session. No external AI contributed.
