@@ -126,6 +126,12 @@ reasoning for those days was not persisted and was not reviewed.
 
 Residual risks found while closing, recorded as `[B-072]` and `[B-073]` in
 `docs/BACKLOG.md` with per-claim evidence status, not fixed there.
+Status as of 2026-10-20: `[B-072]` is closed (owner-accepted code, test and
+workflow-YAML evidence; the optional pre-publish early detection was declined),
+`[B-073]` stays open and untouched, and `[B-079]` (P3, informational: the Habr
+path's handling of a schema mismatch, revisit when the Habr runtime workflow is
+deployed) was opened from the `[B-072]` investigation. Live status is kept in
+`docs/BACKLOG.md`.
 
 This says nothing about whether the referenced goal (G057) is itself achieved
 — that remains an owner decision, not implied by this mission's completion,
