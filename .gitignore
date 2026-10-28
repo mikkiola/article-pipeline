@@ -82,3 +82,7 @@ author/state/
 # Local materialization state written by tooling.py materialize --apply
 # (required by tooling.py verify in that checkout; per-checkout, not tracked).
 /.tooltempest.receipt.json
+# Temporary files of an interrupted materialize --apply (staged targets, receipt temp).
+/scripts/.tooltempest-stage.*
+/schemas/.tooltempest-stage.*
+/..tooltempest.receipt.json.tmp.*
