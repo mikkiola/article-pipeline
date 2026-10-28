@@ -66,3 +66,19 @@ strategy_layer/output/
 # runtime content in this public repository), so a local run's copy is
 # not tracked here by design.
 author/state/
+
+# DocOps checker and tooling bootstrap (ToolTempest): vendored from the commit
+# pinned in .tooltempest.lock by scripts/tooling.py materialize --apply -- not
+# authored here, so not tracked here.
+/scripts/docops.py
+/scripts/docops_core/
+/scripts/tooling.py
+/scripts/tooling_core/
+/schemas/docops-impact-report.schema.json
+/schemas/docops-policy.schema.json
+/schemas/docops-result.schema.json
+/schemas/tooling-receipt.schema.json
+/schemas/tooling-result.schema.json
+# Local materialization state written by tooling.py materialize --apply
+# (required by tooling.py verify in that checkout; per-checkout, not tracked).
+/.tooltempest.receipt.json
