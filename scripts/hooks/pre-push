@@ -1,10 +1,22 @@
 #!/usr/bin/env bash
 # Integrated ToolTempest DocOps Protocol (Canon: ToolTempest ADR-0001)
 # Pinned version in .tooltempest.lock
+#
+# DocOps check: scripts/docops.py inspects each pushed local OID (not HEAD), read
+# from git's pre-push stdin; a deleted ref (all-zero OID) has nothing to check.
+# SPEC.md scope: only the root SPEC.md, or the tracks registered in
+# .docops-policy.json, are evaluated; a SPEC.md in a subfolder must be
+# registered there. An unregistered one yields SKIP (exit 3) when no registered
+# SPEC is active, and any non-zero exit blocks the push (fail-closed). Beside an
+# active registered SPEC it does not block: the check passes and the hook prints
+# an OUT_OF_SCOPE_SPEC warning, so the unevaluated SPEC.md is not silently ignored.
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
+
+# Read every ref-update line first, so no later command can consume stdin.
+push_stdin="$(cat)"
 
 fail=0
 
@@ -22,9 +34,25 @@ else
   echo "[pre-push] WARNING: gitleaks not installed, skipping secret scan."
 fi
 
-echo "[pre-push] Running DocOps hard validation (scripts/doc_sync.py pre-push)..."
-if ! python3 scripts/doc_sync.py pre-push; then
-  fail=1
+# git also runs this hook for an up-to-date push, with empty stdin: no commit
+# leaves the repository then, so there is nothing for DocOps to check.
+if [ -z "$push_stdin" ]; then
+  echo "[pre-push] No ref updates to push; skipping the DocOps check."
+else
+  echo "[pre-push] Running DocOps check on the pushed commits (scripts/docops.py check --push-stdin)..."
+  rc=0
+  output="$(printf '%s\n' "$push_stdin" | python3 scripts/docops.py check --push-stdin 2>&1)" || rc=$?
+  if [ "$rc" -ne 0 ]; then
+    printf '%s\n' "$output"
+    echo "[pre-push] FAIL: DocOps check exited $rc (1 = invariant violated, 2 = no verdict, 3 = SPEC applicability not established)."
+    fail=1
+  else
+    echo "[pre-push] DocOps check passed."
+    # Display only: a passing check can still carry OUT_OF_SCOPE_SPEC warnings. The
+    # trailing `|| true` keeps this step from ever changing the hook's exit status.
+    printf '%s\n' "$push_stdin" | python3 scripts/docops.py report --push-stdin 2>/dev/null \
+      | grep -F 'warning OUT_OF_SCOPE_SPEC' | sed 's/^ *warning /[pre-push] WARNING: /' || true
+  fi
 fi
 
 echo "[pre-push] Checking ToolTempest drift (.tooltempest.lock vs origin/main)..."
@@ -41,7 +69,7 @@ if [ -f .tooltempest.lock ]; then
     if [ -n "$remote_sha" ] && [ "$remote_sha" != "$pinned_sha" ]; then
       echo "[pre-push] WARNING: article-pipeline is behind ToolTempest."
       echo "[pre-push] Pinned: ${pinned_sha:0:7}, latest: ${remote_sha:0:7}."
-      echo "[pre-push] Run scripts/sync-tooling.sh to pick up the latest fixes."
+      echo "[pre-push] To adopt it, bump the pin itself in .tooltempest.lock (sync-tooling.sh installs the pinned files; it does not change the pin)."
     fi
   fi
 fi

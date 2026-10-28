@@ -1,9 +1,33 @@
 #!/usr/bin/env bash
 # Integrated ToolTempest DocOps Protocol (Canon: ToolTempest ADR-0001)
 # Pinned version in .tooltempest.lock
+#
+# Checks the staged index (not the working tree) with scripts/docops.py, the
+# vendored ToolTempest DocOps checker. GIT_INDEX_FILE is inherited on purpose:
+# git sets it for `git commit -a` and `git commit <path>`, so the checker sees
+# exactly the tree that will be committed. Any non-zero exit blocks the commit:
+# 1 = invariant violated, 2 = no verdict (checker missing or failed), 3 = SKIP.
+# SPEC.md scope: only the root SPEC.md, or the tracks registered in
+# .docops-policy.json, are evaluated; a SPEC.md in a subfolder must be
+# registered there. An unregistered one yields SKIP (exit 3) when no registered
+# SPEC is active, and exit 3 blocks the commit (fail-closed). Beside an active
+# registered SPEC it does not block: the check passes and the hook prints an
+# OUT_OF_SCOPE_SPEC warning, so the unevaluated SPEC.md is not silently ignored.
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
-python3 scripts/doc_sync.py pre-commit
+echo "[pre-commit] Running DocOps check on the staged index (scripts/docops.py check --tree index)..."
+rc=0
+output="$(python3 scripts/docops.py check --tree index 2>&1)" || rc=$?
+if [ "$rc" -ne 0 ]; then
+  printf '%s\n' "$output"
+  echo "[pre-commit] FAIL: DocOps check exited $rc (1 = invariant violated, 2 = no verdict, 3 = SPEC applicability not established). Commit blocked."
+  exit "$rc"
+fi
+echo "[pre-commit] DocOps check passed."
+# Display only: a passing check can still carry OUT_OF_SCOPE_SPEC warnings. The
+# trailing `|| true` keeps this step from ever changing the hook's exit status.
+python3 scripts/docops.py report --tree index 2>/dev/null \
+  | grep -F 'warning OUT_OF_SCOPE_SPEC' | sed 's/^ *warning /[pre-commit] WARNING: /' || true
