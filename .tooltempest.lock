@@ -1,6 +1,6 @@
 {
   "repository": "https://github.com/mikkiola/tooltempest.git",
-  "commit": "b63eefa502290c1261b09949d3eef4f8a5d0bc30",
+  "commit": "1da76a7e301b67f545c38e9eec30bcbb53dec945",
   "path": "scripts/doc_sync.py",
   "sha256": "663f019d987669bd9afb7a66e1fac2c5eb0f647835849faadfd8cd5cc4e25d7a"
 }
