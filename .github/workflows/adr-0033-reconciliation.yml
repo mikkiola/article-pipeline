@@ -32,8 +32,18 @@ jobs:
         # scripts/doc_sync.py and scripts/doc_sync_tier2.py are
         # .gitignore'd (vendored locally per ADR-0027/0028, not
         # committed) -- a fresh checkout doesn't have them without
-        # this step.
-        run: scripts/sync-tooling.sh
+        # this step. The materializer is itself untracked here, so it is
+        # taken from the ToolTempest commit pinned in .tooltempest.lock
+        # (fetched into the runner temp directory) and installs the
+        # pinned files into this checkout.
+        run: |
+          set -euo pipefail
+          read -r repository commit < <(python3 -c "import json; d = json.load(open('.tooltempest.lock')); print(d['repository'], d['commit'])")
+          src="${RUNNER_TEMP}/tooltempest"
+          git init -q "$src"
+          git -C "$src" fetch -q --depth 1 "$repository" "$commit"
+          git -C "$src" checkout -q --detach FETCH_HEAD
+          python3 "$src/scripts/tooling.py" materialize --root "$GITHUB_WORKSPACE" --source "$src" --apply
 
       - name: Set up Python
         uses: actions/setup-python@v5

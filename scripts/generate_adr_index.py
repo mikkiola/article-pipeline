@@ -9,9 +9,9 @@ an ADR is added or edited).
 
 Run manually, human/session-triggered -- not wired into a pre-commit/
 pre-push hook. Matches this repo's own existing precedent for
-generated-but-not-automatic tooling (scripts/install-hooks.sh,
-scripts/sync-tooling.sh are both explicitly "human-triggered only, run
-after a relevant change"), and ADR creation/editing is rare compared to
+generated-but-not-automatic tooling (scripts/install-hooks.sh is
+explicitly "human-triggered only, run after a relevant change"), and
+ADR creation/editing is rare compared to
 docs/BACKLOG.md/docs/ROADMAP.md churn -- doesn't carry the same "will
 be forgotten" risk profile that justified automating those. Whoever
 adds or edits an ADR in a session re-runs this before the session ends,

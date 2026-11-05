@@ -42,7 +42,7 @@ local_paths.json
 evidence_package/output/_m4_staging_*.json
 
 # DocOps Protocol: vendored from the ToolTempest commit pinned in
-# .tooltempest.lock via scripts/sync-tooling.sh -- not authored here,
+# .tooltempest.lock via scripts/tooling.py materialize --apply -- not authored here,
 # so not tracked here. Source of truth: ToolTempest ADR-0001.
 /scripts/doc_sync.py
 /scripts/doc_sync_tier2.py

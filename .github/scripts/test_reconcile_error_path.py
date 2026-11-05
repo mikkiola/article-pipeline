@@ -65,7 +65,7 @@ def fail(msg: str) -> int:
 def main() -> int:
     for p in (RECONCILE_PY, DOC_SYNC_PY, DOC_SYNC_TIER2_PY):
         if not p.is_file():
-            return fail(f"{p} not found (run scripts/sync-tooling.sh first)")
+            return fail(f"{p} not found (run python3 scripts/tooling.py materialize --apply --source <ToolTempest checkout holding the pinned commit> first)")
 
     scratch = Path(tempfile.mkdtemp())
     try:
