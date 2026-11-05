@@ -1989,6 +1989,8 @@ effect. Out of this entry's scope.
 
 **Source.** Pre-push hook warning, commit `f9d51d0`, 2026-08-27.
 
+**Closed (2026-11-05).** Obsolete, superseded by `[B-080]`: the drift warning and `sync-tooling.sh` are gone.
+
 ### [B-050] P2 — H11 client-template monetization model, session 2026-08-28 findings (raw, not yet a committed design)
 
 Added: 2026-08-28, owner session.

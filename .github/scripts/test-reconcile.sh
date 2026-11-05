@@ -78,8 +78,8 @@ fail() {
 }
 
 [ -f "$RECONCILE_PY" ] || fail "${RECONCILE_PY} not found"
-[ -f "$DOC_SYNC_PY" ] || fail "${DOC_SYNC_PY} not found (run python3 scripts/tooling.py materialize --apply --source <ToolTempest checkout holding the pinned commit> first)"
-[ -f "$DOC_SYNC_TIER2_PY" ] || fail "${DOC_SYNC_TIER2_PY} not found (run python3 scripts/tooling.py materialize --apply --source <ToolTempest checkout holding the pinned commit> first)"
+[ -f "$DOC_SYNC_PY" ] || fail "${DOC_SYNC_PY} not found (a fresh clone lacks it; from the repository root run python3 <ToolTempest checkout at the pinned commit>/scripts/tooling.py materialize --apply --source <that checkout>; steps: README.md, 'Setup of a fresh clone')"
+[ -f "$DOC_SYNC_TIER2_PY" ] || fail "${DOC_SYNC_TIER2_PY} not found (a fresh clone lacks it; from the repository root run python3 <ToolTempest checkout at the pinned commit>/scripts/tooling.py materialize --apply --source <that checkout>; steps: README.md, 'Setup of a fresh clone')"
 
 SCRATCH="$(mktemp -d)"
 trap 'rm -rf "$SCRATCH"' EXIT
