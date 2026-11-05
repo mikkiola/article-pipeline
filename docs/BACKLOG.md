@@ -3656,3 +3656,29 @@ SYSTEM_FAILURE record and notification, not a silent green job.
 
 **Source.** Found during the `[B-072]` investigation of 2026-10-20 (code and runtime workflow list
 read directly); filed on the owner's instruction the same day. No external AI contributed.
+
+### [B-080] P2 — ToolTempest distribution model adopted (ADR-0072): revisit triggers and two residual gaps
+
+Found: 2026-11-05, Owner-directed bounded step under mission G057 (`CURRENT_MISSION.md`, IN SCOPE).
+This entry records what remains open after the adoption; it is not a work item for the adoption itself.
+
+- **Done in this step:** the pin moved to ToolTempest `84519ca`; `scripts/sync-tooling.sh` and its
+  tests were removed; the `git ls-remote` drift warning left the pre-push hook; the Constitution
+  links to the managed contract file `docs/tooltempest/consumer-contract.md` instead of a hand copy.
+  The decision is `docs/adr/0072-adopt-the-tooltempest-distribution-model-materializer-only-no-network-in-hooks.md`.
+- **Revisit triggers**, copied from ToolTempest ADR-0017, "Confirmation & Revisit": revisit this
+  decision when a fourth consumer repository appears, counted by origin URL; when a second incident
+  of a false version signal, or of a repin for an unchanged payload, occurs within a quarter; when a
+  second AI client is added; or at the first removal of a path of an installed root from the
+  manifest, expected at legacy retirement.
+- **Residual gap 1:** freshness is still commit distance (`tooling.py verify` reports "N commit(s)
+  behind") until fingerprint engine code exists in ToolTempest; a repin can still be prompted by a
+  commit that changes nothing this repository installs.
+- **Residual gap 2:** removed-path handling needs its own accepted ADR (location not specified in
+  ToolTempest ADR-0017) before any path of an installed root leaves the manifest; this repository has no rule
+  for such a path, and a removed file would stay on disk without a finding.
+
+- [ ] Deferred — P2, no current trigger beyond the list above; revisit when one of them fires.
+
+**Source.** The Owner's instructions of 2026-11-05; trigger text copied from ToolTempest ADR-0017
+(read at ToolTempest `84519ca`). No external AI contributed.

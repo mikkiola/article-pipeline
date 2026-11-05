@@ -79,3 +79,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0069](0069-habr-draft-run-keeps-private-credentials-and-sources-out-of-the-paid-stage.md) | The Habr draft run keeps private sources and the broad GitHub token out of the paid stage | Accepted | null | null |
 | [ADR-0070](0070-habr-draft-workflow-is-three-jobs-and-admits-only-owner-authored-fragments.md) | The Habr draft workflow is three jobs, and a fragment is admitted only when its commit's author is an owner identity | Accepted | null | null |
 | [ADR-0071](0071-habr-draft-acceptance-contract-separate-from-r6-and-from-publication-approval.md) | The Habr draft acceptance contract is separate from R6 and is never publication approval | Accepted | null | null |
+| [ADR-0072](0072-adopt-the-tooltempest-distribution-model-materializer-only-no-network-in-hooks.md) | Adopt the ToolTempest distribution model: one installer, no network in hooks, one contract file | Accepted | ADR-0032 | null |

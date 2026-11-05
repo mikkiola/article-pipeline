@@ -317,22 +317,18 @@ targets, not test coverage as a blanket requirement.
 ## ToolTempest consumer obligation
 
 Applies to any project that consumes ToolTempest (`mikkiola/tooltempest`),
-not only this repository — expected to be copied, verbatim or
-near-verbatim, into any other ToolTempest consumer's own Constitution.
-ToolTempest has no Constitution of its own to hold this rule.
+not only this repository. The text of the obligation is the consumer
+contract, [`docs/tooltempest/consumer-contract.md`](tooltempest/consumer-contract.md),
+which is its single source; this section does not repeat it. The file is
+managed: it is installed from the ToolTempest commit pinned in
+`.tooltempest.lock` by `scripts/tooling.py materialize --apply`, and it is
+not tracked in this repository, like the other installed ToolTempest files.
 
-Whenever a session works on ToolTempest itself (not this consumer
-project) and adds, removes, or renames a file under `scripts/`,
-`schemas/`, `skills/`, or `rules/` — the four directories ToolTempest's
-own `MANIFEST.txt` tracks — that session must run ToolTempest's
-completeness-check script (`scripts/check_manifest.py`) before
-considering the change done, and update `MANIFEST.txt` in the same
-commit if it reports a mismatch, not as a separate later task.
-
-This is also the natural trigger point for the owner to consider
-repinning `.tooltempest.lock` in this repo (or any other consumer) to
-pick up the new file — that repin remains a deliberate, separate
-action, not automatic.
+_Dated note (2026-11-05, consumer contract): a hand-copied text of the
+obligation stood here. It had fallen behind the contract: it lacked the
+repin-evidence paragraph and the definitions of its evidence terms. It was
+replaced by the link above, so that there is one source. The earlier wording
+stays in Git history._
 
 ## Cowork-layer practice boundary
 
