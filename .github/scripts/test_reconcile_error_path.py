@@ -65,7 +65,7 @@ def fail(msg: str) -> int:
 def main() -> int:
     for p in (RECONCILE_PY, DOC_SYNC_PY, DOC_SYNC_TIER2_PY):
         if not p.is_file():
-            return fail(f"{p} not found (run scripts/sync-tooling.sh first)")
+            return fail(f"{p} not found (a fresh clone lacks it; from the repository root run python3 <ToolTempest checkout at the pinned commit>/scripts/tooling.py materialize --apply --source <that checkout>; steps: README.md, 'Setup of a fresh clone')")
 
     scratch = Path(tempfile.mkdtemp())
     try:

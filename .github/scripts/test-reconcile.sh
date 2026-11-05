@@ -78,16 +78,16 @@ fail() {
 }
 
 [ -f "$RECONCILE_PY" ] || fail "${RECONCILE_PY} not found"
-[ -f "$DOC_SYNC_PY" ] || fail "${DOC_SYNC_PY} not found (run scripts/sync-tooling.sh first)"
-[ -f "$DOC_SYNC_TIER2_PY" ] || fail "${DOC_SYNC_TIER2_PY} not found (run scripts/sync-tooling.sh first)"
+[ -f "$DOC_SYNC_PY" ] || fail "${DOC_SYNC_PY} not found (a fresh clone lacks it; from the repository root run python3 <ToolTempest checkout at the pinned commit>/scripts/tooling.py materialize --apply --source <that checkout>; steps: README.md, 'Setup of a fresh clone')"
+[ -f "$DOC_SYNC_TIER2_PY" ] || fail "${DOC_SYNC_TIER2_PY} not found (a fresh clone lacks it; from the repository root run python3 <ToolTempest checkout at the pinned commit>/scripts/tooling.py materialize --apply --source <that checkout>; steps: README.md, 'Setup of a fresh clone')"
 
 SCRATCH="$(mktemp -d)"
 trap 'rm -rf "$SCRATCH"' EXIT
 
 # Seeds a bare "origin" plus one work clone with the minimal repo shape
 # reconcile.py needs: vendored scripts/doc_sync.py + doc_sync_tier2.py
-# (normally installed by scripts/sync-tooling.sh; copied directly here
-# since that script talks to the real ToolTempest remote) and, unless
+# (normally installed by scripts/tooling.py materialize --apply; copied
+# directly here so the test needs no ToolTempest source) and, unless
 # $1 = "no-arch", docs/ARCHITECTURE.md.
 seed_repo() {
   local name="$1" include_arch="$2"

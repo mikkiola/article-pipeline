@@ -55,25 +55,6 @@ else
   fi
 fi
 
-echo "[pre-push] Checking ToolTempest drift (.tooltempest.lock vs origin/main)..."
-if [ -f .tooltempest.lock ]; then
-  pinned_sha="$(grep '"commit"' .tooltempest.lock | sed -E 's/.*"commit"[[:space:]]*:[[:space:]]*"([0-9a-f]+)".*/\1/')"
-  repo_url="$(grep '"repository"' .tooltempest.lock | sed -E 's/.*"repository"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/')"
-  if [ -n "$pinned_sha" ] && [ -n "$repo_url" ]; then
-    # Best-effort only: a failed *check* (no network, unreachable host,
-    # bad URL) must never fail or alarm over the push itself -- only a
-    # confirmed, successfully-detected drift does. `|| true` absorbs a
-    # non-zero exit from git ls-remote under `set -e`/pipefail so this
-    # step can never block.
-    remote_sha="$(git ls-remote "$repo_url" main 2>/dev/null | cut -f1 || true)"
-    if [ -n "$remote_sha" ] && [ "$remote_sha" != "$pinned_sha" ]; then
-      echo "[pre-push] WARNING: article-pipeline is behind ToolTempest."
-      echo "[pre-push] Pinned: ${pinned_sha:0:7}, latest: ${remote_sha:0:7}."
-      echo "[pre-push] To adopt it, bump the pin itself in .tooltempest.lock (sync-tooling.sh installs the pinned files; it does not change the pin)."
-    fi
-  fi
-fi
-
 bash scripts/check-doc-pairing.sh
 
 if [ "$fail" -eq 1 ]; then

@@ -73,6 +73,12 @@ archive.
   their tests are in `3432cfa`) and ADR-0068 (the Q rubric decision). A
   one-time exception to the Habr line below; further Habr Draft Automation
   work stays out of scope.
+- [B-080]: repin ToolTempest to `84519ca4de355fd71d35380b3970f28925fdc4e6`;
+  remove `sync-tooling.sh`; remove the `git ls-remote` drift warning from the
+  pre-push hook; replace the hand copy of item 7 in the Constitution with a
+  link to the managed contract file.
+
+Mission amended by Owner decision, 2026-11-05
 
 ## OUT OF SCOPE
 - [B-073] (stays a separate backlog item) and [B-069]
