@@ -3659,7 +3659,7 @@ SYSTEM_FAILURE record and notification, not a silent green job.
 **Source.** Found during the `[B-072]` investigation of 2026-10-20 (code and runtime workflow list
 read directly); filed on the owner's instruction the same day. No external AI contributed.
 
-### [B-080] P2 — ToolTempest distribution model adopted (ADR-0072): revisit triggers and two residual gaps
+### [B-080] P2 — ToolTempest distribution model adopted (ADR-0072): revisit triggers and four residual gaps
 
 Found: 2026-11-05, Owner-directed bounded step under mission G057 (`CURRENT_MISSION.md`, IN SCOPE).
 This entry records what remains open after the adoption; it is not a work item for the adoption itself.
@@ -3679,8 +3679,75 @@ This entry records what remains open after the adoption; it is not a work item f
 - **Residual gap 2:** removed-path handling needs its own accepted ADR (location not specified in
   ToolTempest ADR-0017) before any path of an installed root leaves the manifest; this repository has no rule
   for such a path, and a removed file would stay on disk without a finding.
+- **Residual gap 3:** the client-root lock is created by hand (ToolTempest README, "Usage today",
+  step 2, read at `84519ca`); no ToolTempest command writes it, and the materializer never pins. The manual
+  procedure is documented in this repository's `README.md` ("Optional: ToolTempest skills and rules
+  for an AI client") and is accepted by the Owner as the supported way.
+- **Residual gap 4:** `docs/tooltempest/consumer-contract.md` is installed payload. It is absent in a
+  fresh clone until the bootstrap in `README.md` ("Setup of a fresh clone") runs, and no check
+  validates the link to it from `docs/CONSTITUTION.md`.
 
 - [ ] Deferred — P2, no current trigger beyond the list above; revisit when one of them fires.
 
 **Source.** The Owner's instructions of 2026-11-05; trigger text copied from ToolTempest ADR-0017
 (read at ToolTempest `84519ca`). No external AI contributed.
+
+### [B-081] P2 — `adr-0033-reconciliation.yml` fails at `git push origin HEAD:main` on every merge observed
+
+Found: 2026-11-05, while analyzing the post-merge workflow for `[B-080]`. Recorded only: no work is
+started here, and the Owner leaves this known defect outside `[B-080]`.
+
+- **FACT** (GitHub Actions logs, read 2026-11-05): the run for PR #2 (merged 2026-10-28,
+  `https://github.com/mikkiola/article-pipeline/actions/runs/40633031024`) and the run for PR #3
+  (merged 2026-10-28, `https://github.com/mikkiola/article-pipeline/actions/runs/40654307961`) both
+  concluded `failure` in the step "Reconcile ARCHITECTURE.md and log evidence". Each log ends with
+  `[reconcile] FAIL: push rejected after 3 attempts: Command '['git', 'push', 'origin', 'HEAD:main']'
+  returned non-zero exit status 1.`
+- **FACT** (`gh api`, 2026-11-05): `main` requires a pull request with one code-owner review.
+- **UNKNOWN**: git's own rejection text. It is not in the retrievable log, so the link between the
+  branch protection and the rejected push is an inference, not an observation.
+- **Expected** (the Owner's statement): the step fails on every merge, not only the first, until its
+  publication mechanism is changed. The evidence record and the `ARCHITECTURE.md` sync it would push
+  are not published meanwhile.
+
+- [ ] Deferred — P2, known defect, outside `[B-080]`; no fix is scoped.
+
+**Source.** The Owner's instructions of 2026-11-05; run results read from the two logs above. No
+external AI contributed.
+
+### [B-082] P3 — `test-reconcile.sh` and `test_reconcile_error_path.py` run in no CI workflow
+
+Found: 2026-11-05, during `[B-080]` verification. Recorded only; no work is started.
+
+- **FACT** (run 2026-11-05, each in its own throwaway clone of the `[B-080]` branch with a temporary
+  `HOME`, after the bootstrap in `README.md`): `bash .github/scripts/test-reconcile.sh` exited 0 and
+  printed `OK: all reconcile.py scenarios passed (cases 1-5; case 6 in test_reconcile_error_path.py)`;
+  `python3 .github/scripts/test_reconcile_error_path.py` exited 0 and printed `OK: case 6 (exception
+  mid-flow) ...`. A search of `.github/` (outside the two test files),
+  `scripts/`, and `pyproject.toml` finds no reference to either file, and none of the four
+  workflows (`adr-0033-reconciliation.yml`, `adr-numbering-check.yml`, `habr-edit-capture.yml`,
+  `strategy-layer-boundary-ci.yml`) runs them.
+- **Effect:** a change to `.github/scripts/reconcile.py` is not tested by CI before merge.
+
+- [ ] Deferred — P3, no fix is scoped.
+
+**Source.** Found during `[B-080]` verification on 2026-11-05. No external AI contributed.
+
+### [B-083] P3 — `scripts/install-hooks.sh` overwrites an existing `.pre-docops-backup` file
+
+Found: 2026-11-05, during `[B-080]` verification. Recorded only; no work is started.
+
+- **FACT** (`scripts/install-hooks.sh`, lines 27-33): when the installed hook differs from the
+  tracked source, the script runs `cp` of the installed hook onto
+  `.git/hooks/<name>.pre-docops-backup` with no check for an existing backup, then installs the
+  source hook.
+- **FACT** (file times, 2026-11-05): `.git/hooks/pre-push.pre-docops-backup` has birth time
+  2026-08-18 20:56:15 and modification time 2026-11-05 17:37:46, the time of an `install-hooks.sh`
+  run. The previous backup of `pre-push` was therefore overwritten (inferred from these times); no
+  other copy of its earlier content was found.
+- **Effect:** a second run after a hook changes replaces the first backup, so the original
+  pre-DocOps hook can be lost.
+
+- [ ] Deferred — P3, no fix is scoped.
+
+**Source.** Found during `[B-080]` verification on 2026-11-05. No external AI contributed.

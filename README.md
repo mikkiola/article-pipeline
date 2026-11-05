@@ -29,10 +29,10 @@ The ToolTempest files this repository uses (`scripts/tooling.py`,
 `scripts/docops.py`, `scripts/doc_sync.py`, the other installed `scripts/` and
 `schemas/` files, and `docs/tooltempest/consumer-contract.md`) are installed
 from the commit pinned in `.tooltempest.lock` and are not tracked. A fresh clone
-therefore lacks them, including the installer. Until they are installed, the
-hooks that `scripts/install-hooks.sh` copies into `.git/hooks` block every commit
-and every push that carries ref updates, and the checks that import them fail.
-From the repository root:
+therefore lacks them, including `scripts/tooling.py`, and its `.git/hooks` holds
+no hooks yet; the last step below installs them. Once installed, the hooks block
+every commit and every push that carries ref updates for as long as those files
+are missing, and the checks that import them fail. From the repository root:
 
 ```bash
 tt="$HOME/src/tooltempest"   # any directory outside this repository
@@ -57,12 +57,28 @@ Do not copy this repository's lock: it declares `scripts/doc_sync.py`, a path
 the client target does not install, so the target rejects it
 (`DECLARED_PATH_NOT_INSTALLABLE`). Write a lock with the same `repository` and
 `commit` only, then run the target, with `tt` set as above (steps as in the
-"Usage today" section of ToolTempest's README):
+"Usage today" section of ToolTempest's README). Run it from the repository root:
 
 ```bash
 client="$HOME/.claude"   # for Claude Code; any directory works
-# the next line does nothing if the client root already has a lock
-test ! -e "$client/.tooltempest.lock" && python3 -c "import json; d = json.load(open('.tooltempest.lock')); print(json.dumps({k: d[k] for k in ('repository', 'commit')}, indent=2))" > "$client/.tooltempest.lock"
+# writes the lock only if nothing exists at that path (a file, a symlink, even a dangling one);
+# if the lock cannot be built, nothing is created, so a rerun is safe
+python3 - "$client/.tooltempest.lock" <<'PY'
+import json, os, sys
+d = json.load(open('.tooltempest.lock'))
+text = json.dumps({k: d[k] for k in ('repository', 'commit')}, indent=2) + '\n'
+try:
+    f = open(sys.argv[1], 'x')  # exclusive create: fails on any existing path
+except FileExistsError:
+    print('kept the existing', sys.argv[1], file=sys.stderr)
+else:
+    try:
+        f.write(text)
+        f.close()  # buffered data reaches the disk here, so close is inside the guard
+    except BaseException:
+        os.unlink(sys.argv[1])
+        raise
+PY
 python3 "$tt/scripts/tooling.py" materialize --target client --root "$client" --source "$tt"          # dry run
 python3 "$tt/scripts/tooling.py" materialize --target client --root "$client" --source "$tt" --apply
 ```
