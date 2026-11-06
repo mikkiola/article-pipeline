@@ -23,13 +23,12 @@ a new one.
 
 ### Why this matters
 
-After your PR merges, a reconciliation workflow (see
-`docs/adr/0033-contributor-governance-post-merge-reconciliation.md`
-and `docs/adr/0034-contributor-supplied-doc-updates.md`) reads your
-PR's merged content directly to apply and propose these document
-updates. It does not generate or infer document updates on its own —
-if your PR is missing a required update, the reconciliation will be
-incomplete or incorrect.
+Your PR supplies the document updates directly (ADR-0034). Include
+them before review and merge: no post-merge workflow generates,
+applies, or proposes them. The obsolete reconciliation workflow was
+retired by [ADR-0073](docs/adr/0073-retire-post-merge-reconciliation.md).
+The existing CODEOWNERS and `main` branch protection remain the
+pre-merge review gate for `docs/BACKLOG.md` and `docs/ROADMAP.md`.
 
 ### Current status: process expectation, not yet enforced
 

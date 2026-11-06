@@ -3692,28 +3692,73 @@ This entry records what remains open after the adoption; it is not a work item f
 **Source.** The Owner's instructions of 2026-11-05; trigger text copied from ToolTempest ADR-0017
 (read at ToolTempest `84519ca`). No external AI contributed.
 
-### [B-081] P2 — `adr-0033-reconciliation.yml` fails at `git push origin HEAD:main` on every merge observed
+### [B-081] P2 — Retire obsolete post-merge reconciliation
 
-Found: 2026-11-05, while analyzing the post-merge workflow for `[B-080]`. Recorded only: no work is
-started here, and the Owner leaves this known defect outside `[B-080]`.
+Found: 2026-11-05, while analyzing the post-merge workflow for `[B-080]`.
+Implementation complete on 2026-11-06 under the Owner's explicit B-081
+authorization. The Owner also authorized final review, one local commit and
+a normal direct push to `main`; publication is confirmed separately by
+post-push remote verification. No Goal ID assigned; the mission and strategic
+goal are unchanged.
 
-- **FACT** (GitHub Actions logs, read 2026-11-05): the run for PR #2 (merged 2026-10-28,
-  `https://github.com/mikkiola/article-pipeline/actions/runs/40633031024`) and the run for PR #3
-  (merged 2026-10-28, `https://github.com/mikkiola/article-pipeline/actions/runs/40654307961`) both
-  concluded `failure` in the step "Reconcile ARCHITECTURE.md and log evidence". Each log ends with
-  `[reconcile] FAIL: push rejected after 3 attempts: Command '['git', 'push', 'origin', 'HEAD:main']'
-  returned non-zero exit status 1.`
-- **FACT** (`gh api`, 2026-11-05): `main` requires a pull request with one code-owner review.
-- **UNKNOWN**: git's own rejection text. It is not in the retrievable log, so the link between the
-  branch protection and the rejected push is an inference, not an observation.
-- **Expected** (the Owner's statement): the step fails on every merge, not only the first, until its
-  publication mechanism is changed. The evidence record and the `ARCHITECTURE.md` sync it would push
-  are not published meanwhile.
+- **FACT** (initial checkout and GitHub API/log inspection, 2026-11-06): local
+  `main` matches live `main` at `7253c25adf7d325dd1758ea2fa0c9273fafddb78`.
+  Runs [40633031024](https://github.com/mikkiola/article-pipeline/actions/runs/40633031024),
+  [40654307961](https://github.com/mikkiola/article-pipeline/actions/runs/40654307961)
+  and [42028280263](https://github.com/mikkiola/article-pipeline/actions/runs/42028280263)
+  all logged `(no changes)` and failed after three `git push origin HEAD:main`
+  attempts. Checkout uses `GITHUB_TOKEN`; the job has `contents: write` but
+  no authorized bypass. Live `main` requires a PR with one code-owner review;
+  only the Owner holds the admin role. Git's underlying rejection text is
+  absent, so attributing rejection to protection remains an inference.
+- **FACT** (code and dependency search): `reconcile.py` imported `doc_sync.py`
+  and `doc_sync_tier2.py` and read the current checkout's `ARCHITECTURE.md`
+  as the proposal for comparison with that same file. Meaningful document
+  changes were unreachable. Local history has no workflow-authored commit
+  changing `docs/ARCHITECTURE.md`. No other workflow or script depends on
+  reconciliation or its dedicated tests. No repository consumer reads the
+  run records; the shared legacy writer/retention helpers remain untouched.
+- **DECISION / outcome:** [ADR-0073](adr/0073-retire-post-merge-reconciliation.md),
+  Accepted, partially supersedes the remaining ADR-0033 points 1/6 and
+  ADR-0035's post-merge automation description. Removed
+  `.github/workflows/adr-0033-reconciliation.yml` (including its private
+  ToolTempest bootstrap), `.github/scripts/reconcile.py`,
+  `.github/scripts/test-reconcile.sh` and
+  `.github/scripts/test_reconcile_error_path.py`. Updated `CONTRIBUTING.md`,
+  the two affected `docs/ARCHITECTURE.md` rows and the generated ADR index.
+  No replacement publisher or persistent store is introduced; protection,
+  CODEOWNERS, unrelated workflows, shared components and historical records
+  are preserved.
+- **Verification:** `python3 scripts/generate_adr_index.py` (73 ADRs),
+  `python3 scripts/check_adr_numbering.py`,
+  `bash scripts/test-generate-adr-index.sh`,
+  `bash scripts/check-adr-citation.sh` and
+  `bash scripts/test-adr-citation-check.sh` passed. The targeted command
+  `PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -p no:cacheprovider -q scripts/test_milestone_fields.py scripts/test_milestones_boundary_check.py`
+  passed all 13 tests (exit 0). Eight temporary shared-DocOps checks passed
+  (exit 0): same-content/absent-file no-op, direct apply, non-interactive
+  gate, rejection rollback, confirmation, write-failure rollback, installed
+  manifest-checker consumer and legacy validator. Their first run exited 1
+  because the fixture's macOS temporary root was unresolved; resolving that
+  fixture path fixed the check without changing shared code.
+  The removal/reference, ADR structure/link and index-reproducibility checks
+  exited 0; SHA256 comparison preserved all 434 other pre-existing files,
+  including ignored artifacts and the historical run JSON. Other backlog
+  entries match the original bytes. Before staging and committing, the Git
+  staging index and HEAD were unchanged, and
+  read-only API reinspection confirmed the observed protection fields,
+  applicable rules and admin set still match the pre-implementation state.
 
-- [ ] Deferred — P2, known defect, outside `[B-080]`; no fix is scoped.
+Earlier reconciliation implementation commands and test results in this
+backlog are historical, not current execution instructions. Other entries
+and their statuses, including `[B-082]`, are preserved. General retirement of
+legacy DocOps dependencies belongs to a separately authorized Stage 8 task.
 
-**Source.** The Owner's instructions of 2026-11-05; run results read from the two logs above. No
-external AI contributed.
+- [x] Complete — obsolete reconciliation retired under the Owner-approved
+      direction; relevant checks pass. Publication requires remote verification.
+
+**Source.** The Owner's B-081 task supplied in this session; current code,
+local Git history and read-only GitHub API/log inspection on 2026-11-06.
 
 ### [B-082] P3 — `test-reconcile.sh` and `test_reconcile_error_path.py` run in no CI workflow
 
