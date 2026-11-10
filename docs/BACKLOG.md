@@ -2534,7 +2534,7 @@ are superseded by ADR-0059 and should be read as replaced by, not added to, this
       **that "archived and deleted" characterization was itself wrong.** A dedicated read-only
       search found `article-pipeline-trial-archive-20260929.tar.gz` fully intact at
       `~/Dev/article-pipeline-trial-archive-20260929.tar.gz`, plus an already-extracted copy
-      under `/private/tmp/`, both containing the trial's real guard wording
+      in a temporary directory, both containing the trial's real guard wording
       (`trial_identity_post.py`'s v2 `identity_contribution: AUTOMATION_ONLY_DAY` branch). This
       also corrects ADR-0059's own Context paragraph ("a now-deleted, archived sandbox") — not
       itself edited, per Immutable Lineage; the correction lives here instead. The guard's

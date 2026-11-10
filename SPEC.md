@@ -742,10 +742,9 @@ project's existing convention (`evidence_package/output/`,
 
 ## Test Plan
 
-Per `docs/CONSTITUTION.md`'s TDD rule, the following are exactly the
-"confirmation/gating mechanism whose entire purpose is to trigger under
-specific conditions" class this project already learned (the hard way,
-per that rule's own note) needs a test written first, not after:
+Per universal rule WR-6, the following mechanisms, whose whole job is a
+judgment or a trigger under specific conditions, need a test written first,
+not after:
 
 - Quality Gate's three-outcome state machine (`QUALITY_BLOCK` vs.
   `SYSTEM_FAILURE`, and the `HEALTHY→DEGRADED→RECOVERED` transition-only
