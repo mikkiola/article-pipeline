@@ -15,7 +15,7 @@ supersede or amend ADR-0042 (see Consequences).
 
 ## Context & Constraints
 
-The Q check of the Habr draft path (ADR-0071, `SPEC.md` M9 requirement 44)
+The Q check of the Habr draft path (ADR-0071, `SPEC.md` M9 requirement 45)
 assesses a draft against the infostyle criteria of the owner's `human-text`
 practice. Two facts bound the choice:
 
