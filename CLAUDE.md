@@ -9,7 +9,10 @@ Start with the section "How every repository works" of the
 [universal rules](docs/tooltempest/universal-rules.md): the reading order, the
 file that wins on a conflict, how a rule changes, and what each document is for.
 Its rules are binding. The file is installed from the pin; if it is absent, run
-"Setup of a fresh clone" in [README](README.md). Project rules are in
+"Setup of a fresh clone" in [README](README.md). If
+`docs/tooltempest/universal-rules.md` is missing: stop and run
+`python3 <ToolTempest checkout>/scripts/tooling.py materialize --root . --source <ToolTempest checkout> --apply`.
+Project rules are in
 [CONSTITUTION](docs/CONSTITUTION.md); [SPEC](SPEC.md) is the bounded
 implementation contract. This file routes to these sources. The working rules
 for neighboring repositories, outcomes, and verification are Constitution rules
