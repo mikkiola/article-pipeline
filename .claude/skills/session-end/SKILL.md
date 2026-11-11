@@ -11,8 +11,8 @@ allowed-tools: Read, Edit, Bash
 Explicit, human-triggered supplement to `SPEC.md`'s M2/M5
 autonomous-judgment plan-completion trigger — not a replacement, not a
 redesign. `SPEC.md`'s M2/M5 is unchanged; this command exists because
-its autonomous trigger cannot fire without a `docs/CONSTITUTION.md`-
-required "opening stated plan" (Session protocol), which a session
+its autonomous trigger cannot fire without the "opening stated plan" that
+the universal rules require (their "Reading order"), which a session
 made of many independently-scoped tasks never produces — confirmed by
 a real dry-run test, see `docs/BACKLOG.md`'s `[B-043]`. The owner
 types `/session-end`; invoking it *is* the signal — this command does
@@ -72,7 +72,9 @@ rule exists to prevent.
    trailers found in this session's commits — nothing to close.").
    Stop here; skip to the structural-fact-sync section below.
 4. **Exactly one candidate:** per `SPEC.md`'s M1 step 6 — write the
-   `docs/BACKLOG.md` edit and commit/push it directly. Invoking
+   `docs/BACKLOG.md` edit and make a local commit. Do not push: a push
+   needs the Owner's separate permission (WR-14 of the universal rules),
+   requested only after the mandatory checks pass. Invoking
    `/session-end` already is the owner's "close now" signal (the same
    role M2's step-4 "close now, or continue?" ask plays in the
    autonomous-trigger design) — no separate per-item confirmation

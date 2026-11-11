@@ -81,3 +81,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0071](0071-habr-draft-acceptance-contract-separate-from-r6-and-from-publication-approval.md) | The Habr draft acceptance contract is separate from R6 and is never publication approval | Accepted | null | null |
 | [ADR-0072](0072-adopt-the-tooltempest-distribution-model-materializer-only-no-network-in-hooks.md) | Adopt the ToolTempest distribution model: one installer, no network in hooks, one contract file | Accepted | ADR-0032 | null |
 | [ADR-0073](0073-retire-post-merge-reconciliation.md) | Retire post-merge reconciliation | Accepted | null | null |
+| [ADR-0074](0074-constitution-holds-project-rules-only.md) | The Constitution Holds Project Rules Only; Universal Rules Come from the Pinned ToolTempest File | Accepted | null | null |
