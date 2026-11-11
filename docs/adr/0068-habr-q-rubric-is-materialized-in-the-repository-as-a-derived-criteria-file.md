@@ -45,7 +45,7 @@ text may be published. The file's hash is recorded in every run record.
 |---|---|
 | A. Read the skill from the owner's home directory at run time | Not chosen. Not available in the runtime; ties production behavior to one machine. |
 | B. Integrate the paid Glavred API | Not chosen. Owner decision 2026-10-15: not at this stage. |
-| C. Build a general scoring engine | Not chosen. `SPEC.md` requirement 52 forbids an abstraction beyond this one path. |
+| C. Build a general scoring engine | Not chosen. `SPEC.md` requirement 53 forbids an abstraction beyond this one path. |
 | D. Chosen: a derived criteria file used as a prompt rubric | Smallest reuse that works unattended; versioned and hashed with the code. |
 
 ## Consequences
