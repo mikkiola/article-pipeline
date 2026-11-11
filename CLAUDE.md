@@ -40,7 +40,3 @@ python3 -m pytest linkedin_publisher publication_registry -q
 
 The [session-end skill](.claude/skills/session-end/SKILL.md) is the existing
 session-closing workflow.
-
-A `git push` needs the Owner's separate explicit permission (universal rule
-WR-14). Until the repin delivers that rule, this sentence is the in-repository
-statement of it.
