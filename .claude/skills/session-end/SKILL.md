@@ -1,6 +1,6 @@
 ---
 name: session-end
-description: "Explicit, owner-triggered session-end doc-sync for article-pipeline: reviews this session's commits for docs/BACKLOG.md items to close (Closes: B-NNN trailers, per SPEC.md's M1/M3), presenting/writing per that mechanism's confirmation rules. Triggers on: /session-end only — never invoked by the model on its own judgment. NOT for: autonomous session-end detection (that trigger already exists and was found impractical — see SPEC.md's M2/M5, docs/BACKLOG.md's [B-043])."
+description: "Explicit, owner-triggered session-end doc-sync for article-pipeline: reviews this session's commits for docs/BACKLOG.md items to close (Closes: B-NNN trailers), presenting and writing per the confirmation rules below. Triggers on: /session-end only — never invoked by the model on its own judgment. NOT for: autonomous session-end detection (that trigger already exists and was found impractical — see docs/BACKLOG.md's [B-043])."
 user-invocable: true
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash
@@ -8,10 +8,10 @@ allowed-tools: Read, Edit, Bash
 
 # /session-end
 
-Explicit, human-triggered supplement to `SPEC.md`'s M2/M5
-autonomous-judgment plan-completion trigger — not a replacement, not a
-redesign. `SPEC.md`'s M2/M5 is unchanged; this command exists because
-its autonomous trigger cannot fire without the "opening stated plan" that
+Explicit, human-triggered supplement to the autonomous-judgment
+plan-completion trigger — not a replacement, not a redesign. The autonomous
+trigger is unchanged; this command exists because
+it cannot fire without the "opening stated plan" that
 the universal rules require (their "Reading order"), which a session
 made of many independently-scoped tasks never produces — confirmed by
 a real dry-run test, see `docs/BACKLOG.md`'s `[B-043]`. The owner
@@ -45,7 +45,7 @@ has no trailing punctuation or continuation into further prose, a bare
 line-start grep under any circumstance — that is the exact bug this
 rule exists to prevent.
 
-## What this does — `docs/BACKLOG.md` closure (M1/M3, fully wired)
+## What this does — `docs/BACKLOG.md` closure
 
 1. **Find this session's `Closes: B-NNN` trailers**, per the
    trailer-detection rule above — never scan further back than this
@@ -56,15 +56,13 @@ rule exists to prevent.
 3. **Zero candidates found:** say so plainly (e.g. "No `Closes:`
    trailers found in this session's commits — nothing to close.").
    Stop here.
-4. **Exactly one candidate:** per `SPEC.md`'s M1 step 6 — write the
+4. **Exactly one candidate:** write the
    `docs/BACKLOG.md` edit and make a local commit. Do not push: a push
    needs the Owner's separate permission (WR-14 of the universal rules),
    requested only after the mandatory checks pass. Invoking
-   `/session-end` already is the owner's "close now" signal (the same
-   role M2's step-4 "close now, or continue?" ask plays in the
-   autonomous-trigger design) — no separate per-item confirmation
-   prompt needed on top of that.
-5. **More than one candidate:** present them using `SPEC.md`'s M3
+   `/session-end` already is the owner's "close now" signal — no
+   separate per-item confirmation prompt needed on top of that.
+5. **More than one candidate:** present them in this
    format, verbatim, no deviation:
 
    ```
@@ -83,8 +81,5 @@ rule exists to prevent.
    explicit — declining to close anything is a normal answer. Wait for
    the owner's explicit pick before writing anything; never guess.
 6. **If a closure later turns out wrong:** an ordinary follow-up
-   edit/commit fixes it — no supersession ritual, same as M1's own
-   design.
-7. Never touches `docs/CONSTITUTION.md` — permanently excluded, per
-   `SPEC.md`'s own stated scope (see its "`docs/CONSTITUTION.md` —
-   explicitly excluded" section).
+   edit/commit fixes it — no supersession ritual.
+7. Never touches `docs/CONSTITUTION.md` — permanently excluded.

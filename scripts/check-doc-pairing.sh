@@ -1,20 +1,13 @@
 #!/usr/bin/env bash
-# Warns (never blocks) when a component-directory change isn't paired
-# with an update to one of the Tier 2 docs in the same push. Originally
-# inline in scripts/hooks/pre-push, ARCHITECTURE.md-only; extracted
-# into its own script and extended to also cover BACKLOG.md,
-# ROADMAP.md, and README.md, per DocOps SPEC.md's M2 milestone
-# (2026-08-21). Article-pipeline-specific by design (the component
-# directory list below is this project's own, not a generic
-# ToolTempest mechanism -- see ToolTempest's own README on this
-# boundary: "each consumer that wants it has to replicate the pattern
-# into its own pre-push hook independently").
+# Warns (never blocks) when a push changes a component directory. For each
+# of docs/ARCHITECTURE.md, docs/BACKLOG.md, docs/ROADMAP.md and README.md
+# that the same push does not update, it prints a separate warning; a doc
+# the push does update gets none. A push that changes no component
+# directory, or a branch with no upstream, is not checked. The component
+# directory list below is this project's own, not a generic ToolTempest
+# mechanism.
 #
-# Severity is deliberately unchanged: this remains warning-only, never
-# sets a failing exit code. Whether it should become hard-fail is a
-# separate, still-open docs/BACKLOG.md "Owner decisions needed" item,
-# not re-decided by this extension -- this script only widens which
-# docs are checked, not what happens when one is missing.
+# A missing doc update produces a warning only and does not fail the push.
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"

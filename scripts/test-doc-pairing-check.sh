@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
-# Regression test for scripts/check-doc-pairing.sh (DocOps SPEC.md M2,
-# 2026-08-21): confirms a component-directory change independently
-# warns about each of ARCHITECTURE.md/BACKLOG.md/ROADMAP.md/README.md
-# that wasn't updated in the same push, stays silent about any that
-# were, and never sets a failing exit code (warning-only is unchanged
-# by this extension -- severity is a separate, still-open decision).
+# Regression test for scripts/check-doc-pairing.sh: confirms a component-directory
+# change independently warns about each of ARCHITECTURE.md/BACKLOG.md/ROADMAP.md/
+# README.md that wasn't updated in the same push, stays silent about any that were,
+# and never sets a failing exit code.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
