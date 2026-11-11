@@ -427,13 +427,6 @@ Habr's own rules were read from `habr.com/docs/help/rules` (last edited
 2026-07-08) on 2026-10-15; the text of the rules is not restated here and
 must be re-read from the page when the checks are planned.
 
-**Numbering (2026-10-20).** These requirements were numbered 41-56 while the
-section was a draft. Requirement 41 was meanwhile taken by M2's run outcome
-(FR41, committed first), so the M9 block is renumbered 42-57: every old number
-N is now N+1, in the same order. ADR-0068 was accepted before the renumbering
-and still cites the old numbers 44 (the four checks, now 45) and 52 (reuse, now
-53); accepted ADRs are not edited.
-
 42. **Purpose and boundary.** M9 produces an *internal* Habr draft from
    real Collector data, checks it, revises it within a bound, and saves
    a run report. It is the generation precondition FR17 consumes — gap
