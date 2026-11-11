@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
-# Installs the DocOps Protocol git hooks (ToolTempest ADR-0001) into
-# .git/hooks/. Human-triggered only -- nothing in this repository runs
-# it automatically. Running it activates pre-commit reconciliation and
-# adds DocOps hard validation to pre-push; until it is run, .git/hooks/
-# is left exactly as it already was.
+# Installs the DocOps Protocol git hooks (ToolTempest ADR-0001) into the
+# directory where Git reads hooks for this checkout (git rev-parse
+# --git-path hooks): <git-dir>/hooks in a primary clone, the shared hooks
+# directory of the main repository in a linked worktree, or core.hooksPath
+# when it is set. Human-triggered only -- nothing in this repository runs
+# it automatically. Running it makes pre-commit run the DocOps check on the
+# staged index and pre-push run the DocOps check on each pushed commit; until
+# it is run, the hooks directory is left exactly as it already was.
+#
+# In a linked worktree the hooks directory is shared with the main repository
+# and every other worktree, so running this script there also changes the
+# hooks of those checkouts.
 #
 # Source of truth for the hook bodies is scripts/hooks/{pre-commit,
 # pre-push} in this repository (tracked in git, unlike .git/hooks/
@@ -12,7 +19,6 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-HOOKS_DIR="${REPO_ROOT}/.git/hooks"
 SOURCE_DIR="${REPO_ROOT}/scripts/hooks"
 
 fail() {
@@ -20,7 +26,15 @@ fail() {
   exit 1
 }
 
-[ -d "${REPO_ROOT}/.git" ] || fail "${REPO_ROOT} is not a git repository root"
+git -C "${REPO_ROOT}" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+  || fail "${REPO_ROOT} is not inside a git work tree"
+HOOKS_DIR="$(git -C "${REPO_ROOT}" rev-parse --git-path hooks)" \
+  || fail "cannot resolve the git hooks directory"
+case "${HOOKS_DIR}" in
+  /*) ;;
+  *) HOOKS_DIR="${REPO_ROOT}/${HOOKS_DIR}" ;;
+esac
+mkdir -p "${HOOKS_DIR}"
 [ -f "${SOURCE_DIR}/pre-commit" ] || fail "source hook not found: ${SOURCE_DIR}/pre-commit"
 [ -f "${SOURCE_DIR}/pre-push" ] || fail "source hook not found: ${SOURCE_DIR}/pre-push"
 
