@@ -26,8 +26,9 @@ for how it's wired today; full per-component status is in
 ## Setup of a fresh clone
 
 The ToolTempest files this repository uses (`scripts/tooling.py`,
-`scripts/docops.py`, `scripts/doc_sync.py`, the other installed `scripts/` and
-`schemas/` files, and `docs/tooltempest/consumer-contract.md`; the universal rules file joins them after the repin that delivers it) are installed
+`scripts/docops.py`, the other installed `scripts/` and `schemas/` files, and
+`docs/tooltempest/consumer-contract.md` and `docs/tooltempest/universal-rules.md`)
+are installed
 from the commit pinned in `.tooltempest.lock` and are not tracked. A fresh clone
 therefore lacks them, including `scripts/tooling.py`, and its `.git/hooks` holds
 no hooks yet; the last step below installs them. Once installed, the hooks block
@@ -53,7 +54,7 @@ The client target installs ToolTempest's `skills/` and `rules/` into a client
 configuration directory, only when asked and only into the root you name; there
 is no default root. Neither the git hooks nor CI use it. The root needs its own
 `.tooltempest.lock`, and the materializer never creates a lock (it never pins).
-Do not copy this repository's lock: it declares `scripts/doc_sync.py`, a path
+Do not copy this repository's lock: it declares `scripts/docops.py`, a path
 the client target does not install, so the target rejects it
 (`DECLARED_PATH_NOT_INSTALLABLE`). Write a lock with the same `repository` and
 `commit` only, then run the target, with `tt` set as above (steps as in the

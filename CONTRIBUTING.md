@@ -13,9 +13,7 @@ the same PR:
 - **`docs/ROADMAP.md`** — if your change affects sequencing or the
   current phase plan.
 - **`README.md`** — if your change affects what the project does or
-  how to use it. Flows through the same contributor-supplied-content
-  model as `docs/ARCHITECTURE.md` (ADR-0034), since it joined
-  `TIER2_DOCS` as a direct-write doc (ToolTempest ADR-0004).
+  how to use it.
 
 Write the update in the format the project's existing entries already
 use in each file — match the surrounding style rather than inventing
