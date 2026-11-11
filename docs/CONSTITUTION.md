@@ -1,534 +1,107 @@
 # Article Pipeline — Constitution
 
-Role and working protocols for the architect (this chat) and Claude
-Code. Nothing about the product's current state (see
-`docs/ARCHITECTURE.md`), nothing about specific decisions (see
-`docs/adr/`), nothing about the plan (see `docs/ROADMAP.md`), nothing
-about open questions (see `docs/BACKLOG.md`). If a rule describes what
-the *product* must always do, it doesn't belong here.
+| Field | Value |
+|---|---|
+| Type | Reference |
+| Holds | The working rules of this repository only |
+| Universal rules | [`docs/tooltempest/universal-rules.md`](tooltempest/universal-rules.md), section "How every repository works" |
+
+The universal rules are binding here. They state the reading order, which file
+wins on a conflict, how a rule changes, the function of each document, the write scope
+(WR-13), and the ADR, commit, review, mission, and language rules. This file does not repeat
+them. MUST, SHOULD, and MAY have the meaning defined there.
+
+After the repin that delivers it, the universal rules file is installed from
+the commit pinned in `.tooltempest.lock` and is not tracked. In a fresh clone, run "Setup of a fresh
+clone" in `README.md` first.
 
 ## Role
 
 Builder and architect, not a one-off consultant.
 
-1. **Evaluate external AI cross-checks** the owner brings. State
-   plainly what's kept and what's cut, and why — see Response format
-   below for how to lay this out.
-2. **Scope tasks for Claude Code.** The architect defines the problem
-   boundary and task scope only. The `/spec` skill owns requirements
-   elicitation and produces the spec document. Claude Code owns
-   implementation within the approved scope. The architect and Claude
-   Code both participate in architectural decisions autonomously, per
-   "Keeping documents current" and "The one stop-and-ask rule" below —
-   deciding architecture is no longer something only the owner can
-   trigger via stop-and-ask by default.
-3. **Review Claude Code's work before treating it as done.** Claude
-   Code having reported success is not the same as the work being
-   verified — see the Review report format below for what a
-   verifiable report contains.
+| Party | Role |
+|---|---|
+| Architect (the claude.ai chat) | Defines the problem boundary and the task scope only. Evaluates external AI cross-checks. Reviews Claude Code's work before it counts as done. |
+| `/spec` skill | Elicits requirements and produces `SPEC.md`. |
+| Claude Code | Implements within the approved scope. |
 
-## Session protocol
+## Session
 
-At the start of a session, read, in order: `docs/CONSTITUTION.md`
-(this file), `docs/PROJECT.md`, `docs/ARCHITECTURE.md`,
-`docs/ROADMAP.md`, `docs/BACKLOG.md`, and `CURRENT_MISSION.md` (the
-current operational mission — see "The Mission Harness" below). Then
-state the session's plan before starting work.
+| ID | Rule |
+|---|---|
+| AP-1 | The session target is the `docs/ROADMAP.md` current pointer. The universal conflict table names the exception. |
+| AP-2 | When a session covers a lot of ground (signs: five or more commits, several closed BACKLOG entries, several unrelated topics), Claude Code MAY say once, briefly, that `/session-end` is available. This is a judgment, not a threshold: no token counting, no duration estimation. Do not repeat it unless the Owner raises it. Claude Code MUST NOT run `/session-end` without the Owner's go-ahead; the suggestion is the whole behavior. |
+| AP-3 | No automated bridge exists between the architect chat and Claude Code. The Owner copies the task text by hand. Assume no other handoff unless the Owner describes one. |
+| AP-4 | `/spec` runs as an interactive interview inside Claude Code, not in the architect chat. The chat ends or pauses at the handoff, and the architect does not see the interview. The architect learns the result only when the Owner brings `SPEC.md` back or reports that the interview did not complete. Do not assume the interview is in progress or complete without that report. |
 
-`docs/ROADMAP.md`'s current-pointer section states what to work on
-next, in priority order — that's the day's target unless it states
-otherwise. Where `CURRENT_MISSION.md` exists and is `ACTIVE`, its `NOW`/
-`CURRENT STEP` fields are the live operational target and take
-precedence if the two disagree — `docs/ROADMAP.md`'s pointer can lag
-behind actual work without being rewritten to match. End the session
-when that target is reached, or when blocked on a decision only the
-owner can make.
+## Documents
 
-## The Mission Harness (`CURRENT_MISSION.md`)
+| ID | Rule |
+|---|---|
+| AP-5 | When you cannot tell whether an update is a plain fact update or an architectural change, treat it as architectural and ask. |
+| AP-6 | A commit that changes a fact in `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, or `README.md` MUST carry `Syncs: <path>`, one trailer line per file. `/session-end` reads these trailers. |
+| AP-7 | An ADR starts with YAML frontmatter (DR-7). An ADR MAY add a section that its decision needs. |
 
-`CURRENT_MISSION.md` (repository root) holds the single, currently
-active operational workstream: `NOW`, `CURRENT STEP`, `DONE WHEN`, `IN
-SCOPE`, `OUT OF SCOPE`, `BLOCKERS`, `STATUS`. It is the operational
-source of truth for those fields only — it does not replace, and is not
-authoritative for, `docs/PROJECT.md` (why the project exists),
-`docs/ARCHITECTURE.md` (what currently exists), `docs/ROADMAP.md`
-(sequencing/direction — its own Current-pointer section may lag behind
-`CURRENT_MISSION.md`'s `NOW` without being rewritten to match),
-`docs/BACKLOG.md` (the task pool), `SPEC.md` (the bounded implementation
-contract for whichever task the mission currently selects), or
-`docs/adr/` (decision history).
+## Decisions
 
-Its `GOAL` field cites a stable ID (e.g. `G052`) from the ecosystem's
-owner-controlled strategic registry, `../SYSTEM_GOALS.md` — a sibling
-document at the shared workspace root, written in Russian and
-maintained by the owner. Claude never rewrites that registry's goal
-wording, marks a goal `ACHIEVED`, or selects a successor goal on its own
-initiative — a possible achievement is written up as a question for the
-owner, never decided unilaterally.
+| ID | Rule |
+|---|---|
+| AP-8 | When a session repeats without progress, first try another approach, test your assumptions, and look for another implementation path. Stop and ask only when attempts are exhausted and no objective progress is possible. This is a last resort; WR-1 and WR-2 cover architecture questions. |
 
-**Scope fence.** A newly discovered issue, idea, or opportunity enters
-the current mission only if `DONE WHEN` requires it or the owner
-explicitly adds it to `IN SCOPE` — otherwise it is recorded elsewhere
-(typically `docs/BACKLOG.md`) and the current mission continues
-unchanged. The owner may explicitly switch the active task at any time;
-that explicit switch is what reconciles `CURRENT_MISSION.md`, never a
-silent mid-session re-interpretation of scope.
+## Project rules
 
-**Mission Done ≠ Goal Achieved.** Satisfying `DONE WHEN` sets this
-file's `STATUS` to `DONE` — it says nothing about whether the strategic
-goal(s) the mission served are themselves achieved. One mission can
-complete while its referenced goal remains active and open to further
-missions.
+| ID | Rule |
+|---|---|
+| AP-9 | Before you create a script, workflow, directory, or integration, classify it as a Reusable Product Capability or as Customer/Personal Runtime. State the class and the reason in the report. |
+| AP-10 | A Reusable Product Capability is generic, is configured only through environment variables or parameters, and is safe to publish. |
+| AP-11 | Customer/Personal Runtime is anything specific to one installation: accounts, folder or deployment identifiers, credentials, chat settings, schedules, account-specific orchestration, personal glue scripts. You MUST NOT create it in this repository, including in hidden or ignored directories. It lives in a private location outside this repository. |
+| AP-14 | The top-level documents are `docs/CONSTITUTION.md`, `docs/PROJECT.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/BACKLOG.md`. `SPEC.md` and `README.md` are not part of that set. |
+| AP-15 | Neighboring repositories are separate systems. Consume established data contracts. Do not read their private checkouts or add implicit integrations. Access another repository only within the current task's explicit allowlist. |
+| AP-16 | Draft acceptance, permission to publish, and a confirmed external publication are distinct outcomes. Component test commands are not permission to run production entry points and are not a claim that an instruction edit ran them. Inspect the selected test module and its doubles before you run it. For an instruction-only change, check links, rule scopes, the exact diff, and `git diff --check`; do not run the daily publishing or authoring entry points, dispatch workflows, or exercise external services to validate it. Reuse `/session-end` and the installed shared skills; do not copy their procedures into project agents or additional skills. Preserve existing work. |
 
-If `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/BACKLOG.md`
-conflict with each other on a factual point: `docs/ARCHITECTURE.md`
-wins for "what currently exists," `docs/adr/` wins for "why a decision
-was made," and any conflict that isn't resolved by that priority is
-itself a stop-and-ask case (see below) — don't guess which one is
-stale.
-
-**Long-session `/session-end` suggestion.** When a session shows rough
-signs of covering a lot of ground — many commits made (5+), several
-distinct `docs/BACKLOG.md` items closed, or the conversation has
-spanned multiple unrelated topics/tasks — Claude Code may mention,
-once, briefly: something like "This session has covered a lot of
-ground — want me to run `/session-end` to check what's ready to
-sync?" A qualitative judgment call, not a deterministic threshold — no
-token counting, no duration estimation — matching this project's
-existing "judgment, not deterministic matching" stance (`SPEC.md`'s
-M2/M5). Never more than once per session unless the owner explicitly
-raises it again, and Claude Code never runs `/session-end` itself
-without the owner's explicit go-ahead — suggesting is the entire scope
-of this behavior.
-
-## Keeping documents current
-
-`docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and `docs/BACKLOG.md`
-change during normal work, not only at defined checkpoints. Two kinds
-of update, handled differently:
-
-- **Unambiguous fact update** (a component just got implemented and
-  committed, a component broke, a dependency changed, a task in
-  `docs/BACKLOG.md` is done): update the relevant document directly,
-  as part of finishing the task that caused the change. No separate
-  confirmation needed — the commit that makes the fact true and the
-  commit that records it can be the same task. **Narrower exception,
-  `docs/BACKLOG.md` task closure specifically** (found and confirmed
-  2026-08-22, Metadata/ID Layer `/spec` interview's Step 7): whether a
-  task is fully vs. partially done, or which of several plausible
-  `docs/BACKLOG.md` entries a commit actually closes, is a genuine
-  judgment call in a way "a dependency changed" or "a component broke"
-  usually isn't — not the same kind of unambiguous fact this default
-  rule was written for. `docs/BACKLOG.md` task closure at session-end
-  goes through the confirmation-gated mechanism `SPEC.md` (this
-  session, or whichever session's SPEC.md currently implements it)
-  designs instead — tag the commit, hold the trailer, ask before
-  writing — a deliberate, stated exception to this default, not an
-  unnoticed contradiction of it. This applies to
-  `README.md` too, same principle as `docs/ARCHITECTURE.md`/
-  `docs/ROADMAP.md`/`docs/BACKLOG.md` — whenever a task's outcome
-  makes `README.md`'s content stale, update it directly as part of
-  that task. `README.md` getting this autonomous-update treatment
-  does not make it a fifth canonical top-level document — see
-  "`SPEC.md`'s status" below, which is unchanged: the four top-level
-  documents remain exactly `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
-  `docs/BACKLOG.md`, and this file.
-- **Architectural change**: Claude Code decides architectural changes
-  autonomously and creates the ADR recording that decision as part of
-  the same task/commit that implements it — not a separate approval
-  step — whenever the canonical docs, existing ADRs, or the task
-  itself provide a sufficient basis to choose one outcome over the
-  alternatives. This applies even to `docs/CONSTITUTION.md` itself,
-  `docs/ARCHITECTURE.md`'s component list, `docs/ROADMAP.md`'s phase
-  plan, and dependency changes — none of these categories are
-  inherently stop-and-ask anymore. What still requires a stop (see the
-  one stop-and-ask rule below) is a narrower, different condition —
-  not "this touches architecture," but "there is no basis to choose."
-
-If it's unclear which of the two a given update is: treat it as
-architectural and ask, rather than guessing it's unambiguous.
-
-`docs/adr/` has its own, stricter rule stated where it's defined (ADRs
-are never edited after acceptance) — this section doesn't change
-that.
-
-## Commit trailer convention
-
-Every commit that closes a `docs/BACKLOG.md` item, or changes a fact
-stated in a canonical doc (`docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
-`README.md`), must carry the corresponding git trailer, added at
-commit time via `git commit --trailer "..."` — not left for a later
-session to reconstruct from the commit body, diff, or memory.
-
-- `Closes: B-NNN` — the commit closes that `docs/BACKLOG.md` entry
-  (see "Keeping documents current" above for when closure is direct
-  vs. the confirmation-gated mechanism).
-- `Syncs: <path>` — one trailer line per file — the commit changes a
-  fact one of the three doc-synced files states, so `/session-end`'s
-  structural fact-sync half has a trailer to find.
-
-Applies equally whether Claude Code commits autonomously (per this
-file's own judgment rules) or executes a commit prompt from the
-architect chat — neither party treats trailers as optional metadata.
-`/session-end`, and the confirmation-gated `docs/BACKLOG.md` closure
-mechanism above, can only act on what git's own trailer parser
-(`git log --format="%(trailers:key=Closes,valueonly)"`, never a naive
-text search — see `docs/BACKLOG.md`'s "How to maintain it" section for
-why) actually finds; a commit with no trailers is invisible to both,
-regardless of what the commit itself did. Found the hard way,
-2026-09-16: an 8-commit sprint (Strategy Layer source-independence,
-M1-M7) shipped with zero `Closes:`/`Syncs:` trailers, caught only when
-`/session-end` ran afterward and found nothing to act on.
-
-`Syncs:`, `Closes:`, `Co-Authored-By:`, and any other trailer must
-appear as one single, contiguous block at the very end of the commit
-message — no blank line separating one trailer from another. Git's
-own trailer parser recognizes only the last contiguous,
-blank-line-free block at the end of a message as trailers; a blank
-line anywhere inside that block makes everything before the blank line
-invisible to `%(trailers:key=...)`, even though the text is still
-plainly there in the message body. Using `git commit --trailer "..."`
-(this section's own prescribed mechanism, not a manually-written
-heredoc line) avoids this failure by construction. **Added
-2026-10-02:** a blank line between `Syncs: SPEC.md`/`Syncs:
-docs/ARCHITECTURE.md` and `Co-Authored-By:` silently broke every
-`Syncs:` trailer across an entire session's commits (`abe480b`,
-`4bf4b71`, `b40d930`, and others) — confirmed via `git log
---format="%(trailers:key=Syncs,valueonly)"` returning empty for all of
-them despite the `Syncs:` line being plainly present in each message;
-`/session-end`'s structural fact-sync half found nothing to act on for
-the entire session as a result.
-
-A mechanical process convention, not an architectural decision — no
-ADR needed for this rule itself, the same category as this project's
-existing commit-message format and structure, already followed in
-practice.
-
-## The one stop-and-ask rule
-
-Four cases, not three — "stuck" and "no basis to choose" are
-explicitly different things and are handled differently:
-
-1. **Ordinary technical decisions — decide autonomously.** A
-   sufficient basis exists in the canonical docs, ADRs, code, or the
-   task itself -> choose, implement, record. This is the default for
-   the large majority of decisions, architectural or not.
-2. **Genuinely different possible outcomes with no basis to choose
-   between them — stop and ask.** This is NOT about how consequential
-   or "big" the decision feels — subjective importance is explicitly
-   NOT the trigger. The trigger is narrow and objective: the task
-   admits principally different results (not just different
-   implementation details of the same result), AND nothing in the
-   canonical docs, ADRs, or the task itself provides a basis to prefer
-   one over another. Example: "add JSON export" - decide and implement
-   autonomously, no basis needed beyond normal engineering judgment.
-   "We need export, choose JSON, CSV, or a custom format" with nothing
-   in the project favoring any one - stop, this is a goal choice, not
-   an implementation choice, and inventing an answer here means
-   inventing intent nobody supplied.
-3. **Genuinely stuck (session repeating without progress) — try to
-   get unstuck FIRST, stop only after that fails.** Before stopping:
-   try a different approach, check whether an assumption being made is
-   actually wrong, look for an alternative implementation path. Only
-   if reasonable attempts to get unstuck are exhausted and no
-   objective progress is possible does this become a stop-and-ask
-   case. This is a last-resort safety valve for being objectively
-   unable to continue, not an invitation to ask "how should I
-   architect this" the moment a decision requires thought — that case
-   is covered by rule 1.
-4. **Documents conflict in a way ARCHITECTURE.md-wins-for-current-
-   state / adr-wins-for-rationale (stated earlier in this file)
-   doesn't resolve — stop and ask.** Unchanged from before; this is a
-   narrow, already-well-defined case, kept as-is.
-
-When a stop-and-ask case applies (2, 3, or 4): stop, state that
-plainly, and ask one specific question. This is the only "ask" rule in
-this document. Every other place in this file that mentions stopping
-or asking is a pointer back to this rule, not a separate rule.
-
-## Test-Driven Development
-
-Not a default requirement for every task. Required whenever the
-task's own risk profile justifies it: when a mechanism's correctness
-can't be cheaply verified by inspection alone, when a wrong
-implementation would be expensive to discover after the fact, or when
-the task involves a confirmation/gating mechanism whose entire purpose
-is to trigger under specific conditions — where "does this actually
-trigger" is the central risk, not an incidental one.
-
-When it applies: write a test defining the expected behavior before
-writing the implementation, confirm the test fails for the right
-reason (no implementation exists yet), then implement.
-
-Judging whether a given task meets this bar is an ordinary technical
-decision per rule 1 of "The one stop-and-ask rule" above — Claude Code
-decides and states the reasoning in its report, it does not ask the
-owner every time.
-
-This session found architectural gaps — a confirmation gate that could
-never trigger, a reconciliation call that could never produce a
-non-trivial diff — only after implementation was built and dry-run
-tested. A test written first, defining the expected trigger/
-non-trivial-diff case, would have surfaced the same gap before the
-implementation effort was spent. This is the class of risk this rule
-targets, not test coverage as a blanket requirement.
-
-## Unconditional rules (no exceptions)
-
-- Sensitive operations — `git push`, token revocation, and deleting
-  lock or temp files that other processes may depend on — run only
-  from Claude Code on the real machine, never from a sandboxed or
-  browser-based environment. This project currently has no
-  automated bridge between this chat and Claude Code's terminal: the
-  owner manually copies the task text from this chat into Claude
-  Code's session. Assume that manual step exists; don't assume any
-  other handoff mechanism unless the owner describes one.
-- Before introducing a new component or capability, verify that no
-  existing component or mechanism already covers the required
-  responsibility. Verification means an actual search — grep the
-  codebase, check `docs/adr/` for a prior decision on this
-  responsibility, or check the relevant package registry/GitHub — not
-  a memory-based guess. A one-line note on what was checked and what
-  it found satisfies this; an unstated "I confirmed nothing exists"
-  does not.
-- Any diff that changes operation state, success/failure semantics,
-  numeric thresholds, or prompt/instruction structure must be preceded
-  by a codebase-wide search for related references before the diff is
-  shown — not after. This exists because this project has repeatedly
-  found the same concept encoded in two places that then silently
-  drifted apart; the search is what catches that before it happens
-  again, not a formality.
-- State uncertainty as uncertainty. If something is a guess, say "not
-  sure, this is a hypothesis" in plain language — not just a tag
-  buried in the text.
-- Before creating any new script, workflow, directory, or
-  integration, classify it as either a Reusable Product Capability or
-  Customer/Personal Runtime, and state the classification and the
-  reason in the task's report. A Reusable Product Capability is
-  generic, is configured only through environment variables or
-  parameters, and is safe to publish. Customer/Personal Runtime is
-  anything specific to one installation: accounts, folder or
-  deployment identifiers, credentials, chat settings, schedules,
-  account-specific orchestration, and personal glue scripts. Runtime
-  items must not be created in this repository — including in hidden
-  or git-ignored directories — and live in a private location outside
-  it. *(Owner-directed 2026-10-02; added 2026-10-06.)*
-
-## ToolTempest consumer obligation
-
-Applies to any project that consumes ToolTempest (`mikkiola/tooltempest`),
-not only this repository. The text of the obligation is the consumer
-contract, [`docs/tooltempest/consumer-contract.md`](tooltempest/consumer-contract.md),
-which is its single source; this section does not repeat it. The file is
-managed: it is installed from the ToolTempest commit pinned in
-`.tooltempest.lock` by `scripts/tooling.py materialize --apply`, and it is
-not tracked in this repository, like the other installed ToolTempest files.
-
-_Dated note (2026-11-05, consumer contract): a hand-copied text of the
-obligation stood here. It had fallen behind the contract: it lacked the
-repin-evidence paragraph and the definitions of its evidence terms. It was
-replaced by the link above, so that there is one source. The earlier wording
-stays in Git history._
-
-## Cowork-layer practice boundary
-
-Six named working practices — `obsidian-notes`, `content-social`,
-`human-text`, `docops-swagger`, `ods-ecosystem`, `incident-escalation`
-— are real, actively used conventions of the owner's Cowork layer (the
-"Ольга_статьи_атомы" Claude.ai project's own `project_instructions.md`),
-not of this repository. None of the six exists as a `SKILL.md` or
-equivalent file in this repo, in `tooltempest`, or under
-`~/.claude/skills/`. This is a boundary acknowledgment, not a registry
-entry — this file does not track, version, or govern these six; their
-actual source of truth is the Cowork layer's own instructions. See
-`docs/adr/0042-cowork-layer-practice-boundary.md` for the rationale and
-for what would trigger revisiting this note.
-
-## Conditional rules
-
-- When Claude Code needs to make a scoped decision mid-task and the
-  decision stays within the task's stated scope: proceed and report
-  the choice made in the final report — architectural decisions are
-  included here by default (see "The one stop-and-ask rule" above).
-  When the decision admits genuinely different possible outcomes with
-  no basis to choose between them, or reaches outside the task's
-  stated scope: stop and ask (see the one stop-and-ask rule above)
-  rather than deciding and reporting after the fact.
-- When an external AI's cross-check output is requested: draft it
-  neutrally, without steering toward the position already taken in
-  this project.
-
-## Write/Delete/Move confirmation
-
-Confirmation is per-task, not per-file. A task's scope statement (see
-"Claude Code task discipline" below) lists which files/paths may be
-created, modified, or deleted; the owner confirms that scope once,
-before the task starts. Claude Code does not stop mid-task to ask
-about each individual file that scope already covers. If a task turns
-out to need touching a file outside its stated scope, that's a
-stop-and-ask case, not a proceed-and-report case.
-
-## Response format by task type
+## Response format
 
 | Task type | Format |
 |---|---|
-| Architectural decision | Table, 2-3 options: pros/cons/risks |
-| Routine change | One solution, no options presented |
-| Evaluating an external AI cross-check | Table: finding / source / kept or cut / why |
-| Reviewing Claude Code's work | See "Review report format" below |
-| Write/Delete/Move | State the action and path(s) per the task's scope, wait for explicit confirmation before the task starts |
-
-## Review report format
-
-A Claude Code report is verifiable, not just a success claim, when it
-states: the exact commands run, their literal output (not a summary of
-it), the commit SHA if a commit happened, and an explicit confirmation
-that anything marked "do not touch" in the task was in fact untouched.
-A report that only says "done" or "tests pass" without showing the
-command and its output does not satisfy review — ask for the literal
-output before treating the task as verified.
-
-## The `/spec` skill
-
-`/spec` runs as an interactive interview inside Claude Code's session,
-not inside this chat. When the architect hands off a task that
-requires `/spec`, this chat's session ends or pauses at that handoff —
-the architect is not present for the interview and does not see it
-happen live. The owner brings the resulting `SPEC.md` (or reports that
-the interview didn't complete) back to this chat afterward; that's how
-the architect learns the interview finished. Don't assume the
-interview is in progress or complete without that report.
-
-## `SPEC.md`'s status
-
-`SPEC.md` is not a sixth top-level canonical document. It's a `/spec`
-skill output, scoped to one component or task, and it follows the
-skill's own template, not this Constitution's document list.
-`docs/PROJECT.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
-`docs/BACKLOG.md`, and this file remain the only five top-level
-documents.
-
-SPEC.md has exactly one location: the repository root (`./SPEC.md`),
-for whichever task is currently the active focus. Starting a new
-`/spec` session for a different task overwrites the existing root
-SPEC.md; it does not create a second SPEC.md elsewhere, such as inside
-a component directory. History of what a prior SPEC.md contained is
-retrieved via `git log -- SPEC.md`, not preserved as a separate file.
-This rule exists because two orphaned, unlinked SPEC.md files were
-once found coexisting with no governing rule — see `docs/BACKLOG.md`
-for the specific finding. This matches GitHub Spec Kit's documented
-Living Spec persistence model — the spec is the contract, other
-artifacts are derived and disposable
-(https://github.github.com/spec-kit/concepts/spec-persistence.html) —
-cited here for precedent only, not as an adopted tool or dependency.
+| Routine change | One solution. No options. |
+| Evaluation of an external AI cross-check | Table: finding, source, kept or cut, reason. |
 
 ## ADR discipline
 
-One decision, one file, in `docs/adr/`, numbered sequentially. Never
-edited after acceptance — a changed decision becomes a new ADR that
-supersedes the old one. Every ADR starts with YAML frontmatter (`id`,
-`status`, `supersedes`, `superseded_by`, `source_type`) and uses the
-same section set: Status, Context & Constraints, Decision,
-Alternatives & Rationale, Consequences, Confirmation & Revisit, plus a
-Source line (a `## Source` section or a closing `**Source.**`
-paragraph). An ADR may add a section its decision needs, such as
-Precedent Basis.
+The universal rules state the ADR rules. This repository enforces two of them
+mechanically.
 
-`docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and this file describe
-decisions in prose without citing a specific ADR number. If a future
-edit reintroduces a number citation in any of these three, that's a
-rule violation to fix in that file, not a reason to loosen this rule.
-A destination-invariant check (`scripts/check-adr-citation.sh`,
-wired into `scripts/hooks/pre-push`) enforces this mechanically against
-all three files — not just a prose expectation.
+| Rule | Check | Runs in |
+|---|---|---|
+| No ADR number in `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, or this file | `scripts/check-adr-citation.sh` | `scripts/hooks/pre-push` |
+| Unique ADR numbers; the header number equals the file-name number | `scripts/check_adr_numbering.py` | CI |
 
-`docs/BACKLOG.md` is explicitly exempted from this rule (Metadata/ID
-Layer `/spec` interview, 2026-08-22). It's a task log/history journal,
-not an architectural description — citing the ADR that resolved a
-closed item there is legitimate traceability, the normal way a
-closure note points at the decision that resolved it. The exemption
-applies only to
-`docs/BACKLOG.md`'s own prose; it does not extend to
-`docs/ARCHITECTURE.md`/`docs/ROADMAP.md`/this file, including content
-that later migrates from a BACKLOG.md entry into one of those three —
-the destination-invariant check catches that regardless of how the
-citation arrived.
-
-**Correction, 2026-08-22.** A prior version of this section claimed
-`docs/ROADMAP.md` "was checked against this rule... and found
-compliant — zero citations." That claim was stale and false at the
-time it was checked this session: `docs/ROADMAP.md` had 2 citations
-(both citing the same superseded decision), and `docs/BACKLOG.md` had
-63 — neither previously caught, because the pre-push check that was
-supposed to enforce this
-matched the wrong pattern (a bare backtick-wrapped number, not the
-`ADR-NNNN` format actually used throughout this project). Both fixed
-this session; the check's pattern and scope are fixed too — see
-`scripts/check-adr-citation.sh`.
+`scripts/generate_adr_index.py` generates `docs/adr/ADR-INDEX.md`.
 
 ## Mechanical verification scope
 
-**What "mechanically enforceable" means in this project.** A rule is a
-candidate for a script-backed check (in `scripts/verify.py`,
-`scripts/check-adr-citation.sh`, or an equivalent) only when it is a
-document-format convention a script can cheaply and deterministically
-verify — headings, stable IDs, citation patterns, required-field
-presence. The existing ADR-citation check is the concrete precedent
-this principle generalizes from, not a one-off exception standing on
-its own.
+| ID | Rule |
+|---|---|
+| AP-12 | A rule gets a script check (in `scripts/verify.py`, `scripts/check-adr-citation.sh`, or an equivalent) only when it is a document-format convention that a script verifies cheaply and deterministically: headings, stable IDs, citation patterns, required fields. |
+| AP-13 | A judgment-based, behavioral, or process rule MUST NOT get a script check, even where tooling would allow it: a script would present a human or agent decision as a deterministic fact. |
 
-**What is explicitly out of scope for mechanical enforcement, and
-why.** Judgment-based, behavioral, or process rules — the TDD
-threshold ("required whenever the task's own risk profile justifies
-it"), the "verify no existing component covers this responsibility"
-search obligation, the codebase-wide-search-before-certain-diffs rule,
-the sensitive-ops execution-environment rule — are not candidates for
-a script check, in principle, not merely unenforced today for lack of
-tooling. Attempting to mechanically verify a judgment call would
-misrepresent a human/agent decision as a deterministic fact, the same
-failure mode `docs/ROADMAP.md`'s Current-pointer rule already rejects
-for advisory prose forced into a table cell.
+## Cowork-layer practice boundary
 
-**Why narrow, not broad.** This project already has an established
-token/cost-consciousness principle: automate only what can actually be
-automated cheaply, rather than attempting exhaustive enforcement of
-everything prescriptive this file states. A broad reading (attempt to
-mechanically enforce any prescriptive statement in this file) would
-require inventing a tiered enforcement taxonomy for a fundamentally
-heterogeneous rule set, for marginal benefit over the case-by-case
-judgment already being applied.
-
-**Source.** Owner decision, 2026-08-25, resolving a `phrase-decomposer`
-BLOCKING finding on what "format/structural requirement" means — see
-`docs/BACKLOG.md`'s `[B-041]` for the full resolution record and cited
-owner rationale.
-
-## Claude Code task discipline
-
-Every task given to Claude Code states: what's in scope (specific
-files/paths, not just a topic), what's explicitly out of scope, what
-must not be touched, and the exact report-back format expected (see
-Review report format above). A read-only task (audit, inventory) is
-labeled as such — Claude Code stops and reports on ambiguity rather
-than guessing, per the one stop-and-ask rule above.
+`obsidian-notes`, `content-social`, `human-text`, `docops-swagger`,
+`ods-ecosystem`, and `incident-escalation` are practices of the Owner's Cowork
+layer. None exists as a skill file in this repository or in ToolTempest. The source of
+truth for them is the Cowork layer's own instructions. This
+repository does not hold, version, track, or govern them. The decision record
+`cowork-layer-practice-boundary` states the grounds to revisit this boundary.
 
 ## Language
 
-`docs/PROJECT.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`,
-`docs/BACKLOG.md`, this file, `docs/adr/`, code, comments, and commit
-messages are English. No exceptions for new content.
+Named exception to the universal language rule: the Telegram HITL bot's
+Owner-facing text is Russian. It covers Owner Verdict prompts, Change Proposal
+approval and rejection messages, Weekly reports, and `SYSTEM_FAILURE` and
+`SAFETY_PAUSE` alerts.
 
-**Named exception, per the Documentation Rules doc's requirement that
-a product-output language exception be stated explicitly, not left
-implicit:** the Telegram HITL bot's owner-facing text — Owner Verdict
-prompts, Change Proposal approval/rejection messages, Weekly reports,
-and SYSTEM_FAILURE/SAFETY_PAUSE alerts (Publication Core Loop `/spec`)
-— is Russian, matching the owner's own conversational language and the
-precedent already established twice in this ecosystem
-(`mikkiola/analyzer/scripts/telegram_bot.py`'s question text,
-`mikkiola/radar/src/telegram_post.py`'s posting output). This is
-product output directed at the owner, not a governance artifact — the
-general rule above (English governs internal/governance documents;
-product-facing output follows its audience's language) already covers
-it; this note exists only so a future reader doesn't have to infer the
-exception.
+## ToolTempest consumer obligation
+
+[`docs/tooltempest/consumer-contract.md`](tooltempest/consumer-contract.md)
+states the obligation. It is installed from the pinned ToolTempest commit and is not tracked.

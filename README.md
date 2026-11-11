@@ -6,9 +6,9 @@ quality gate, and platform adaptation. Claim extraction, evidence gathering,
 the strategy layer and authoring exist; the quality gate and platform
 adaptation are not started — see `docs/ARCHITECTURE.md`.
 
-Canonical documentation lives in `docs/`: the Constitution, Project,
-Architecture, Roadmap and Backlog documents, and the decision records
-under `docs/adr/`.
+Documentation lives in `docs/`. How the repository works, and the binding
+rules, are in `docs/tooltempest/universal-rules.md`, section "How every
+repository works" (installed by the setup below).
 
 Atom Selector and `graph_reader.py` currently live here as vendored copies
 of `brain.git` code; migrating them to a single source is open as `[B-002]`
@@ -27,7 +27,7 @@ for how it's wired today; full per-component status is in
 
 The ToolTempest files this repository uses (`scripts/tooling.py`,
 `scripts/docops.py`, `scripts/doc_sync.py`, the other installed `scripts/` and
-`schemas/` files, and `docs/tooltempest/consumer-contract.md`) are installed
+`schemas/` files, and `docs/tooltempest/consumer-contract.md`; the universal rules file joins them after the repin that delivers it) are installed
 from the commit pinned in `.tooltempest.lock` and are not tracked. A fresh clone
 therefore lacks them, including `scripts/tooling.py`, and its `.git/hooks` holds
 no hooks yet; the last step below installs them. Once installed, the hooks block
