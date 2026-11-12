@@ -1750,25 +1750,21 @@ ADR-0041's Context/Alternatives sections and recoverable via
 `git log --follow -- docs/spec-prep/B-040-B-041-facts.md` if ever
 needed.
 
-### [B-042] P3 — docs/ARCHITECTURE.md has no row for the session-end doc-sync auto-close mechanism (SPEC.md)
+### [B-042] P3 — docs/ARCHITECTURE.md has no row for the session-end `Closes:` closure mechanism
 
 Found: 2026-08-24, fact-check pass before the `[B-037]` split above.
-`docs/ARCHITECTURE.md`'s only doc-sync-related row is "ToolTempest
-Tier 2 doc-sync (snapshot, diff, role-gated apply, CLI)" — the
-lower-level `apply_tier2_sync()` infrastructure. The session-end
-auto-close mechanism `SPEC.md` (repo root) designs — BACKLOG.md
-closure via a `Closes:` commit trailer, plus `ARCHITECTURE.md`/
-`ROADMAP.md`/`README.md` structural fact-sync reusing that same
-infrastructure — has no `docs/ARCHITECTURE.md` row of its own.
+The session-end mechanism that closes `BACKLOG.md` entries through a
+`Closes:` commit trailer (the `/session-end` skill) has no
+`docs/ARCHITECTURE.md` row of its own.
 
 Informational only, not an action item: **do not add a row now.**
-`SPEC.md`'s own M7 milestone is still confirmed-blocked (see `[B-035]`
-and `SPEC.md`'s "M7" section) — the mechanism isn't fully implemented.
-Adding an "Implemented" (or any status) row today would create the
-same kind of table/prose mismatch this session just fixed in
-`docs/ROADMAP.md`'s Phase 3 row (`[B-040]`'s live example). Revisit
-once M7 resolves — tracked under `[B-035]`, the eventual
-ToolTempest-side session.
+Updated 2026-11-12: the stale references were removed. The "ToolTempest
+Tier 2 doc-sync" row and the `apply_tier2_sync()` infrastructure it
+described no longer exist ([ADR-0075](adr/0075-retire-the-tier-2-doc-sync-and-the-legacy-doc-sync-modules.md)),
+and the structural fact-sync half of the earlier design is retired. The
+earlier revisit condition (M7 of the then `SPEC.md`, tracked under
+`[B-035]`) referred to a SPEC that is no longer the root `SPEC.md`; no
+replacement trigger is defined.
 
 **Source.** Fact-check pass, 2026-08-24, immediately before the
 `[B-037]` split.
