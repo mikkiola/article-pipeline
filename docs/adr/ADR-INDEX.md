@@ -83,3 +83,4 @@ same convention as ToolTempest's `MANIFEST.txt` consumer obligation.
 | [ADR-0073](0073-retire-post-merge-reconciliation.md) | Retire post-merge reconciliation | Accepted | null | null |
 | [ADR-0074](0074-constitution-holds-project-rules-only.md) | The Constitution Holds Project Rules Only; Universal Rules Come from the Pinned ToolTempest File | Accepted | null | null |
 | [ADR-0075](0075-retire-the-tier-2-doc-sync-and-the-legacy-doc-sync-modules.md) | Retire the Tier 2 Doc-Sync and the Legacy doc_sync Modules | Accepted | null | null |
+| [ADR-0076](0076-remove-the-syncs-trailer-rule-from-the-constitution.md) | Remove the Syncs Trailer Rule from the Constitution | Accepted | null | null |

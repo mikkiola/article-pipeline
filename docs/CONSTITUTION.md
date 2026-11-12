@@ -39,7 +39,6 @@ Builder and architect, not a one-off consultant.
 | ID | Rule |
 |---|---|
 | AP-5 | When you cannot tell whether an update is a plain fact update or an architectural change, treat it as architectural and ask. |
-| AP-6 | A commit that changes a fact in `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, or `README.md` MUST carry `Syncs: <path>`, one trailer line per file. `/session-end` reads these trailers. |
 | AP-7 | An ADR starts with YAML frontmatter (DR-7). An ADR MAY add a section that its decision needs. |
 
 ## Decisions
