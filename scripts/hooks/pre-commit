@@ -5,16 +5,10 @@
 # Checks the staged index (not the working tree) with scripts/docops.py, the
 # vendored ToolTempest DocOps checker. GIT_INDEX_FILE is inherited on purpose:
 # git sets it for `git commit -a` and `git commit <path>`, so the checker sees
-# exactly the tree that will be committed. Any non-zero exit blocks the commit
-# (fail-closed): 1 = invariant violated, 2 = no verdict (checker missing or failed).
-# SPEC.md scope (ToolTempest ADR-0013 Decision 7): every tracked file named
-# SPEC.md (name matched case-insensitively, at any depth) must be the root
-# SPEC.md, a track registered in .docops-policy.json, or listed in its
-# non_active_specs with a reason. Any other SPEC.md makes the check FAIL with
-# OUT_OF_SCOPE_SPEC (exit 1), also beside an active registered SPEC. A listed
-# entry that is invalid (no reason, duplicate, stale, not a file) fails with its
-# own code (NON_ACTIVE_*, exit 1); an unusable policy file yields exit 2 (no
-# verdict).
+# exactly the tree that will be committed. Any non-zero checker exit blocks the
+# commit (fail-closed): 1 = invariant violated, 2 = no verdict. The SPEC.md scope
+# rule is the checker's own contract (ToolTempest ADR-0013 Decision 7);
+# `scripts/docops.py check --help` lists its exit codes.
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
