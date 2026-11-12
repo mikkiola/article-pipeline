@@ -5,10 +5,13 @@
 # DocOps check: scripts/docops.py inspects each pushed local OID (not HEAD), read
 # from git's pre-push stdin; a deleted ref (all-zero OID) has nothing to check.
 # SPEC.md scope (ToolTempest ADR-0013 Decision 7): every tracked file named
-# SPEC.md, at any depth, must be the root SPEC.md, a track registered in
-# .docops-policy.json, or listed in its non_active_specs with a reason. Any other
-# SPEC.md makes the check FAIL with OUT_OF_SCOPE_SPEC (exit 1), also beside an
-# active registered SPEC. Any non-zero exit blocks the push (fail-closed).
+# SPEC.md (name matched case-insensitively, at any depth) must be the root
+# SPEC.md, a track registered in .docops-policy.json, or listed in its
+# non_active_specs with a reason. Any other SPEC.md makes the check FAIL with
+# OUT_OF_SCOPE_SPEC (exit 1), also beside an active registered SPEC. A listed
+# entry that is invalid (no reason, duplicate, stale, not a file) fails with its
+# own code (NON_ACTIVE_*, exit 1); an unusable policy file yields exit 2 (no
+# verdict). Any non-zero exit blocks the push (fail-closed).
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
