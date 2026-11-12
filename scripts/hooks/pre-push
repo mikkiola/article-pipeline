@@ -4,12 +4,10 @@
 #
 # DocOps check: scripts/docops.py inspects each pushed local OID (not HEAD), read
 # from git's pre-push stdin; a deleted ref (all-zero OID) has nothing to check.
-# SPEC.md scope: only the root SPEC.md, or the tracks registered in
-# .docops-policy.json, are evaluated; a SPEC.md in a subfolder must be
-# registered there. An unregistered one yields SKIP (exit 3) when no registered
-# SPEC is active, and any non-zero exit blocks the push (fail-closed). Beside an
-# active registered SPEC it does not block: the check passes and the hook prints
-# an OUT_OF_SCOPE_SPEC warning, so the unevaluated SPEC.md is not silently ignored.
+# Any non-zero checker exit blocks the push (fail-closed): 1 = invariant
+# violated, 2 = no verdict. The SPEC.md scope rule is the checker's own contract
+# (ToolTempest ADR-0013 Decision 7); `scripts/docops.py check --help` lists its
+# exit codes.
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
@@ -44,14 +42,10 @@ else
   output="$(printf '%s\n' "$push_stdin" | python3 scripts/docops.py check --push-stdin 2>&1)" || rc=$?
   if [ "$rc" -ne 0 ]; then
     printf '%s\n' "$output"
-    echo "[pre-push] FAIL: DocOps check exited $rc (1 = invariant violated, 2 = no verdict, 3 = SPEC applicability not established)."
+    echo "[pre-push] FAIL: DocOps check exited $rc (1 = invariant violated, 2 = no verdict)."
     fail=1
   else
     echo "[pre-push] DocOps check passed."
-    # Display only: a passing check can still carry OUT_OF_SCOPE_SPEC warnings. The
-    # trailing `|| true` keeps this step from ever changing the hook's exit status.
-    printf '%s\n' "$push_stdin" | python3 scripts/docops.py report --push-stdin 2>/dev/null \
-      | grep -F 'warning OUT_OF_SCOPE_SPEC' | sed 's/^ *warning /[pre-push] WARNING: /' || true
   fi
 fi
 
