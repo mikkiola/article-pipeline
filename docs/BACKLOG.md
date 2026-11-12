@@ -425,7 +425,7 @@ from Claude Code's read-only comparison of ADR-0001 against
 scripts/doc_sync.py, plus systems-loop analysis (O'Connor lens) in the
 architect chat.
 
-### [B-022] P2 — doc_sync.py STAGE step can raise an unhandled exception on index.lock contention
+### [B-022] P2 — doc_sync.py STAGE step can raise an unhandled exception on index.lock contention — RESOLVED
 
 Found during the 2026-08-19 edge-case audit (Scenario 4b, ToolTempest
 scripts/doc_sync.py). The STAGE step's `git add` call
@@ -455,6 +455,14 @@ invocation per real `git commit`).
 
 Source. DocOps Protocol V2.0 hardening session, 2026-08-19 edge-case
 audit (Scenario 4b) in the architect chat.
+
+Resolution, 2026-11-12 (closed as obsolete on the Owner's confirmation,
+`Closes: B-022` in the closing commit): the target module no longer exists.
+[ADR-0075](adr/0075-retire-the-tier-2-doc-sync-and-the-legacy-doc-sync-modules.md)
+retired `scripts/doc_sync.py` and `scripts/doc_sync_tier2.py`; the lock
+declares only `scripts/docops.py`, so neither module is installed here and
+nothing tracked here calls them. The defect was not fixed; there is nothing
+left to fix.
 
 ### [B-023] P1 — [TOOLTEMPEST] CI for ToolTempest, before the second consumer connects (closed)
 
@@ -564,7 +572,7 @@ hook — via a separate, prior mechanism, `docs/adr/0032-drift-warning.md`
 ToolTempest drift (.tooltempest.lock vs origin/main)..."). It predates
 this entry and was never something ADR-0005 needed to newly deliver.
 
-### [B-024] P2 — doc_sync_tier2.py CLI exit-code semantics for no-op runs
+### [B-024] P2 — doc_sync_tier2.py CLI exit-code semantics for no-op runs — RESOLVED
 
 Found during Tier 2 Stage 4 (CLI entry point) implementation,
 2026-08-19. `apply_tier2_sync()`'s CLI wrapper exits 0 only when
@@ -583,6 +591,14 @@ rejection, etc.).
 
 **Source.** Tier 2 /doc-sync implementation session, 2026-08-19,
 Stage 4.
+
+Resolution, 2026-11-12 (closed as obsolete on the Owner's confirmation,
+`Closes: B-024` in the closing commit): the target module no longer exists.
+[ADR-0075](adr/0075-retire-the-tier-2-doc-sync-and-the-legacy-doc-sync-modules.md)
+retired `scripts/doc_sync.py` and `scripts/doc_sync_tier2.py`, including
+`apply_tier2_sync()` and its CLI wrapper; neither module is installed here and
+nothing tracked here calls them. The exit-code semantics were not changed;
+there is no caller or code left to apply them to.
 
 ### [B-025] P2 — ADR lifecycle state machine + structural validation + generated index
 
@@ -704,7 +720,7 @@ against the new pin picked up `scripts/doc_sync_tier2.py` and the new
 `scripts/check_manifest.py` automatically, with neither file named
 anywhere in this repo's own scripts.
 
-### [B-027] P1 — Implement ADR-0033's GitHub Actions workflow
+### [B-027] P1 — Implement ADR-0033's GitHub Actions workflow — RESOLVED
 
 Found: 2026-08-19. ADR-0033
 (docs/adr/0033-contributor-governance-post-merge-reconciliation.md) is
@@ -1012,6 +1028,17 @@ is added as part of this decision; branch protection configuration
 itself is a manual GitHub repo-settings step, not done as part of
 this decision — see the checkbox above.
 
+Resolution, 2026-11-12 (closed as obsolete on the Owner's confirmation,
+`Closes: B-027` in the closing commit): the work this entry tracked no longer
+exists. [ADR-0073](adr/0073-retire-post-merge-reconciliation.md) retired the
+post-merge reconciliation workflow and its script.
+[ADR-0075](adr/0075-retire-the-tier-2-doc-sync-and-the-legacy-doc-sync-modules.md)
+retired `scripts/doc_sync.py` and `scripts/doc_sync_tier2.py`, which are no
+longer installed here. The one checkbox left open above asks about
+`scripts/doc_sync.py`'s logic, a module that no longer exists; the Finding
+above answers it and the box is left as written. The pre-merge gate of
+ADR-0035 (CODEOWNERS and branch protection) is not part of this closure.
+
 ### [B-028] P2 — Email notification on vendoring drift (depends on [TOOLTEMPEST] CI)
 
 Found: 2026-08-19, during the sync-tooling.sh completeness (Phase 5)
@@ -1202,7 +1229,7 @@ implemented directly in article-pipeline (`scripts/check-doc-pairing.sh`
 **Source.** DocOps SPEC.md implementation session, 2026-08-20. M2
 correction and resync, 2026-08-21.
 
-### [B-033] P2 — README.md has no automated sync path today (reconcile.py hardcodes ARCHITECTURE.md only)
+### [B-033] P2 — README.md has no automated sync path today (reconcile.py hardcodes ARCHITECTURE.md only) — RESOLVED
 
 Found: 2026-08-21, during this session's P1-P5 DocOps fact-check
 (read-only verification of the session-end doc-sync `SPEC.md`, commit
@@ -1243,6 +1270,16 @@ separately unexamined — not assumed either way.
 **Source.** P1-P5 DocOps fact-check, this session, 2026-08-21 (read-only
 verification against `scripts/doc_sync_tier2.py`,
 `.github/scripts/reconcile.py`, live `gh api`/`gh run list` checks).
+
+Resolution, 2026-11-12 (closed as obsolete on the Owner's confirmation,
+`Closes: B-033` in the closing commit): the code this entry tracked no longer
+exists. [ADR-0073](adr/0073-retire-post-merge-reconciliation.md) retired the
+post-merge reconciliation workflow and `reconcile.py`.
+[ADR-0075](adr/0075-retire-the-tier-2-doc-sync-and-the-legacy-doc-sync-modules.md)
+retired `scripts/doc_sync_tier2.py`, including `apply_tier2_sync()`, and removed
+the `/session-end` structural fact-sync step. Both checkboxes above name those
+mechanisms as the thing to fix or to revisit, so neither has a target left.
+The gap was not fixed.
 
 ### [B-034] P2 — resolve_component_name() has no explicit component-tagging alternative to guessing
 
