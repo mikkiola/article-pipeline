@@ -71,6 +71,9 @@ author/state/
 /scripts/docops_core/
 /scripts/tooling.py
 /scripts/tooling_core/
+/scripts/tt_pin_check.py
+/scripts/check_mutable_reads.py
+/scripts/worktree_cleanup.sh
 /schemas/docops-impact-report.schema.json
 /schemas/docops-policy.schema.json
 /schemas/docops-result.schema.json
