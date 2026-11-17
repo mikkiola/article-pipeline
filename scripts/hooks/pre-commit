@@ -14,6 +14,18 @@ set -euo pipefail
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
 
+# ToolTempest pin check (ToolTempest ADR-0022, Decision 5): runs first, before
+# the pinned checker is executed. Any non-zero exit blocks the commit:
+# 1 = blocked, 2 = usage or internal failure (also when scripts/tt_pin_check.py
+# is missing, which is fail-closed: run scripts/tooling.py materialize first).
+echo "[pre-commit] Running the ToolTempest pin check (scripts/tt_pin_check.py commit)..."
+pin_rc=0
+python3 scripts/tt_pin_check.py commit --root "$REPO_ROOT" || pin_rc=$?
+if [ "$pin_rc" -ne 0 ]; then
+  echo "[pre-commit] FAIL: pin check exited $pin_rc (1 = blocked, 2 = usage or internal failure). Commit blocked."
+  exit "$pin_rc"
+fi
+
 echo "[pre-commit] Running DocOps check on the staged index (scripts/docops.py check --tree index)..."
 rc=0
 output="$(python3 scripts/docops.py check --tree index 2>&1)" || rc=$?

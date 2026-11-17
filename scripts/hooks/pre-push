@@ -16,6 +16,20 @@ cd "$REPO_ROOT"
 # Read every ref-update line first, so no later command can consume stdin.
 push_stdin="$(cat)"
 
+# ToolTempest pin check (ToolTempest ADR-0022, Decision 5): runs first, before
+# every other check and before the pinned checker is executed. Any non-zero
+# exit blocks the push at once: 1 = blocked, 2 = usage or internal failure (also
+# when scripts/tt_pin_check.py is missing, which is fail-closed: run
+# scripts/tooling.py materialize first). An empty stdin (an up-to-date push)
+# has nothing to check and passes.
+echo "[pre-push] Running the ToolTempest pin check (scripts/tt_pin_check.py push)..."
+pin_rc=0
+printf '%s\n' "$push_stdin" | python3 scripts/tt_pin_check.py push --root "$REPO_ROOT" || pin_rc=$?
+if [ "$pin_rc" -ne 0 ]; then
+  echo "[pre-push] FAIL: pin check exited $pin_rc (1 = blocked, 2 = usage or internal failure). Push blocked."
+  exit "$pin_rc"
+fi
+
 fail=0
 
 if ! bash scripts/check-adr-citation.sh; then
