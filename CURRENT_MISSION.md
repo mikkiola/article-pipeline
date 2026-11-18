@@ -77,8 +77,13 @@ archive.
   remove `sync-tooling.sh`; remove the `git ls-remote` drift warning from the
   pre-push hook; replace the hand copy of item 7 in the Constitution with a
   link to the managed contract file.
+- Redact secret values in the pre-push secret scan output by adding the
+  scanner's redaction option to the existing invocation; what the scan covers
+  does not change.
 
 Mission amended by Owner decision, 2026-11-05
+
+Mission amended by Owner decision, 2026-11-18
 
 ## OUT OF SCOPE
 - [B-073] (stays a separate backlog item) and [B-069]

@@ -38,7 +38,8 @@ fi
 
 echo "[pre-push] Running gitleaks..."
 if command -v gitleaks >/dev/null 2>&1; then
-  if ! gitleaks detect --source . --no-git -v; then
+  # --redact: verbose output prints the Secret field; redact it in stdout and logs.
+  if ! gitleaks detect --source . --no-git -v --redact; then
     echo "[pre-push] FAIL: gitleaks found a potential secret."
     fail=1
   fi
