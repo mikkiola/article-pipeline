@@ -129,9 +129,19 @@ while read -r s_lref s_loid s_rref s_roid; do
     fail=1
     continue
   fi
-  if ! git log --remerge-diff -n 1 --format=%H "$s_loid" >/dev/null 2>&1; then
-    echo "[pre-push] FAIL: secret scan did not run: this git ($(git --version 2>/dev/null || echo 'version unknown')) does not support 'git log --remerge-diff'; $s_count commit(s) of $s_rref are not scanned."
-    echo "[pre-push] Recovery: install git 2.36 or newer (brew upgrade git), then push again."
+  # Probe of the option only: -n 0 parses the options and the commit but computes no
+  # diff. The minimum-version message is printed only when git names the option as
+  # unrecognized; any other failure gets its own message.
+  s_probe_rc=0
+  s_probe_err="$(git log --remerge-diff -n 0 --format=%H "$s_loid" 2>&1 >/dev/null)" || s_probe_rc=$?
+  if [ "$s_probe_rc" -ne 0 ]; then
+    if [[ "$s_probe_err" == *remerge-diff* ]]; then
+      echo "[pre-push] FAIL: secret scan did not run: this git ($(git --version 2>/dev/null || echo 'version unknown')) does not support 'git log --remerge-diff'; $s_count commit(s) of $s_rref are not scanned."
+      echo "[pre-push] Recovery: install git 2.36 or newer (brew upgrade git), then push again."
+    else
+      echo "[pre-push] FAIL: secret scan did not run: git could not read $s_lref ($s_loid) for the scan (exit $s_probe_rc); $s_count commit(s) of $s_rref are not scanned."
+      echo "[pre-push] Recovery: run  git log --remerge-diff -n 0 $s_loid  and fix the git error shown; for an incomplete clone: git fetch $scan_remote"
+    fi
     fail=1
     continue
   fi
