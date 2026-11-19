@@ -47,6 +47,12 @@ echo "[pre-push] Running gitleaks on the commits this push publishes..."
 # --remerge-diff makes git show what a merge commit itself adds; without it
 # `git log -p` shows no diff for merges. It needs git >= 2.36: an older git
 # blocks the push with a message that names the minimum version.
+# gitleaks treats any stderr output of its own `git log` call as a failed read: it
+# logs `ERR error="stderr is not empty"`, reports "0 commits scanned" and exits 0.
+# So the git trace variables (GIT_TRACE*) are removed from its environment, and an
+# ERR line in its log blocks the push even at exit 0 (a git warning does the same).
+# The number of commits scanned is not checked: gitleaks reports 0 for commits
+# that add no text (delete-only, empty, mode-only, binary, rename-only).
 # Known limits of this scan: docs/adr/0077-pre-push-secret-scan-covers-the-commits-a-push-publishes.md.
 # $1 is the remote name, or the URL itself for a push by URL. A URL may carry
 # credentials, so it is never printed or passed on: it is mapped to a configured
@@ -147,10 +153,17 @@ while read -r s_lref s_loid s_rref s_roid; do
   fi
   s_logopts="--remerge-diff ${s_revs[*]}"
   echo "[pre-push] $s_rref: scanning $s_count new commit(s) (git log $s_logopts)."
+  s_unset=()
+  for s_v in $(compgen -v GIT_TRACE); do s_unset+=(-u "$s_v"); done
   s_rc=0
-  s_out="$(gitleaks detect --source . --log-opts "$s_logopts" -v --redact --exit-code 2 </dev/null 2>&1)" || s_rc=$?
+  s_out="$(env ${s_unset[@]+"${s_unset[@]}"} gitleaks detect --source . --log-opts "$s_logopts" -v --redact --exit-code 2 --no-color </dev/null 2>&1)" || s_rc=$?
   printf '%s\n' "$s_out"
   if [ "$s_rc" -eq 0 ]; then
+    if grep -Eq '(^|[[:space:]])ERR[[:space:]]' <<< "$s_out"; then
+      echo "[pre-push] FAIL: secret scan for $s_rref is not trusted: gitleaks logged an error (ERR line above) although it exited 0; its commits may not have been scanned."
+      echo "[pre-push] Recovery: run  git log -p -U0 $s_logopts >/dev/null  and fix what git prints on stderr (a warning counts), then push again."
+      fail=1
+    fi
     continue
   elif [ "$s_rc" -eq 2 ] && grep -Eq 'leaks found: [1-9]' <<< "$s_out"; then
     echo "[pre-push] FAIL: gitleaks found a potential secret in the commits pushed to $s_rref (see the File and Fingerprint lines above, the Fingerprint starts with the commit; values are redacted)."
