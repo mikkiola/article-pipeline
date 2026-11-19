@@ -36,16 +36,122 @@ if ! bash scripts/check-adr-citation.sh; then
   fail=1
 fi
 
-echo "[pre-push] Running gitleaks..."
-if command -v gitleaks >/dev/null 2>&1; then
-  # --redact: verbose output prints the Secret field; redact it in stdout and logs.
-  if ! gitleaks detect --source . --no-git -v --redact; then
-    echo "[pre-push] FAIL: gitleaks found a potential secret."
-    fail=1
-  fi
+echo "[pre-push] Running gitleaks on the commits this push publishes..."
+# Secret scan of the commits each pushed ref adds on the remote side, not of the
+# working tree: a secret that one pushed commit adds and a later one removes is
+# found, published history is not rescanned. A scan that cannot complete (no
+# scanner, scanner error, git error, undeterminable range) blocks the push.
+# Exit codes of gitleaks: 0 clean, 2 secret found (--exit-code), other = failed.
+# --redact: the output prints no secret value. A false positive is silenced by the
+# scanner's own mechanisms (.gitleaksignore fingerprint, `gitleaks:allow` comment).
+# --remerge-diff makes git show what a merge commit itself adds; without it
+# `git log -p` shows no diff for merges. It needs git >= 2.36: an older git
+# blocks the push with a message that names the minimum version.
+# Known limits of this scan: docs/adr/0077-pre-push-secret-scan-covers-the-commits-a-push-publishes.md.
+# $1 is the remote name, or the URL itself for a push by URL. A URL may carry
+# credentials, so it is never printed or passed on: it is mapped to a configured
+# remote by its push URL, and an unmapped URL blocks.
+scan_remote="${1:-}"
+scan_target_ok=1
+if [ -z "$scan_remote" ]; then
+  scan_target_ok=0
 else
-  echo "[pre-push] WARNING: gitleaks not installed, skipping secret scan."
+  # Plain string matching on captured output: no `grep -q` in a pipe, which
+  # under pipefail can report a match as a failure (SIGPIPE to the producer).
+  scan_nl=$'\n'
+  scan_names="$(git remote)"
+  if [[ "$scan_nl$scan_names$scan_nl" != *"$scan_nl$scan_remote$scan_nl"* ]]; then
+    scan_mapped=""
+    for s_n in $scan_names; do
+      s_urls="$(git remote get-url --push --all "$s_n" 2>/dev/null)" || s_urls=""
+      if [[ "$scan_nl$s_urls$scan_nl" == *"$scan_nl$scan_remote$scan_nl"* ]]; then
+        scan_mapped="$s_n"
+        break
+      fi
+    done
+    scan_remote="$scan_mapped"
+    [ -n "$scan_remote" ] || scan_target_ok=0
+  fi
 fi
+scan_zero='^0+$'
+if [ -z "$push_stdin" ]; then
+  echo "[pre-push] No ref updates to push; nothing to scan for secrets."
+fi
+while read -r s_lref s_loid s_rref s_roid; do
+  [ -n "$s_lref" ] || continue
+  if [ -z "$s_roid" ]; then
+    echo "[pre-push] FAIL: secret scan cannot determine the range of '$s_lref' (incomplete pre-push input)."
+    echo "[pre-push] Recovery: push with 'git push <remote> <ref>' from a normal git invocation."
+    fail=1
+    continue
+  fi
+  if [[ "$s_loid" =~ $scan_zero ]]; then
+    echo "[pre-push] $s_rref: deletion, no commit is published; nothing to scan."
+    continue
+  fi
+  if [ "$scan_target_ok" -ne 1 ]; then
+    echo "[pre-push] FAIL: secret scan cannot determine what is already published for $s_rref: the push target is not a configured remote (a push by URL, or no remote name)."
+    echo "[pre-push] Recovery: push by remote name: git push <remote> <ref>   (git remote -v lists the names)"
+    fail=1
+    continue
+  fi
+  if ! git rev-parse --verify --quiet "${s_loid}^{commit}" >/dev/null; then
+    echo "[pre-push] FAIL: secret scan cannot read $s_lref ($s_loid) as a commit; its commits are not scanned."
+    echo "[pre-push] Recovery: a ref that points to a tree or blob cannot be scanned; push a ref that points to a commit."
+    fail=1
+    continue
+  fi
+  if [[ "$s_roid" =~ $scan_zero ]]; then
+    # New ref: every commit not reachable from a remote-tracking ref of this remote.
+    s_revs=("$s_loid" --not "--remotes=$scan_remote")
+  elif git rev-parse --verify --quiet "${s_roid}^{commit}" >/dev/null; then
+    # Existing ref (update or force push): what the push adds on top of the remote tip.
+    s_revs=("${s_roid}..${s_loid}")
+  else
+    echo "[pre-push] FAIL: secret scan cannot determine the new commits of $s_rref: remote tip $s_roid is not a commit in this repository."
+    echo "[pre-push] Recovery: git fetch $scan_remote   (then push again)"
+    fail=1
+    continue
+  fi
+  if ! s_count="$(git rev-list --count "${s_revs[@]}" 2>/dev/null)"; then
+    echo "[pre-push] FAIL: secret scan: git could not resolve the commit range '${s_revs[*]}' for $s_rref."
+    echo "[pre-push] Recovery: git fetch $scan_remote   (then push again); if it persists, run 'git rev-list ${s_revs[*]}' to see the git error."
+    fail=1
+    continue
+  fi
+  if [ "$s_count" -eq 0 ]; then
+    echo "[pre-push] $s_rref: no new commits to scan."
+    continue
+  fi
+  if ! command -v gitleaks >/dev/null 2>&1; then
+    echo "[pre-push] FAIL: secret scan did not run: gitleaks is not installed; $s_count commit(s) of $s_rref are not scanned."
+    echo "[pre-push] Recovery: brew install gitleaks   (then push again)"
+    fail=1
+    continue
+  fi
+  if ! git log --remerge-diff -n 1 --format=%H "$s_loid" >/dev/null 2>&1; then
+    echo "[pre-push] FAIL: secret scan did not run: this git ($(git --version 2>/dev/null || echo 'version unknown')) does not support 'git log --remerge-diff'; $s_count commit(s) of $s_rref are not scanned."
+    echo "[pre-push] Recovery: install git 2.36 or newer (brew upgrade git), then push again."
+    fail=1
+    continue
+  fi
+  s_logopts="--remerge-diff ${s_revs[*]}"
+  echo "[pre-push] $s_rref: scanning $s_count new commit(s) (git log $s_logopts)."
+  s_rc=0
+  s_out="$(gitleaks detect --source . --log-opts "$s_logopts" -v --redact --exit-code 2 </dev/null 2>&1)" || s_rc=$?
+  printf '%s\n' "$s_out"
+  if [ "$s_rc" -eq 0 ]; then
+    continue
+  elif [ "$s_rc" -eq 2 ] && grep -Eq 'leaks found: [1-9]' <<< "$s_out"; then
+    echo "[pre-push] FAIL: gitleaks found a potential secret in the commits pushed to $s_rref (see the File and Fingerprint lines above, the Fingerprint starts with the commit; values are redacted)."
+    echo "[pre-push] Recovery: remove the secret from those commits (rewrite them, e.g. git rebase -i) and rotate it if it was real."
+    echo "[pre-push]   A false positive: add its Fingerprint to .gitleaksignore, or put a 'gitleaks:allow' comment on the line."
+  else
+    echo "[pre-push] FAIL: secret scan did not complete for $s_rref (gitleaks exit $s_rc); its commits are not scanned."
+    echo "[pre-push] Recovery: run  gitleaks detect --source . --log-opts '$s_logopts' -v --redact  and fix the error shown."
+  fi
+  fail=1
+done <<< "$push_stdin"
 
 # git also runs this hook for an up-to-date push, with empty stdin: no commit
 # leaves the repository then, so there is nothing for DocOps to check.

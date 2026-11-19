@@ -15,12 +15,14 @@ tags = ["key", "anthropic"]
 # public portfolio identity and must keep showing up freely. The
 # allowlist below excludes: a URL that merely contains "/home/" as an
 # ordinary path segment; two gitignored local-config files whose raw
-# filesystem content this rule would otherwise see (gitleaks' --no-git
-# scan mode reads the filesystem directly, not git's index, so it
-# doesn't respect .gitignore) even though neither is ever committed;
+# filesystem content this rule would otherwise see in a working-tree scan
+# (gitleaks' --no-git mode, still run by scripts/test-local-fs-path-rule.sh
+# and by verification, reads the filesystem directly, not git's index, so
+# it doesn't respect .gitignore) even though neither is ever committed;
 # and this rule's own regression test script
 # (scripts/test-local-fs-path-rule.sh), whose fixtures are deliberately
-# shaped like real local paths for testing purposes.
+# shaped like real local paths for testing purposes. The pre-push hook
+# scans the pushed commits, not the filesystem (ADR-0077).
 [[rules]]
 id = "local-fs-path"
 description = "Local machine filesystem path (macOS /Users or Linux /home)"
