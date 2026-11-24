@@ -37,13 +37,20 @@ if ! bash scripts/check-adr-citation.sh; then
 fi
 
 echo "[pre-push] Running gitleaks on the commits this push publishes..."
-# Secret scan of the commits each pushed ref adds on the remote side, not of the
-# working tree: a secret that one pushed commit adds and a later one removes is
-# found, published history is not rescanned. A scan that cannot complete (no
-# scanner, scanner error, git error, undeterminable range) blocks the push.
+# Secret scan of the commits each pushed ref adds, not of the working tree: a secret
+# that one pushed commit adds and a later one removes is found. The range is taken per
+# ref (ADR-0077, point 1). An updated ref: the commits above the remote tip that git
+# passes to this hook. A new ref: the commits that no remote-tracking ref of this
+# remote reaches. A commit that another ref already published is in the range of an
+# updated ref, so it is scanned again (limit 9). A stale remote-tracking ref can hide
+# a commit that the remote no longer holds, so it is pushed again unscanned (limit 1;
+# git fetch --prune removes that case). A scan that cannot complete (no scanner,
+# scanner error, git error, undeterminable range) blocks the push.
 # Exit codes of gitleaks: 0 clean, 2 secret found (--exit-code), other = failed.
-# --redact: the output prints no secret value. A false positive is silenced by the
-# scanner's own mechanisms (.gitleaksignore fingerprint, `gitleaks:allow` comment).
+# --redact hides the secret value of a finding. It does not hide the commit metadata
+# that gitleaks prints with a finding: an Author name that holds a secret is printed
+# as it is (limit 11). A false positive is silenced by the scanner's own mechanisms
+# (.gitleaksignore fingerprint, `gitleaks:allow` comment).
 # --remerge-diff makes git show what a merge commit itself adds; without it
 # `git log -p` shows no diff for merges. It needs git >= 2.36: an older git
 # blocks the push with a message that names the minimum version.
@@ -138,9 +145,11 @@ while read -r s_lref s_loid s_rref s_roid; do
     echo "[pre-push] $s_rref: no new commits to scan."
     continue
   fi
-  # A commit with three or more parents (an octopus merge) is not published: with
-  # --remerge-diff git shows none of what such a merge adds, so a secret added by
-  # it is never scanned (ADR-0077). A status of git that is not 0 blocks as well.
+  # A push that publishes a commit with three or more parents (an octopus merge) is
+  # blocked: with --remerge-diff git shows none of what such a merge adds, so a secret
+  # added by it would never be scanned (ADR-0077, point 6). The check takes the range
+  # of this ref only: a merge that another ref already published is in the range of an
+  # updated ref and blocks it (limit 9). A status of git that is not 0 blocks as well.
   if ! s_octo="$(git rev-list --min-parents=3 "${s_revs[@]}" 2>/dev/null)"; then
     echo "[pre-push] FAIL: secret scan could not read the parent count of the commits of $s_rref (git rev-list --min-parents failed); an octopus merge cannot be excluded."
     echo "[pre-push] Recovery: git fetch $scan_remote   (then push again); if it persists, run 'git rev-list --min-parents=3 ${s_revs[*]}' to see the git error."
@@ -150,8 +159,7 @@ while read -r s_lref s_loid s_rref s_roid; do
   if [ -n "$s_octo" ]; then
     echo "[pre-push] FAIL: this push publishes a commit with three or more parents (octopus merge) to $s_rref; the secret scan cannot see what such a merge adds, so the push is blocked."
     echo "[pre-push]   Commit(s): ${s_octo//$'\n'/ }"
-    s_octo1="${s_octo%%$'\n'*}"
-    echo "[pre-push] Recovery: list its parents with  git rev-parse ${s_octo1}^1 ${s_octo1}^2 ${s_octo1}^3  then redo it as ordinary two-parent merges:  git switch -c redo <parent 1>; git merge <parent 2>; git merge <parent 3>  (re-apply by hand, as its own commit, what the octopus commit added itself); or  git rebase $scan_remote/<branch>  to drop the merge; then push the new branch."
+    echo "[pre-push]   Guidance and the known hazards of rewriting such a merge: docs/adr/0077-pre-push-secret-scan-covers-the-commits-a-push-publishes.md, Decision, point 6."
     fail=1
     continue
   fi
