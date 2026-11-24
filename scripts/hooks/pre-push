@@ -60,6 +60,7 @@ echo "[pre-push] Running gitleaks on the commits this push publishes..."
 # "no match" passes, any other status blocks.
 # The number of commits scanned is not checked: gitleaks reports 0 for commits
 # that add no text (delete-only, empty, mode-only, rename-only, empty file).
+# A push that publishes a commit with three or more parents is blocked below (ADR-0077, point 6).
 # Known limits of this scan: docs/adr/0077-pre-push-secret-scan-covers-the-commits-a-push-publishes.md.
 # $1 is the remote name, or the URL itself for a push by URL. A URL may carry
 # credentials, so it is never printed or passed on: it is mapped to a configured
@@ -135,6 +136,23 @@ while read -r s_lref s_loid s_rref s_roid; do
   fi
   if [ "$s_count" -eq 0 ]; then
     echo "[pre-push] $s_rref: no new commits to scan."
+    continue
+  fi
+  # A commit with three or more parents (an octopus merge) is not published: with
+  # --remerge-diff git shows none of what such a merge adds, so a secret added by
+  # it is never scanned (ADR-0077). A status of git that is not 0 blocks as well.
+  if ! s_octo="$(git rev-list --min-parents=3 "${s_revs[@]}" 2>/dev/null)"; then
+    echo "[pre-push] FAIL: secret scan could not read the parent count of the commits of $s_rref (git rev-list --min-parents failed); an octopus merge cannot be excluded."
+    echo "[pre-push] Recovery: git fetch $scan_remote   (then push again); if it persists, run 'git rev-list --min-parents=3 ${s_revs[*]}' to see the git error."
+    fail=1
+    continue
+  fi
+  if [ -n "$s_octo" ]; then
+    echo "[pre-push] FAIL: this push publishes a commit with three or more parents (octopus merge) to $s_rref; the secret scan cannot see what such a merge adds, so the push is blocked."
+    echo "[pre-push]   Commit(s): ${s_octo//$'\n'/ }"
+    s_octo1="${s_octo%%$'\n'*}"
+    echo "[pre-push] Recovery: list its parents with  git rev-parse ${s_octo1}^1 ${s_octo1}^2 ${s_octo1}^3  then redo it as ordinary two-parent merges:  git switch -c redo <parent 1>; git merge <parent 2>; git merge <parent 3>  (re-apply by hand, as its own commit, what the octopus commit added itself); or  git rebase $scan_remote/<branch>  to drop the merge; then push the new branch."
+    fail=1
     continue
   fi
   if ! command -v gitleaks >/dev/null 2>&1; then
